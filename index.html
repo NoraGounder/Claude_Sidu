@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quailworks — AI Automation Agency</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #f9f7f3;
+      --warm-white: #fdfcfa;
+      --ink: #1a1714;
+      --ink-light: #6b6560;
+      --ink-faint: #b8b3ae;
+      --accent: #c8a96e;
+      --accent-dark: #a8883f;
+      --rule: #e4e0da;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--warm-white);
+      color: var(--ink);
+      font-family: 'DM Mono', monospace;
+      font-weight: 300;
+      font-size: 13px;
+      line-height: 1.7;
+      letter-spacing: 0.01em;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE TEXTURE OVERLAY ─────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    /* ── NAV ───────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 48px;
+      background: rgba(253, 252, 250, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.3s ease;
+    }
+
+    nav.scrolled { border-bottom-color: var(--rule); }
+
+    .nav-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .nav-tag {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    /* ── HERO ──────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      padding: 0 48px 64px;
+      padding-top: 120px;
+      position: relative;
+    }
+
+    .hero-body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 1100px;
+    }
+
+    .hero-label {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 32px;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.8s ease 0.2s forwards;
+    }
+
+    .hero-headline {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(52px, 8vw, 108px);
+      font-weight: 300;
+      line-height: 1.0;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      margin-bottom: 12px;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeUp 0.9s ease 0.35s forwards;
+    }
+
+    .hero-headline em {
+      font-style: italic;
+      color: var(--ink-light);
+    }
+
+    .hero-sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 3.5vw, 48px);
+      font-weight: 300;
+      font-style: italic;
+      color: var(--ink-light);
+      line-height: 1.2;
+      margin-bottom: 56px;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeUp 0.9s ease 0.5s forwards;
+    }
+
+    .hero-desc {
+      max-width: 480px;
+      font-size: 13px;
+      color: var(--ink-light);
+      line-height: 1.9;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.8s ease 0.65s forwards;
+    }
+
+    .hero-rule {
+      position: absolute;
+      right: 48px;
+      top: 50%;
+      transform: translateY(-50%);
+      writing-mode: vertical-rl;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      opacity: 0;
+      animation: fadeIn 1s ease 1s forwards;
+    }
+
+    .hero-rule::before {
+      content: '';
+      display: block;
+      width: 1px;
+      height: 80px;
+      background: var(--rule);
+    }
+
+    .hero-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--rule);
+      padding-top: 28px;
+      opacity: 0;
+      animation: fadeIn 0.8s ease 1.1s forwards;
+    }
+
+    .hero-footer-left {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    .scroll-hint {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    .scroll-line {
+      width: 40px;
+      height: 1px;
+      background: var(--rule);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scroll-line::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent);
+      transform: translateX(-100%);
+      animation: lineSlide 2s ease 1.5s infinite;
+    }
+
+    /* ── WHAT WE DO ────────────────────────────────── */
+    .section {
+      padding: 120px 48px;
+    }
+
+    .section-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 64px;
+      align-items: start;
+      margin-bottom: 80px;
+    }
+
+    .section-num {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding-top: 6px;
+    }
+
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(36px, 4vw, 56px);
+      font-weight: 300;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+
+    .section-title em { font-style: italic; color: var(--ink-light); }
+
+    /* ── SERVICES GRID ─────────────────────────────── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border-top: 1px solid var(--rule);
+    }
+
+    .service-card {
+      padding: 48px 40px 48px 0;
+      border-right: 1px solid var(--rule);
+      position: relative;
+      cursor: default;
+      transition: background 0.3s ease;
+    }
+
+    .service-card:last-child { border-right: none; padding-right: 0; }
+    .service-card:not(:first-child) { padding-left: 40px; }
+
+    .service-card:hover { background: var(--cream); }
+
+    .service-num {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--ink-faint);
+      margin-bottom: 32px;
+    }
+
+    .service-icon {
+      width: 36px;
+      height: 36px;
+      margin-bottom: 24px;
+      opacity: 0.7;
+    }
+
+    .service-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 24px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .service-desc {
+      font-size: 12px;
+      color: var(--ink-light);
+      line-height: 1.8;
+    }
+
+    .service-tag {
+      display: inline-block;
+      margin-top: 24px;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 4px 10px;
+      border-radius: 0;
+    }
+
+    /* ── HOW WE WORK ───────────────────────────────── */
+    .how-section {
+      background: var(--cream);
+      padding: 120px 48px;
+    }
+
+    .process-list {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 48px;
+      margin-top: 64px;
+    }
+
+    .process-item {
+      position: relative;
+    }
+
+    .process-item::after {
+      content: '→';
+      position: absolute;
+      right: -28px;
+      top: 0;
+      font-size: 18px;
+      color: var(--rule);
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .process-item:last-child::after { display: none; }
+
+    .process-step {
+      font-size: 48px;
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      color: var(--rule);
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+
+    .process-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 400;
+      margin-bottom: 12px;
+    }
+
+    .process-desc {
+      font-size: 12px;
+      color: var(--ink-light);
+      line-height: 1.8;
+    }
+
+    /* ── WHY QUAILWORKS ────────────────────────────── */
+    .why-section {
+      padding: 120px 48px;
+    }
+
+    .why-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      margin-top: 64px;
+    }
+
+    .why-statement {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 3vw, 42px);
+      font-weight: 300;
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+    }
+
+    .why-statement strong {
+      font-weight: 600;
+      font-style: italic;
+    }
+
+    .why-points {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .why-point {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .why-point:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .why-point-marker {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+
+    .why-point-text {
+      font-size: 13px;
+      color: var(--ink-light);
+      line-height: 1.8;
+    }
+
+    .why-point-text strong {
+      font-weight: 400;
+      color: var(--ink);
+      display: block;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    /* ── FOOTER ────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .footer-copy {
+      font-size: 11px;
+      color: var(--ink-faint);
+      letter-spacing: 0.1em;
+    }
+
+    .footer-domain {
+      font-size: 11px;
+      color: var(--ink-faint);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── ANIMATIONS ────────────────────────────────── */
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    @keyframes lineSlide {
+      0% { transform: translateX(-100%); }
+      50% { transform: translateX(0); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── RESPONSIVE ────────────────────────────────── */
+    @media (max-width: 900px) {
+      nav, .hero, .section, .how-section, .why-section, footer {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+
+      .hero-rule { display: none; }
+
+      .section-header {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .services-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .service-card {
+        border-right: none;
+        border-bottom: 1px solid var(--rule);
+        padding: 40px 0 !important;
+      }
+
+      .process-list {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .process-item::after { display: none; }
+
+      .why-grid {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      footer {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <a class="nav-logo" href="#">Quailworks</a>
+    <span class="nav-tag">AI Automation Agency</span>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-body">
+      <div class="hero-label">Est. 2025 · quailworks.xyz</div>
+      <h1 class="hero-headline">
+        We build the<br /><em>machines</em> that<br />run your business.
+      </h1>
+      <p class="hero-sub">AI automation, end to end.</p>
+      <p class="hero-desc">
+        Quailworks designs and deploys intelligent automation systems for businesses
+        that are ready to stop doing things manually. From lead generation
+        to operations — we replace repetitive work with systems that never sleep.
+      </p>
+    </div>
+
+    <div class="hero-rule">quailworks.xyz</div>
+
+    <div class="hero-footer">
+      <span class="hero-footer-left">AI · Automation · Systems</span>
+      <div class="scroll-hint">
+        <div class="scroll-line"></div>
+        Scroll
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-header reveal">
+        <div class="section-num">01 — What we do</div>
+        <h2 class="section-title">
+          Intelligent systems<br /><em>built for your workflow.</em>
+        </h2>
+      </div>
+
+      <div class="services-grid">
+        <div class="service-card reveal">
+          <div class="service-num">001</div>
+          <svg class="service-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="8" width="28" height="20" rx="2" stroke="#1a1714" stroke-width="1.5"/>
+            <path d="M12 18h12M18 12v12" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <div class="service-name">Outbound Automation</div>
+          <p class="service-desc">
+            AI-powered lead research, personalised outreach at scale, and automated follow-up sequences that keep your pipeline full without lifting a finger.
+          </p>
+          <span class="service-tag">GTM Systems</span>
+        </div>
+
+        <div class="service-card reveal" style="transition-delay: 0.1s">
+          <div class="service-num">002</div>
+          <svg class="service-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="10" stroke="#1a1714" stroke-width="1.5"/>
+            <path d="M18 10v8l5 3" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <div class="service-name">Workflow Automation</div>
+          <p class="service-desc">
+            Connect your tools, eliminate manual handoffs, and automate the repetitive tasks that consume your team's time. Built on Make, Zapier, or custom APIs.
+          </p>
+          <span class="service-tag">Operations</span>
+        </div>
+
+        <div class="service-card reveal" style="transition-delay: 0.2s">
+          <div class="service-num">003</div>
+          <svg class="service-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 28L18 8l8 20" stroke="#1a1714" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M13 22h10" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <div class="service-name">AI Agents</div>
+          <p class="service-desc">
+            Custom AI agents that research, write, decide, and act on your behalf. From booking systems to content pipelines — agents built for your specific use case.
+          </p>
+          <span class="service-tag">Agentic AI</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section class="how-section">
+    <div class="section-inner">
+      <div class="section-header reveal">
+        <div class="section-num">02 — How we work</div>
+        <h2 class="section-title">
+          From conversation<br /><em>to running system.</em>
+        </h2>
+      </div>
+
+      <div class="process-list">
+        <div class="process-item reveal">
+          <div class="process-step">01</div>
+          <div class="process-title">Diagnose</div>
+          <p class="process-desc">We map your current workflow and identify the highest-value automation opportunities.</p>
+        </div>
+        <div class="process-item reveal" style="transition-delay:0.1s">
+          <div class="process-step">02</div>
+          <div class="process-title">Design</div>
+          <p class="process-desc">We architect the system — tools, agents, data flows — before writing a single line of code.</p>
+        </div>
+        <div class="process-item reveal" style="transition-delay:0.2s">
+          <div class="process-step">03</div>
+          <div class="process-title">Build</div>
+          <p class="process-desc">Fast, iterative delivery. Working systems in days, not months.</p>
+        </div>
+        <div class="process-item reveal" style="transition-delay:0.3s">
+          <div class="process-step">04</div>
+          <div class="process-title">Hand off</div>
+          <p class="process-desc">We document everything and train your team. You own the system, completely.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section class="why-section">
+    <div class="section-inner">
+      <div class="section-header reveal">
+        <div class="section-num">03 — Why Quailworks</div>
+        <h2 class="section-title">
+          Built by operators,<br /><em>not just coders.</em>
+        </h2>
+      </div>
+
+      <div class="why-grid">
+        <div class="why-statement reveal">
+          Most agencies sell you a tool.<br />
+          We sell you a <strong>result</strong> — fewer hours spent on work that shouldn't require a human.
+        </div>
+
+        <div class="why-points">
+          <div class="why-point reveal">
+            <div class="why-point-marker"></div>
+            <div class="why-point-text">
+              <strong>Engineering-grade thinking</strong>
+              Systems designed with the same rigour as industrial processes — reliable, documented, maintainable.
+            </div>
+          </div>
+          <div class="why-point reveal" style="transition-delay:0.1s">
+            <div class="why-point-marker"></div>
+            <div class="why-point-text">
+              <strong>No bloated retainers</strong>
+              Project-based or retained — we structure engagements around outcomes, not hours.
+            </div>
+          </div>
+          <div class="why-point reveal" style="transition-delay:0.2s">
+            <div class="why-point-marker"></div>
+            <div class="why-point-text">
+              <strong>Tools you already use</strong>
+              We build on your existing stack — Clay, HubSpot, Make, Notion, Slack, and more.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">Quailworks</div>
+    <div class="footer-copy">© 2025 Quailworks. All rights reserved.</div>
+    <div class="footer-domain">quailworks.xyz</div>
+  </footer>
+
+  <script>
+    // Nav scroll border
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    reveals.forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>
