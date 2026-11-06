@@ -21,6 +21,8 @@ fit:
   # Seen in the first live Layer 1 data (e.g. "Hilti Nederland BV"): local arms of large groups
   # often buy software at group level, so they fit less well than independent companies.
   subsidiary_of_large_group: -15
+  # TypeSafe Jev 1.14's ICP score (0 poor .. 2 strong), scaled to 0-15 points (gtm/layers/l2_jev.py).
+  jev_icp_fit: 15
 
 signals:
   # Found on careers pages and in job ads during Layer 2.
@@ -32,7 +34,7 @@ signals:
   headcount_growth: 10        # clear growth signs (several open roles, new site or warehouse)
 
 tiers:
-  # Maximum fit is 90, and a Dutch company in range with a working site scores 75-90 on fit
+  # Maximum fit is 105 (90 + Jev ICP fit 15), and a Dutch company in range with a working site scores 75-90 on fit
   # alone. So Tier 1 and 2 need real signals; fit-only accounts are Tier 3 (cheapest handling).
   tier_1: {fit_min: 60, signal_min: 50}
   tier_2: {fit_min: 60, signal_min: 25}

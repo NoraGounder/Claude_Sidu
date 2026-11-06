@@ -8,9 +8,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import atexit
 import hashlib
 import json
+import os
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -126,8 +130,6 @@ class Fetcher:
             else:
                 html = body.decode(resp.encoding or "utf-8", errors="replace")
                 page = parse_html(resp.url, html)
-                if len(page.text) < 300:
-                    page = self._render(resp.url) or page
         except Exception as exc:   # noqa: BLE001 - one bad site must never stop a crawl
             # Includes errors raised while streaming the body (urllib3 read timeouts, broken
             # connections) and parser errors. Not cached, so a later run retries them.
@@ -135,25 +137,102 @@ class Fetcher:
         cache.write_text(json.dumps(page.__dict__, ensure_ascii=False), encoding="utf-8")
         return page
 
-    def _render(self, url: str) -> Page | None:
-        """JavaScript fallback through Crawl4AI, if installed (pip install -e '.[crawl]')."""
-        try:
-            import asyncio
-            from crawl4ai import AsyncWebCrawler
-        except ImportError:
-            return None
 
-        async def go():
-            async with AsyncWebCrawler() as crawler:
-                return await crawler.arun(url=url)
+class BrowserPool:
+    """One shared Crawl4AI browser for all worker threads, running on its own event loop."""
 
+    _instance: "BrowserPool | None" = None
+    _lock = threading.Lock()
+
+    def __init__(self, tabs: int = 4):
+        os.environ.setdefault("CRAWL4AI_NO_CLOUD_NOTICE", "1")
+        from crawl4ai import AsyncWebCrawler, BrowserConfig  # noqa: F401 - fail early if missing
+        self.loop = asyncio.new_event_loop()
+        self.thread = threading.Thread(target=self.loop.run_forever, daemon=True)
+        self.thread.start()
+        self.tabs = tabs
+        self.crawler = asyncio.run_coroutine_threadsafe(self._start(), self.loop).result(timeout=120)
+        atexit.register(self.close)
+
+    async def _start(self):
+        from crawl4ai import AsyncWebCrawler, BrowserConfig
+        self.sem = asyncio.Semaphore(self.tabs)
+        crawler = AsyncWebCrawler(config=BrowserConfig(headless=True, user_agent=USER_AGENT, verbose=False))
+        await crawler.start()
+        return crawler
+
+    @classmethod
+    def get(cls) -> "BrowserPool":
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
+
+    async def _fetch(self, url: str):
+        from crawl4ai import CacheMode, CrawlerRunConfig
+        async with self.sem:
+            return await self.crawler.arun(url=url, config=CrawlerRunConfig(
+                cache_mode=CacheMode.BYPASS, page_timeout=30000, wait_until="domcontentloaded",
+                delay_before_return_html=1.5, verbose=False))
+
+    def fetch(self, url: str) -> Page:
         try:
-            result = asyncio.run(go())
-        except Exception:
-            return None
-        if not getattr(result, "html", None):
-            return None
-        return parse_html(url, result.html)
+            result = asyncio.run_coroutine_threadsafe(self._fetch(url), self.loop).result(timeout=90)
+        except Exception as exc:  # noqa: BLE001
+            return Page(url=url, status=0, error=f"browser:{type(exc).__name__}")
+        if not getattr(result, "success", False) or not getattr(result, "html", None):
+            return Page(url=url, status=getattr(result, "status_code", 0) or 0,
+                        error=f"browser:{(getattr(result, 'error_message', '') or 'no html')[:60]}")
+        page = parse_html(getattr(result, "url", None) or url, result.html)
+        page.status = getattr(result, "status_code", 200) or 200
+        return page
+
+    def close(self) -> None:
+        try:
+            asyncio.run_coroutine_threadsafe(self.crawler.close(), self.loop).result(timeout=30)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+class HybridFetcher(Fetcher):
+    """Plain HTTP first (fast, free). Crawl4AI's browser when a site blocks or fails the request,
+    or returns an almost empty page (JavaScript sites). Same robots.txt rules and cache."""
+
+    MIN_TEXT = 300
+
+    def get(self, url: str) -> Page:
+        page = super().get(url)
+        if page.error == "blocked_by_robots" or (page.ok and len(page.text) >= self.MIN_TEXT):
+            return page
+        rendered = self.render(url)
+        return rendered if rendered.ok else page
+
+    def render(self, url: str) -> Page:
+        """Fetch through the browser (used directly for careers pages whose job list needs JS)."""
+        cache = self._cache_path("browser:" + url)
+        if self.use_cache and cache.exists():
+            data = json.loads(cache.read_text(encoding="utf-8"))
+            data["links"] = [tuple(x) for x in data.get("links", [])]
+            return Page(**data)
+        if not self.allowed(url):
+            return Page(url=url, status=0, error="blocked_by_robots")
+        page = BrowserPool.get().fetch(url)
+        if page.status != 0:
+            cache.write_text(json.dumps(page.__dict__, ensure_ascii=False), encoding="utf-8")
+        return page
+
+
+def browser_available() -> bool:
+    try:
+        import crawl4ai  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def default_fetcher() -> Fetcher:
+    """HybridFetcher when Crawl4AI is installed (pip install -e '.[crawl]'), plain HTTP otherwise."""
+    return HybridFetcher() if browser_available() else Fetcher()
 
 
 @dataclass
@@ -188,6 +267,11 @@ def find_careers_link(page: Page) -> str | None:
     return max(scored)[2] if scored else None
 
 
+def _job_links(page: Page) -> list[str]:
+    return [u for u, _ in page.links
+            if JOB_LINK_HINTS.search(urlparse(u).path) and len(urlparse(u).path.strip("/").split("/")) >= 2]
+
+
 def crawl_site(fetcher: Fetcher, website: str, max_jobs: int = 5) -> SiteCrawl:
     # LinkedIn often stores http:// addresses. Try https:// first (nearly every site has it, and
     # some networks only allow HTTPS), then fall back to the address as given.
@@ -211,6 +295,12 @@ def crawl_site(fetcher: Fetcher, website: str, max_jobs: int = 5) -> SiteCrawl:
                 break
     if not site.careers or not site.careers.ok:
         return site
+    # Many careers pages load their job list with JavaScript: if plain HTTP shows no job links,
+    # look again through the browser.
+    if hasattr(fetcher, "render") and not _job_links(site.careers):
+        rendered = fetcher.render(site.careers.url)
+        if rendered.ok and _job_links(rendered):
+            site.careers = rendered
 
     seen, job_urls, titles = set(), [], []
     for url, text in site.careers.links:

@@ -1,9 +1,8 @@
 """Layer 2: cheap pre-filter. Crawl each Layer 1 account's website and careers page, find
-evidence with rules, score fit and signals from scoring.yaml, and assign a tier. No paid calls:
-the only cost is time. Accounts below Tier 3 are dropped before Layer 3 spends money on contacts.
-
-Unclear accounts (vacancies found but no rule matched) are flagged for an AI review of their
-job titles, done by Claude Code or Jev, instead of being guessed at here.
+evidence with rules, score fit and signals from scoring.yaml, and assign a tier. Crawling, rules
+and arithmetic are deterministic Python. AI decisions come only from TypeSafe Jev 1.14
+(gtm/layers/l2_jev.py); they are stored in jev_decisions and folded into every score here, so a
+re-crawl or re-score never loses them.
 """
 
 from __future__ import annotations
@@ -14,7 +13,7 @@ from dataclasses import dataclass, field
 
 from gtm import db
 from gtm.config import ClientConfig
-from gtm.crawl import Fetcher, SiteCrawl, crawl_site
+from gtm.crawl import Page, SiteCrawl, crawl_site, default_fetcher
 from gtm.layers.l1_discover import band_midpoint
 from gtm.normalize import has_keyword, size_range
 from gtm.signals import Evidence, extract, is_dutch
@@ -27,9 +26,29 @@ class Score:
     tier: str
     breakdown: dict
     flags: list[str] = field(default_factory=list)
+    reason: str | None = None
 
 
-def fit_score(cfg: ClientConfig, account: dict, site: SiteCrawl | None, evidence: list[Evidence]) -> tuple[int, dict]:
+def load_jev(conn, account_id: int) -> dict | None:
+    row = conn.execute("SELECT * FROM jev_decisions WHERE account_id=?", (account_id,)).fetchone()
+    if not row:
+        return None
+    return {"model_id": row["model_id"], "not_a_buyer": row["not_a_buyer"], "icp_fit": row["icp_fit"],
+            "icp_confidence": row["icp_confidence"], "titles": json.loads(row["titles_json"])}
+
+
+def jev_evidence(cfg: ClientConfig, site: SiteCrawl | None, jev: dict | None) -> list[Evidence]:
+    if not jev:
+        return []
+    threshold = cfg.ai["thresholds"]["admin_role"]
+    url = (site.careers.url if site and site.careers and site.careers.ok else
+           site.home.url if site else "")
+    return [Evidence("admin_job_ad", f"job title: {title}", url, f"{title} (Jev 1.14, p={p:.2f})")
+            for title, p in jev["titles"].items() if p >= threshold]
+
+
+def fit_score(cfg: ClientConfig, account: dict, site: SiteCrawl | None, evidence: list[Evidence],
+              jev: dict | None = None) -> tuple[int, dict]:
     rules = cfg.scoring["fit"]
     parts: dict[str, int] = {}
 
@@ -56,6 +75,9 @@ def fit_score(cfg: ClientConfig, account: dict, site: SiteCrawl | None, evidence
             parts["dutch_site"] = rules["dutch_language_site"]
     if any(e.signal == "subsidiary_of_large_group" for e in evidence):
         parts["subsidiary"] = rules.get("subsidiary_of_large_group", 0)
+    if jev and jev.get("icp_fit") is not None and rules.get("jev_icp_fit"):
+        # Jev's ICP score is 0 (poor) .. 2 (strong); scale to the configured weight.
+        parts["jev_icp_fit"] = round(rules["jev_icp_fit"] * jev["icp_fit"] / 2)
     return max(0, sum(parts.values())), parts
 
 
@@ -89,20 +111,26 @@ def tier_for(cfg: ClientConfig, fit: int, signal: int) -> str:
     return "rejected_l2"
 
 
-def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None) -> tuple[Score, list[Evidence]]:
-    evidence = extract(site) if site else []
-    fit, fit_parts = fit_score(cfg, account, site, evidence)
+def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None,
+                  jev: dict | None = None) -> tuple[Score, list[Evidence]]:
+    evidence = (extract(site) if site else []) + jev_evidence(cfg, site, jev)
+    fit, fit_parts = fit_score(cfg, account, site, evidence, jev)
     signal, sig_parts = signal_score(cfg, site, evidence)
     flags = []
     if not account.get("website"):
         flags.append("no_website")
     elif site and not site.home.ok:
         flags.append(f"unreachable:{site.home.error or site.home.status}")
-    if site and site.job_link_count and "admin_job_ad" not in sig_parts and fit >= 60:
-        flags.append("review_job_titles")
     if any(e.signal == "subsidiary_of_large_group" for e in evidence):
         flags.append("subsidiary")
-    return Score(fit, signal, tier_for(cfg, fit, signal), {"fit": fit_parts, "signals": sig_parts}, flags), evidence
+    tier, reason = tier_for(cfg, fit, signal), None
+    if tier == "rejected_l2":
+        reason = f"fit {fit} below tier 3"
+    if jev:
+        flags.append("jev:" + jev["model_id"])
+        if jev["not_a_buyer"] is not None and jev["not_a_buyer"] >= cfg.ai["thresholds"]["not_a_buyer"]:
+            tier, reason = "rejected_l2", f"jev:not_a_buyer p={jev['not_a_buyer']:.2f}"
+    return Score(fit, signal, tier, {"fit": fit_parts, "signals": sig_parts}, flags, reason), evidence
 
 
 def _save(conn, account_id: int, site: SiteCrawl | None, score: Score, evidence: list[Evidence]) -> None:
@@ -112,87 +140,36 @@ def _save(conn, account_id: int, site: SiteCrawl | None, score: Score, evidence:
         conn.execute(
             "INSERT INTO evidence(account_id, layer, signal, label, url, quote, found_at) VALUES (?,?,?,?,?,?,?)",
             (account_id, "L2", e.signal, e.label, e.url, e.quote, ts))
+    home_ok = bool(site and site.home.ok)
     conn.execute(
         "INSERT OR REPLACE INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, careers_url,"
-        " job_link_count, job_titles, flags, breakdown, scored_at, home_title)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (account_id, score.fit, score.signal, score.tier,
-         int(bool(site and site.home.ok)), int(bool(site and site.home.ok and is_dutch(site))),
+        " job_link_count, job_titles, flags, breakdown, scored_at, home_title, home_excerpt)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (account_id, score.fit, score.signal, score.tier, int(home_ok), int(home_ok and is_dutch(site)),
          site.careers.url if site and site.careers and site.careers.ok else None,
          site.job_link_count if site else 0,
          json.dumps((site.job_titles if site else [])[:30], ensure_ascii=False),
          json.dumps(score.flags), json.dumps(score.breakdown), ts,
-         (site.home.title[:200] if site and site.home.ok else None)))
-    reason = None if score.tier != "rejected_l2" else f"fit {score.fit} below tier 3"
-    conn.execute("UPDATE accounts SET status=?, status_reason=? WHERE id=?", (score.tier, reason, account_id))
-
-
-def review_items(conn, client: str, include_all: bool = False) -> list[dict]:
-    """Accounts for the AI review: by default those flagged review_job_titles; with include_all,
-    every scored account (to also catch non-buyers such as associations or public bodies)."""
-    where = "" if include_all else " AND s.flags LIKE '%review_job_titles%'"
-    rows = conn.execute(
-        "SELECT a.id, a.name, a.domain, a.industry, s.tier, s.home_title, s.careers_url, s.job_titles"
-        " FROM accounts a JOIN l2_scores s ON s.account_id=a.id"
-        f" WHERE a.client=? AND s.tier != 'rejected_l2'{where} ORDER BY a.id", (client,)).fetchall()
-    return [{"account_id": r["id"], "name": r["name"], "domain": r["domain"], "industry": r["industry"],
-             "tier": r["tier"], "home_title": r["home_title"], "careers_url": r["careers_url"],
-             "job_titles": json.loads(r["job_titles"])} for r in rows]
-
-
-def apply_review(cfg: ClientConfig, conn, reviews: list[dict], reviewer: str) -> dict:
-    """Apply AI verdicts. Each review: {"account_id", "admin_roles": [job titles that are manual
-    admin/order/invoice work], "not_a_buyer": bool, "reason": str}. Only titles that were in the
-    export may be cited, so every new signal still points to a real job ad."""
-    w = cfg.scoring["signals"]
-    counts = {"reviewed": 0, "changed_tier": 0, "dropped": 0, "ignored_titles": 0}
-    for rv in reviews:
-        row = conn.execute(
-            "SELECT s.* FROM l2_scores s JOIN accounts a ON a.id=s.account_id WHERE s.account_id=? AND a.client=?",
-            (rv["account_id"], cfg.slug)).fetchone()
-        if not row:
-            continue
-        counts["reviewed"] += 1
-        flags = [f for f in json.loads(row["flags"]) if f != "review_job_titles"] + [f"reviewed:{reviewer}"]
-        if rv.get("not_a_buyer"):
-            reason = f"ai:not_a_buyer:{(rv.get('reason') or '')[:80]}"
-            conn.execute("UPDATE l2_scores SET tier='rejected_l2', flags=? WHERE account_id=?",
-                         (json.dumps(flags), row["account_id"]))
-            conn.execute("UPDATE accounts SET status='rejected_l2', status_reason=? WHERE id=?",
-                         (reason, row["account_id"]))
-            counts["dropped"] += 1
-            continue
-        known = set(json.loads(row["job_titles"]))
-        roles = [t for t in rv.get("admin_roles", []) if t in known]
-        counts["ignored_titles"] += len(rv.get("admin_roles", [])) - len(roles)
-        breakdown = json.loads(row["breakdown"])
-        sig = breakdown.setdefault("signals", {})
-        ts = db.now_iso()
-        for role in roles:
-            conn.execute(
-                "INSERT INTO evidence(account_id, layer, signal, label, url, quote, found_at) VALUES (?,?,?,?,?,?,?)",
-                (row["account_id"], "L2-AI", "admin_job_ad", f"job title ({reviewer})",
-                 row["careers_url"] or "", role, ts))
-        if roles:
-            sig["admin_job_ad"] = w["admin_job_ad"]
-        if len(roles) >= 2:
-            sig["multiple_admin_ads"] = w["multiple_admin_ads"]
-        signal = min(100, sum(sig.values()))
-        tier = tier_for(cfg, row["fit"], signal)
-        conn.execute("UPDATE l2_scores SET signal=?, tier=?, flags=?, breakdown=? WHERE account_id=?",
-                     (signal, tier, json.dumps(flags), json.dumps(breakdown), row["account_id"]))
-        conn.execute("UPDATE accounts SET status=? WHERE id=?", (tier, row["account_id"]))
-        counts["changed_tier"] += tier != row["tier"]
-    conn.commit()
-    return counts
+         site.home.title[:200] if home_ok else None,
+         site.home.text[:1200] if home_ok else None))
+    conn.execute("UPDATE accounts SET status=?, status_reason=? WHERE id=?",
+                 (score.tier, score.reason, account_id))
 
 
 def run(cfg: ClientConfig, conn, limit: int | None = None, rescore: bool = False, workers: int = 8,
-        fetcher_factory=Fetcher) -> dict:
-    statuses = ("qualified_l1", "tier_1", "tier_2", "tier_3", "rejected_l2") if rescore else ("qualified_l1",)
-    marks = ",".join("?" * len(statuses))
-    sql = f"SELECT * FROM accounts WHERE client=? AND status IN ({marks}) ORDER BY id"
-    accounts = [dict(r) for r in conn.execute(sql, (cfg.slug, *statuses)).fetchall()]
+        fetcher_factory=None, account_ids: list[int] | None = None) -> dict:
+    fetcher_factory = fetcher_factory or default_fetcher
+    if account_ids is not None:
+        marks = ",".join("?" * len(account_ids)) or "NULL"
+        accounts = [dict(r) for r in conn.execute(
+            f"SELECT * FROM accounts WHERE client=? AND id IN ({marks}) ORDER BY id",
+            (cfg.slug, *account_ids)).fetchall()]
+    else:
+        statuses = ("qualified_l1", "tier_1", "tier_2", "tier_3", "rejected_l2") if rescore else ("qualified_l1",)
+        marks = ",".join("?" * len(statuses))
+        accounts = [dict(r) for r in conn.execute(
+            f"SELECT * FROM accounts WHERE client=? AND status IN ({marks}) ORDER BY id",
+            (cfg.slug, *statuses)).fetchall()]
     # Exclusion keywords may have been added after Layer 1 ran: re-check names before crawling.
     kept = []
     for acc in accounts:
@@ -211,21 +188,21 @@ def run(cfg: ClientConfig, conn, limit: int | None = None, rescore: bool = False
         try:
             site = crawl_site(fetcher_factory(), acc["website"]) if acc.get("website") else None
         except Exception as exc:  # noqa: BLE001 - score the account without a site, flag it
-            from gtm.crawl import Page
             site = SiteCrawl(home=Page(url=acc["website"], status=0, error=f"crawl_error:{type(exc).__name__}"))
         return acc, site
 
     summary = {"accounts": len(accounts), "tier_1": 0, "tier_2": 0, "tier_3": 0, "rejected_l2": 0,
-               "unreachable": 0, "review_job_titles": 0}
+               "unreachable": 0, "jev_decided": 0}
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [pool.submit(work, a) for a in accounts]
         for fut in as_completed(futures):
             acc, site = fut.result()
-            score, evidence = score_account(cfg, acc, site)
+            jev = load_jev(conn, acc["id"])
+            score, evidence = score_account(cfg, acc, site, jev)
             _save(conn, acc["id"], site, score, evidence)
             conn.commit()
             summary[score.tier] += 1
             summary["unreachable"] += any(f.startswith("unreachable") for f in score.flags)
-            summary["review_job_titles"] += "review_job_titles" in score.flags
+            summary["jev_decided"] += jev is not None
     db.finish_run(conn, run_id, "succeeded", len(accounts), 0.0, json.dumps(summary))
     return summary

@@ -137,7 +137,7 @@ def test_scoring_and_tiers_end_to_end(env):
     assert a["signal"] == 85 and a["status"] == "tier_1"
 
     b = rows["Groot Machine NL"]
-    assert "subsidiary" in json.loads(b["flags"]) and "review_job_titles" in json.loads(b["flags"])
+    assert "subsidiary" in json.loads(b["flags"])
     assert b["status"] == "tier_3"            # fit only, no signals: cheapest handling
 
     c = rows["Zonder Site"]
@@ -149,22 +149,28 @@ def test_scoring_and_tiers_end_to_end(env):
     ev = conn.execute("SELECT COUNT(*) FROM evidence").fetchone()[0]
     assert ev >= 7
 
-    # AI review: Groot Machine's "Service Engineer" is not admin work, but say the reviewer finds
-    # an admin title; titles not in the export are ignored, and non-buyers are dropped.
+    # Stored Jev 1.14 decisions are folded into every (re)score: a confirmed admin title adds a
+    # signal with its source, Jev's ICP score adds fit, and a non-buyer verdict drops the account.
     ids = {r["name"]: r["id"] for r in conn.execute("SELECT id, name FROM accounts")}
-    queue = l2_prefilter.review_items(conn, CLIENT)
-    assert [q["name"] for q in queue] == ["Groot Machine NL"]
-    assert queue[0]["job_titles"] == ["Service Engineer", "Welder"]
-    counts = l2_prefilter.apply_review(cfg, conn, [
-        {"account_id": ids["Groot Machine NL"], "admin_roles": ["Welder", "Made Up Title"]},
-        {"account_id": ids["Zonder Site"], "not_a_buyer": True, "reason": "trade association"},
-    ], reviewer="claude")
-    assert counts == {"reviewed": 2, "changed_tier": 1, "dropped": 1, "ignored_titles": 1}
-    b2 = conn.execute("SELECT signal, tier, flags FROM l2_scores WHERE account_id=?",
+    conn.execute("INSERT INTO jev_decisions(account_id, model_id, not_a_buyer, icp_fit, titles_json, decided_at)"
+                 " VALUES (?,?,?,?,?,?)", (ids["Groot Machine NL"], "typesafe/jev-1.14-20261014", 0.05, 2.0,
+                                           json.dumps({"Service Engineer": 0.04, "Welder": 0.91}), "t"))
+    conn.execute("INSERT INTO jev_decisions(account_id, model_id, not_a_buyer, icp_fit, titles_json, decided_at)"
+                 " VALUES (?,?,?,?,?,?)", (ids["Zonder Site"], "typesafe/jev-1.14-20261014", 0.93, 0.2, "{}", "t"))
+    conn.commit()
+    l2_prefilter.run(cfg, conn, account_ids=[ids["Groot Machine NL"], ids["Zonder Site"]],
+                     fetcher_factory=lambda: FakeFetcher(pages))
+    b2 = conn.execute("SELECT fit, signal, tier, breakdown, flags FROM l2_scores WHERE account_id=?",
                       (ids["Groot Machine NL"],)).fetchone()
-    # fit 65 (subsidiary penalty) and a confirmed admin role (30) -> Tier 2
-    assert (b2["signal"], b2["tier"]) == (30, "tier_2") and "reviewed:claude" in b2["flags"]
-    assert conn.execute("SELECT status FROM accounts WHERE id=?", (ids["Zonder Site"],)).fetchone()[0] == "rejected_l2"
+    # fit 65 + Jev ICP 15 = 80; one confirmed admin title = 30 -> Tier 2
+    assert (b2["fit"], b2["signal"], b2["tier"]) == (80, 30, "tier_2")
+    assert json.loads(b2["breakdown"])["fit"]["jev_icp_fit"] == 15
+    assert "jev:typesafe/jev-1.14-20261014" in json.loads(b2["flags"])
+    quotes = [r[0] for r in conn.execute("SELECT quote FROM evidence WHERE account_id=? AND signal='admin_job_ad'",
+                                         (ids["Groot Machine NL"],))]
+    assert quotes == ["Welder (Jev 1.14, p=0.91)"]
+    zs = conn.execute("SELECT status, status_reason FROM accounts WHERE id=?", (ids["Zonder Site"],)).fetchone()
+    assert tuple(zs) == ("rejected_l2", "jev:not_a_buyer p=0.93")
 
 
 def test_generic_and_non_job_links_are_not_titles():
@@ -210,3 +216,32 @@ def test_excluded_names_are_dropped_before_crawling(env):
     assert summary["accounts"] == 0 and fetcher.requested == []
     row = conn.execute("SELECT status, status_reason FROM accounts").fetchone()
     assert tuple(row) == ("rejected_l1", "excluded_keyword:vereniging")
+
+
+def test_hybrid_fetcher_uses_the_browser_only_when_needed(env, monkeypatch):
+    """Plain HTTP first; Crawl4AI's browser for blocked or near-empty pages (JavaScript sites)."""
+    from gtm import crawl
+
+    rendered = []
+
+    class StubPool:
+        def fetch(self, url):
+            rendered.append(url)
+            return parse_html(url, "<html><body>" + "Rendered content. " * 40 + "</body></html>")
+
+    monkeypatch.setattr(crawl.BrowserPool, "get", classmethod(lambda cls: StubPool()))
+    fetcher = crawl.HybridFetcher(delay_secs=0)
+    monkeypatch.setattr(fetcher, "allowed", lambda url: True)
+
+    def fake_http(self, url):
+        if "full" in url:
+            return parse_html(url, "<html><body>" + "Server-rendered text. " * 40 + "</body></html>")
+        if "blocked" in url:
+            return Page(url=url, status=403)
+        return parse_html(url, "<html><body><div id='app'></div></body></html>")
+
+    monkeypatch.setattr(crawl.Fetcher, "get", fake_http)
+    assert fetcher.get("https://full.example").ok and rendered == []
+    assert "Rendered content" in fetcher.get("https://blocked.example").text
+    assert "Rendered content" in fetcher.get("https://js-app.example").text
+    assert rendered == ["https://blocked.example", "https://js-app.example"]

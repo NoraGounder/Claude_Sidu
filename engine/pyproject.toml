@@ -11,7 +11,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
-crawl = ["crawl4ai>=0.7"]
+crawl = ["crawl4ai>=0.9", "playwright>=1.49"]
 
 [project.scripts]
 gtm = "gtm.cli:main"

@@ -72,6 +72,33 @@ CREATE TABLE IF NOT EXISTS evidence (
 );
 CREATE INDEX IF NOT EXISTS ix_evidence_account ON evidence(account_id);
 
+CREATE TABLE IF NOT EXISTS jev_decisions (
+    account_id      INTEGER PRIMARY KEY REFERENCES accounts(id),
+    model_id        TEXT NOT NULL,
+    not_a_buyer     REAL,
+    icp_fit         REAL,
+    icp_confidence  REAL,
+    titles_json     TEXT NOT NULL DEFAULT '{}',
+    raw_answers     TEXT,
+    decided_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS jev_calls (
+    id             INTEGER PRIMARY KEY,
+    client         TEXT NOT NULL,
+    account_id     INTEGER,
+    requested_model TEXT NOT NULL,
+    model_id       TEXT,
+    input_tokens   INTEGER,
+    output_tokens  INTEGER,
+    cost_usd       REAL,
+    latency_ms     INTEGER,
+    request_id     TEXT,
+    status         TEXT NOT NULL,
+    error          TEXT,
+    created_at     TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS segment_progress (
     client     TEXT NOT NULL,
     segment    TEXT NOT NULL,
@@ -100,6 +127,7 @@ CREATE TABLE IF NOT EXISTS runs (
 
 MIGRATIONS = [
     ("l2_scores", "home_title", "TEXT"),
+    ("l2_scores", "home_excerpt", "TEXT"),
 ]
 
 

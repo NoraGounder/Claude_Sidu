@@ -1,0 +1,24 @@
+# AI policy for this client's pipeline. Enforced in code (engine/gtm/sources/jev.py): a run
+# refuses to start if these settings break the rules below.
+#
+# Rules (set by Quailworks, 2026-11-06):
+# - Only TypeSafe Jev 1.14 makes AI decisions (qualification, ICP scoring, classification).
+# - Never OpenRouter Auto Router, Jev Router, the Jev Latest alias, or any GPT/Claude/Gemini/other
+#   model through OpenRouter. No fallback: if Jev is unavailable, stop and report the error.
+# - Crawling, deterministic checks and data processing stay in Python.
+# - Every request logs the model ID Jev reports, token usage and cost (table jev_calls).
+# - The API key is never printed or written anywhere; it comes from OPENROUTER_API_KEY (or the
+#   cloud session's network secret for openrouter.ai).
+
+provider: openrouter
+endpoint: https://openrouter.ai/api/alpha/decisions
+model: typesafe/jev-1.14
+api_key_env: OPENROUTER_API_KEY
+fallback: none
+
+# Decision thresholds (Jev returns calibrated probabilities)
+thresholds:
+  not_a_buyer: 0.80      # drop the account
+  admin_role: 0.70       # count a job title as a manual-admin vacancy
+max_titles_per_request: 15
+workers: 4               # parallel requests

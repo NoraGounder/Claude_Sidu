@@ -71,6 +71,7 @@ class ClientConfig(BaseModel):
     icp: ICP
     limits: Limits
     scoring: dict[str, Any]
+    ai: dict[str, Any] = Field(default_factory=dict)
 
     @property
     def private_dir(self) -> Path:
@@ -108,4 +109,5 @@ def load_client(slug: str) -> ClientConfig:
         icp=ICP.model_validate(_load_yaml(root / "icp.yaml")),
         limits=Limits.model_validate(_load_yaml(root / "limits.yaml")),
         scoring=_load_yaml(root / "scoring.yaml") if (root / "scoring.yaml").exists() else {},
+        ai=_load_yaml(root / "ai.yaml") if (root / "ai.yaml").exists() else {},
     )

@@ -6,7 +6,7 @@ month_budget_usd:
   leadmagic: 40
   fullenrich: 20
   millionverifier: 5
-  openrouter: 5     # Layer 2 AI review (Jev Router). Actual cost per call is logged.
+  openrouter: 5     # TypeSafe Jev 1.14 decisions only (see ai.yaml). Actual cost per request is logged.
 
 # Unit prices used for estimates before a run (USD per item). Apify's actual run cost
 # replaces the estimate in the ledger when the run reports it. Check vendor pages monthly.
@@ -14,9 +14,9 @@ unit_price_usd:
   "harvestapi/linkedin-company-search:short": 0.002    # $2.00 per 1,000 on Free/Starter plan (2026-11-06)
   "harvestapi/linkedin-company-search:full": 0.004     # $4.00 per 1,000 on Free/Starter plan (2026-11-06)
   "harvestapi/linkedin-profile-search:full": 0.0032    # $3.20 per 1,000 (Apify store, 2026-11-06)
-  # Jev Router has variable pricing (it picks the model). Pre-run estimate per batch of 20
-  # companies; the ledger then records OpenRouter's reported cost. Tune after the first run.
-  "openrouter:typesafe/jev-router:batch": 0.02
+  # TypeSafe Jev 1.14: $0.042 per million input tokens, output free. A first test request
+  # cost $0.000017; estimate $0.0001 per account request. Actual cost is logged in jev_calls.
+  "openrouter:typesafe/jev-1.14:request": 0.0001
 
 sending:
   max_emails_per_day: 120

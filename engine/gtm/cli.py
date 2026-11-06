@@ -64,7 +64,7 @@ def cmd_prefilter(args) -> int:
     summary = l2_prefilter.run(cfg, conn, limit=args.limit, rescore=args.rescore, workers=args.workers)
     print(f"Scored {summary['accounts']} accounts: Tier 1 {summary['tier_1']}, Tier 2 {summary['tier_2']}, "
           f"Tier 3 {summary['tier_3']}, dropped {summary['rejected_l2']}. "
-          f"Unreachable sites {summary['unreachable']}; job titles to review {summary['review_job_titles']}.")
+          f"Unreachable sites {summary['unreachable']}; with Jev 1.14 decisions {summary['jev_decided']}.")
     return 0
 
 
@@ -85,58 +85,47 @@ def cmd_tiers(args) -> int:
     return 0
 
 
-def cmd_review_queue(args) -> int:
-    """Write accounts for the AI review (job titles, non-buyers) to JSONL in data/."""
-    from gtm.layers import l2_prefilter
+def cmd_jev(args) -> int:
+    """Layer 2 AI decisions with TypeSafe Jev 1.14 only (see clients/<client>/ai.yaml)."""
+    from gtm.layers import l2_jev
+    from gtm.sources.jev import JevPolicyError, JevUnavailable
 
     cfg = load_client(args.client)
     conn = db.connect()
-    out = args.out or str(data_dir() / f"{cfg.slug}-review-queue.jsonl")
-    items = l2_prefilter.review_items(conn, cfg.slug, include_all=args.all)
-    with open(out, "w", encoding="utf-8") as fh:
-        for item in items:
-            fh.write(json.dumps(item, ensure_ascii=False) + "\n")
-    print(f"Wrote {len(items)} accounts to {out}")
-    return 0
-
-
-def cmd_apply_review(args) -> int:
-    from gtm.layers import l2_prefilter
-
-    cfg = load_client(args.client)
-    conn = db.connect()
-    with open(args.file, encoding="utf-8") as fh:
-        reviews = [json.loads(line) for line in fh if line.strip()]
-    counts = l2_prefilter.apply_review(cfg, conn, reviews, args.reviewer)
-    print(f"Applied {counts['reviewed']} reviews: {counts['changed_tier']} changed tier, "
-          f"{counts['dropped']} dropped as not a buyer, {counts['ignored_titles']} titles ignored "
-          f"(not in the export).")
-    return 0
-
-
-def cmd_ai_review(args) -> int:
-    from gtm.layers import l2_ai_review
-
-    cfg = load_client(args.client)
-    conn = db.connect()
-    rp = l2_ai_review.plan(cfg, conn, include_all=args.all, batch_size=args.batch, limit=args.limit,
-                           model=args.model)
-    print(f"AI review with {rp.model}: {len(rp.items)} accounts in {len(rp.batches)} batches, "
-          f"estimated ${rp.est_cost:.2f}")
-    if args.dry_run:
-        if rp.batches:
-            print("First prompt:\n" + l2_ai_review._prompt(rp.batches[0])[:2000])
-        print("Dry run: nothing was called or spent.")
-        return 0
-    if not rp.batches:
+    if args.purge_legacy:
+        counts = l2_jev.purge_legacy_ai(conn, cfg.slug)
+        print(f"Removed pre-policy AI verdicts: {counts['evidence_removed']} evidence rows, "
+              f"{counts['drops_undone']} drops undone. Re-score with: prefilter --rescore")
         return 0
     try:
-        t = l2_ai_review.run(cfg, conn, rp)
+        jp = l2_jev.plan(cfg, conn, limit=args.limit, redo=args.redo)
+    except JevPolicyError as exc:
+        print(f"Refused by the AI policy: {exc}")
+        return 3
+    print(f"Jev decisions with {jp.model}: {len(jp.items)} accounts, estimated ${jp.est_cost:.4f}")
+    if args.dry_run:
+        if jp.items:
+            state, questions, _ = l2_jev.build_request(cfg, jp.items[0])
+            print("First request (state and questions):")
+            print(json.dumps({"state": state, "questions": list(questions)}, ensure_ascii=False, indent=1)[:2500])
+        print("Dry run: nothing was called or spent.")
+        return 0
+    if not jp.items:
+        return 0
+    try:
+        t = l2_jev.run(cfg, conn, jp)
+    except (JevUnavailable, JevPolicyError) as exc:
+        print(f"Stopped: {exc}")
+        print("No other model was used. Fix the cause and run the same command again; decided accounts are kept.")
+        return 4
     except budget.BudgetExceeded as exc:
         print(f"Stopped: {exc}")
         return 2
-    print(f"Reviewed {t['reviewed']} accounts in {t['batches']} batches: {t['changed_tier']} changed tier, "
-          f"{t['dropped']} dropped as not a buyer. Cost ${t['cost_usd']:.4f}. Models used: {', '.join(t['models'])}")
+    r = t.get("rescored", {})
+    print(f"Jev decided {t['decided']} accounts. Model IDs reported: {', '.join(t['models'])}. "
+          f"Tokens in/out: {t['input_tokens']}/{t['output_tokens']}. Cost ${t['cost_usd']:.6f}.")
+    if r:
+        print(f"Re-scored: Tier 1 {r['tier_1']}, Tier 2 {r['tier_2']}, Tier 3 {r['tier_3']}, dropped {r['rejected_l2']}.")
     return 0
 
 
@@ -207,23 +196,13 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--verbose", action="store_true")
     t.set_defaults(func=cmd_tiers)
 
-    r = sub.add_parser("review-queue", help="export accounts for the AI review to JSONL")
-    r.add_argument("--out")
-    r.add_argument("--all", action="store_true", help="every scored account, not only flagged ones")
-    r.set_defaults(func=cmd_review_queue)
-
-    ai = sub.add_parser("ai-review", help="Layer 2 AI review through OpenRouter (default: Jev Router)")
-    ai.add_argument("--all", action="store_true", help="screen every scored account, not only flagged ones")
-    ai.add_argument("--batch", type=int, default=20, help="companies per request")
-    ai.add_argument("--limit", type=int)
-    ai.add_argument("--model", default="typesafe/jev-router")
-    ai.add_argument("--dry-run", action="store_true")
-    ai.set_defaults(func=cmd_ai_review)
-
-    ar = sub.add_parser("apply-review", help="apply AI review verdicts from a JSONL file")
-    ar.add_argument("--file", required=True)
-    ar.add_argument("--reviewer", default="claude", help="who reviewed: claude or jev")
-    ar.set_defaults(func=cmd_apply_review)
+    j = sub.add_parser("jev", help="Layer 2 AI decisions with TypeSafe Jev 1.14 (no other model)")
+    j.add_argument("--limit", type=int)
+    j.add_argument("--redo", action="store_true", help="decide again accounts Jev already decided")
+    j.add_argument("--dry-run", action="store_true", help="show the first request and cost, call nothing")
+    j.add_argument("--purge-legacy", action="store_true",
+                   help="remove AI verdicts made before the Jev 1.14 policy (Jev Router)")
+    j.set_defaults(func=cmd_jev)
 
     s = sub.add_parser("stats", help="counts by status and spend this month")
     s.set_defaults(func=cmd_stats)
