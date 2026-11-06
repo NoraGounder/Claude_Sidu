@@ -240,10 +240,11 @@ def find_emails(cfg: ClientConfig, conn, fe: FullEnrichClient | None = None, lim
             else:
                 new_status, key, email = "no_email", "not_found", None
             totals[key] += 1
-            conn.execute("UPDATE contacts SET status=?, email=?, email_status=?, email_source=?, updated_at=?"
-                         " WHERE id=? AND client=?",
+            ts = db.now_iso()
+            conn.execute("UPDATE contacts SET status=?, email=?, email_status=?, email_source=?, updated_at=?,"
+                         " verified_at=? WHERE id=? AND client=?",
                          (new_status, email, status or None, "FullEnrich" if email else None,
-                          db.now_iso(), cid, cfg.slug))
+                          ts, ts if email else None, cid, cfg.slug))
         conn.commit()
         db.finish_run(conn, run_id, "succeeded", len(batch), round(credits * credit_usd, 4), enrichment_id)
     totals["cost_usd"] = round(totals["credits"] * credit_usd, 4)

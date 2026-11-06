@@ -1,0 +1,27 @@
+# Layer 4: send gate. Deterministic rules (engine/gtm/layers/l4_gate.py). A contact is "ready" only
+# when every rule passes; "held" means it may pass later; "rejected_l4" means never send.
+
+accepted_email_status: [DELIVERABLE, HIGH_PROBABILITY]   # FullEnrich verification results
+
+catch_all:                     # the mail server accepts any address, so delivery can't be confirmed
+  allowed_tiers: [tier_1, tier_2]
+  max_share_of_ready: 0.15     # at most 15% of ready contacts, to protect sender reputation
+
+freshness_days: 45             # older verifications are re-checked with MillionVerifier before sending
+
+contact_countries: [NL, BE]    # contact's own location, when known
+
+role_prefixes: [info, sales, contact, office, admin, hello, support, finance, administratie, facturen,
+                factuur, inkoop, verkoop, hr, jobs, vacatures, receptie, service, noreply, no-reply,
+                planning, logistiek, orders, order, mail, team]
+
+free_mail_domains: [gmail.com, googlemail.com, hotmail.com, hotmail.nl, outlook.com, outlook.nl, live.com,
+                    live.nl, msn.com, yahoo.com, icloud.com, me.com, ziggo.nl, kpnmail.nl, planet.nl,
+                    home.nl, xs4all.nl, telenet.be, skynet.be, proximus.be]
+
+require_sender_consent: true   # client.yaml sender.consent_to_send_in_name must be "granted"
+
+# GDPR Art. 14: say where we got the data and how to opt out. Added to every first email in Layer 5.
+gdpr_notice:
+  nl: "Uw zakelijke contactgegevens vond ik via LinkedIn en FullEnrich. Liever geen berichten meer? Antwoord dan 'stop'."
+  en: "I found your business contact details via LinkedIn and FullEnrich. Prefer not to hear from me? Just reply 'stop'."

@@ -161,6 +161,8 @@ CREATE TABLE IF NOT EXISTS runs (
 MIGRATIONS = [
     ("l2_scores", "home_title", "TEXT"),
     ("l2_scores", "home_excerpt", "TEXT"),
+    ("contacts", "verified_at", "TEXT"),
+    ("contacts", "gate_checked_at", "TEXT"),
 ]
 
 

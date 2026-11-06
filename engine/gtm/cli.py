@@ -168,6 +168,27 @@ def cmd_contacts(args) -> int:
     return 0
 
 
+def cmd_gate(args) -> int:
+    """Layer 4: send gate (deterministic)."""
+    from gtm.layers import l4_gate
+    from gtm.sources.millionverifier import MillionVerifierError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    try:
+        res = l4_gate.run(cfg, conn, recheck=args.recheck)
+    except MillionVerifierError as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    counts = ", ".join(f"{k} {v}" for k, v in sorted(res.counts.items())) or "no contacts with an email"
+    reasons = ", ".join(f"{k} {v}" for k, v in sorted(res.reasons.items())) or "none"
+    print(f"Layer 4 gate: {counts}. Reasons: {reasons}.")
+    return 0
+
+
 def cmd_stats(args) -> int:
     cfg = load_client(args.client)
     conn = db.connect()
@@ -250,6 +271,10 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--skip-emails", action="store_true", help="people search and selection only")
     c.add_argument("--dry-run", action="store_true")
     c.set_defaults(func=cmd_contacts)
+
+    g = sub.add_parser("gate", help="Layer 4: send gate (suppression, email quality, consent, GDPR)")
+    g.add_argument("--recheck", action="store_true", help="re-check stale emails with MillionVerifier first")
+    g.set_defaults(func=cmd_gate)
 
     s = sub.add_parser("stats", help="counts by status and spend this month")
     s.set_defaults(func=cmd_stats)

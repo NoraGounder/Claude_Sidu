@@ -22,6 +22,8 @@ unit_price_usd:
   "fullenrich:credit": 0.055
   "fullenrich:person_returned": 0.01375
   "fullenrich:work_email": 0.055
+  # MillionVerifier: about $37 per 10,000 checks (one-off credits). Used only to re-check stale emails.
+  "millionverifier:check": 0.004
 
 sending:
   max_emails_per_day: 120
