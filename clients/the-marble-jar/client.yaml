@@ -16,7 +16,8 @@ language:
 sender:
   mode: founder                  # founder | agency_rep
   details: private/sender.yaml   # name, title, signature, booking link
-  consent_to_send_in_name: pending   # pending | granted. Layer 6 refuses to send until granted.
+  consent_to_send_in_name: granted   # written consent held by Quailworks, confirmed 2026-11-06
+  consent_scope: send in the founder's name and on his behalf
 
 handoff:
   channel: email + calendar invite   # client never logs into our tools
@@ -27,6 +28,5 @@ approvals_pending:
   - Lead offer (Automation Sprint) and the 5-day prototype promise
   - Email templates and the reply guide
   - Which client logos and results we may name
-  - Consent to send in the founder's name
   - Data processing agreement between Quailworks and The Marble Jar
   - Exclusion list (current clients, open deals, partners, competitors)

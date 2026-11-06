@@ -1,0 +1,29 @@
+# Layer 6: Smartlead sending settings (engine/gtm/layers/l6_send.py).
+# Mailbox limits come from limits.yaml (sending: max_per_mailbox_per_day, max_emails_per_day).
+
+campaign_prefix: "TMJ"
+
+# One campaign per sending region, so emails arrive in the recipient's working hours.
+regions:
+  nl:    {countries: [NL],     timezone: Europe/Amsterdam}
+  uk_ie: {countries: [GB, IE], timezone: Europe/London}
+  us:    {countries: [US],     timezone: America/New_York}
+
+schedule:
+  days_of_the_week: [2, 3, 4]      # Tuesday-Thursday
+  start_hour: "09:00"
+  end_hour: "16:30"
+  min_time_btw_emails: 8           # minutes between sends per mailbox
+
+settings:
+  track_open: false                # pixels hurt deliverability and are unreliable
+  track_click: false
+  stop_on_reply: true
+  stop_on_auto_reply: false
+  send_as_plain_text: true
+
+# A second contact at the same company waits until the first one's sequence is over.
+stagger_days_same_account: 21
+
+# Mailboxes must have warm-up on before they are linked to a campaign.
+require_warmup: true

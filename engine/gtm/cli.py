@@ -230,6 +230,73 @@ def cmd_import_review(args) -> int:
     return 0 if not c["errors"] else 6
 
 
+def cmd_push(args) -> int:
+    """Layer 6: upload eligible leads to Smartlead. Campaigns are not started."""
+    from gtm.layers import l6_send
+    from gtm.sources.smartlead import SmartleadError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    plan = l6_send.plan_push(cfg, conn)
+    eligible = sum(len(v) for v in plan.eligible.values())
+    regions = ", ".join(f"{k} {len(v)}" for k, v in plan.eligible.items()) or "none"
+    held = ", ".join(f"{k} {v}" for k, v in sorted(plan.held.items())) or "none"
+    print(f"Layer 6 plan: {eligible} leads eligible ({regions}). Held: {held}.")
+    if not args.live:
+        print("Dry run: nothing uploaded. Add --live to upload (campaigns stay paused until `start`).")
+        return 0
+    try:
+        t = l6_send.push(cfg, conn, plan=plan)
+    except (SmartleadError, RuntimeError) as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    print(f"Uploaded {t['pushed']} leads to campaigns {t['campaigns']}. Nothing is sending yet.")
+    for p in t.get("mailbox_problems", []):
+        print(f"  mailbox not linked: {p}")
+    print("Check each campaign in Smartlead (sequence, settings, mailboxes), then start it with:"
+          " python -m gtm --client <client> start --region <region> --i-confirm")
+    return 0
+
+
+def cmd_start(args) -> int:
+    """Layer 6: the only command that makes Smartlead send."""
+    from gtm.layers import l6_send
+    from gtm.sources.smartlead import SmartleadError
+
+    if not args.i_confirm:
+        print("Refused: starting a campaign sends real emails. Re-run with --i-confirm after approval.")
+        return 7
+    cfg = load_client(args.client)
+    try:
+        name = l6_send.start(cfg, db.connect(), args.region)
+    except (SmartleadError, RuntimeError) as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    print(f"Campaign '{name}' is ACTIVE. Smartlead now sends on its schedule.")
+    return 0
+
+
+def cmd_sync(args) -> int:
+    """Layer 6: pull replies, bounces and unsubscribes; Jev 1.14 classifies replies."""
+    from gtm.layers import l6_send
+    from gtm.sources.jev import JevPolicyError, JevUnavailable
+    from gtm.sources.smartlead import SmartleadError
+
+    cfg = load_client(args.client)
+    try:
+        t = l6_send.sync(cfg, db.connect())
+    except (JevUnavailable, JevPolicyError) as exc:
+        print(f"Stopped by Jev: {exc}. No other model was used.")
+        return 4
+    except SmartleadError as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    cats = ", ".join(f"{k} {v}" for k, v in sorted(t["categories"].items())) or "none"
+    print(f"Sync: {t['replies']} new replies ({cats}); {t['needs_human']} need a human reply now; "
+          f"{t['bounced']} bounced and {t['unsubscribed']} unsubscribed (all suppressed).")
+    return 0
+
+
 def cmd_stats(args) -> int:
     cfg = load_client(args.client)
     conn = db.connect()
@@ -329,6 +396,18 @@ def build_parser() -> argparse.ArgumentParser:
     ir = sub.add_parser("import-review", help="Layer 5: apply approve/reject decisions and edits from the CSV")
     ir.add_argument("--file", required=True)
     ir.set_defaults(func=cmd_import_review)
+
+    pu = sub.add_parser("push", help="Layer 6: upload eligible leads to Smartlead (dry run unless --live)")
+    pu.add_argument("--live", action="store_true")
+    pu.set_defaults(func=cmd_push)
+
+    st = sub.add_parser("start", help="Layer 6: start a Smartlead campaign (sends real emails)")
+    st.add_argument("--region", required=True, help="region from sending.yaml, e.g. nl, uk_ie, us")
+    st.add_argument("--i-confirm", action="store_true", help="required: confirms sending was approved")
+    st.set_defaults(func=cmd_start)
+
+    sy = sub.add_parser("sync", help="Layer 6: pull replies, bounces, unsubscribes; classify replies")
+    sy.set_defaults(func=cmd_sync)
 
     s = sub.add_parser("stats", help="counts by status and spend this month")
     s.set_defaults(func=cmd_stats)

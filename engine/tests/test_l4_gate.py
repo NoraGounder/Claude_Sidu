@@ -45,7 +45,15 @@ def _statuses(conn):
     return {r["first_name"]: (r["status"], r["status_reason"]) for r in conn.execute("SELECT * FROM contacts")}
 
 
+def _consent(client_dir, value):
+    path = client_dir / "client.yaml"
+    data = yaml.safe_load(path.read_text())
+    data["sender"]["consent_to_send_in_name"] = value
+    path.write_text(yaml.safe_dump(data))
+
+
 def test_gate_rules(env):
+    _consent(env, "pending")          # this test covers the consent-pending hold
     cfg = load_client(CLIENT)
     conn = db.connect()
     a = _account(conn, "Groothandel BV", "groothandel.example", "tier_1")
@@ -120,7 +128,7 @@ def test_recheck_uses_millionverifier_for_stale_only(env):
     l4_gate.run(cfg, conn, recheck=True, mv=mv, now=NOW)
     assert sorted(mv.checked) == ["dead@groothandel.example", "old@groothandel.example"]
     s = _statuses(conn)
-    assert s["Old"] == ("held", "sender_consent_pending")       # now fresh and valid
+    assert s["Old"] == ("ready", None)       # re-checked: fresh and valid (consent is granted in client.yaml)
     assert s["Dead"] == ("rejected_l4", "email_status:INVALID")
 
 

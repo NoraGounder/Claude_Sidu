@@ -42,7 +42,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 | 3 | Find decision-makers (FullEnrich people search), rank them with Jev 1.14 (titles only), find work emails for the chosen ones (max 2 per Tier 1–2 account, 1 for Tier 3) | FullEnrich, TypeSafe Jev 1.14 | `gtm/layers/l3_contacts.py` | built |
 | 4 | Send gate: suppression, role/free-mail addresses, domain match, contact country, email status, catch-all cap, freshness, sender consent, GDPR source | Python rules (`gate.yaml`); MillionVerifier only to re-check stale emails | `gtm/layers/l4_gate.py` | built |
 | 5 | Drafts from human-written templates and crawled facts only; Jev 1.14 picks the angle and fact-checks the opening; Quailworks reviews in Google Sheets | Python templates, TypeSafe Jev 1.14, CSV round-trip | `gtm/layers/l5_copy.py` | built |
-| 6 | Sending and reply handling | Smartlead + SmartSenders mailboxes | — | planned |
+| 6 | Upload approved, gate-ready leads (one campaign per region, checked mailboxes, one contact per company); start only with `--i-confirm` after approval; sync replies, bounces and unsubscribes (Jev 1.14 classifies masked replies) | Smartlead + SmartSenders mailboxes, TypeSafe Jev 1.14 | `gtm/layers/l6_send.py` | built (run locally: key goes in the URL) |
 | 7 | Handoff, CRM and learning | HubSpot (free), meeting brief to client | — | planned |
 
 ## How to run
@@ -61,6 +61,9 @@ python -m gtm --client the-marble-jar contacts --dry-run       # Layer 3 plan an
 python -m gtm --client the-marble-jar contacts --limit 10      # Layer 3 small live test
 python -m gtm --client the-marble-jar gate                     # Layer 4 send gate (free)
 python -m gtm --client the-marble-jar draft && python -m gtm --client the-marble-jar export-drafts   # Layer 5
+python -m gtm --client the-marble-jar push                     # Layer 6 dry run; --live uploads (paused)
+python -m gtm --client the-marble-jar start --region nl --i-confirm   # sends: only after the user approves
+python -m gtm --client the-marble-jar sync                     # replies, bounces, unsubscribes
 pytest -q
 ```
 

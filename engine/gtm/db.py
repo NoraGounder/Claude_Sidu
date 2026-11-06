@@ -152,6 +152,44 @@ CREATE TABLE IF NOT EXISTS drafts (
     updated_at         TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS campaigns (
+    id             INTEGER PRIMARY KEY,
+    client         TEXT NOT NULL,
+    region         TEXT NOT NULL,
+    smartlead_id   INTEGER NOT NULL,
+    name           TEXT NOT NULL,
+    timezone       TEXT NOT NULL,
+    status         TEXT NOT NULL,          -- DRAFTED | ACTIVE | PAUSED | STOPPED
+    created_at     TEXT NOT NULL,
+    UNIQUE(client, region)
+);
+
+CREATE TABLE IF NOT EXISTS outbound (
+    contact_id        INTEGER PRIMARY KEY REFERENCES contacts(id),
+    client            TEXT NOT NULL,
+    account_id        INTEGER NOT NULL,
+    draft_id          INTEGER NOT NULL,
+    campaign_id       INTEGER NOT NULL REFERENCES campaigns(id),
+    smartlead_lead_id INTEGER,
+    status            TEXT NOT NULL,       -- pushed | replied | bounced | unsubscribed | completed
+    pushed_at         TEXT NOT NULL,
+    last_sync_at      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS replies (
+    id            INTEGER PRIMARY KEY,
+    client        TEXT NOT NULL,
+    contact_id    INTEGER NOT NULL REFERENCES contacts(id),
+    received_at   TEXT,
+    text          TEXT,                    -- local only (data/, gitignored)
+    category      TEXT,
+    category_p    REAL,
+    model_id      TEXT,
+    handled       INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL,
+    UNIQUE(client, contact_id, received_at)
+);
+
 CREATE TABLE IF NOT EXISTS segment_progress (
     client     TEXT NOT NULL,
     segment    TEXT NOT NULL,
