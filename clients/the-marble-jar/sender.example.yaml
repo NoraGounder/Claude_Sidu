@@ -1,0 +1,6 @@
+# Copy to private/sender.yaml (gitignored) and fill in. Layer 5 drafts are marked "preview" until
+# the real file exists, and Layer 6 refuses to send until client.yaml records the sender's consent.
+first_name: "<sender first name>"
+full_name: "<sender full name>"
+title: "Founder, The Marble Jar"
+booking_link: "<calendar booking link>"

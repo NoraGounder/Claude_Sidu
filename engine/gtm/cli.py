@@ -189,6 +189,47 @@ def cmd_gate(args) -> int:
     return 0
 
 
+def cmd_draft(args) -> int:
+    """Layer 5: fact-based drafts from approved templates; Jev 1.14 picks the angle and fact-checks."""
+    from gtm.layers import l5_copy
+    from gtm.sources.jev import JevPolicyError, JevUnavailable
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    try:
+        t = l5_copy.draft(cfg, conn, redo=args.redo, limit=args.limit)
+    except (JevUnavailable, JevPolicyError) as exc:
+        print(f"Stopped by Jev: {exc}. No other model was used; run again to continue.")
+        return 4
+    hooks = ", ".join(f"{k} {v}" for k, v in sorted(t["hooks"].items())) or "none"
+    print(f"Drafted {t['drafted']} contacts ({t['preview']} preview only, {t['needs_review']} flagged by "
+          f"Jev's fact check). Openings used: {hooks}.")
+    if t["preview"]:
+        print("Preview only: add clients/<client>/private/sender.yaml (see sender.example.yaml) and re-draft.")
+    return 0
+
+
+def cmd_export_drafts(args) -> int:
+    from gtm.layers import l5_copy
+
+    cfg = load_client(args.client)
+    path, n = l5_copy.export_review(cfg, db.connect(), args.out)
+    print(f"Wrote {n} drafts to {path}. Import it into Google Sheets, set decision to approve or reject, "
+          f"then download as CSV and run import-review. Delete the sheet afterwards (personal data).")
+    return 0
+
+
+def cmd_import_review(args) -> int:
+    from gtm.layers import l5_copy
+
+    cfg = load_client(args.client)
+    c = l5_copy.import_review(cfg, db.connect(), args.file)
+    print(f"Approved {c['approved']}, rejected {c['rejected']}, unchanged {c['unchanged']}.")
+    for err in c["errors"]:
+        print(f"  not approved: {err}")
+    return 0 if not c["errors"] else 6
+
+
 def cmd_stats(args) -> int:
     cfg = load_client(args.client)
     conn = db.connect()
@@ -275,6 +316,19 @@ def build_parser() -> argparse.ArgumentParser:
     g = sub.add_parser("gate", help="Layer 4: send gate (suppression, email quality, consent, GDPR)")
     g.add_argument("--recheck", action="store_true", help="re-check stale emails with MillionVerifier first")
     g.set_defaults(func=cmd_gate)
+
+    dr = sub.add_parser("draft", help="Layer 5: write fact-based email drafts (templates + Jev 1.14 checks)")
+    dr.add_argument("--limit", type=int)
+    dr.add_argument("--redo", action="store_true", help="re-draft contacts that already have a draft")
+    dr.set_defaults(func=cmd_draft)
+
+    ex = sub.add_parser("export-drafts", help="Layer 5: CSV of drafts for review in Google Sheets")
+    ex.add_argument("--out")
+    ex.set_defaults(func=cmd_export_drafts)
+
+    ir = sub.add_parser("import-review", help="Layer 5: apply approve/reject decisions and edits from the CSV")
+    ir.add_argument("--file", required=True)
+    ir.set_defaults(func=cmd_import_review)
 
     s = sub.add_parser("stats", help="counts by status and spend this month")
     s.set_defaults(func=cmd_stats)

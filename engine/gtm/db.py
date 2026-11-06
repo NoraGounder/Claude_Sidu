@@ -132,6 +132,26 @@ CREATE TABLE IF NOT EXISTS l3_progress (
     credits      REAL
 );
 
+CREATE TABLE IF NOT EXISTS drafts (
+    id                 INTEGER PRIMARY KEY,
+    client             TEXT NOT NULL,
+    contact_id         INTEGER NOT NULL UNIQUE REFERENCES contacts(id),
+    language           TEXT NOT NULL,
+    hook               TEXT NOT NULL,
+    process            TEXT NOT NULL,
+    subject            TEXT NOT NULL,
+    steps_json         TEXT NOT NULL,      -- rendered emails, one per step, with their send day
+    facts_json         TEXT NOT NULL,      -- every fact used, with its source URL
+    jev_angle_p        REAL,
+    qa_unsupported_p   REAL,
+    status             TEXT NOT NULL,      -- preview | draft | needs_review | approved | rejected
+    edited             INTEGER NOT NULL DEFAULT 0,
+    review_note        TEXT,
+    reviewed_at        TEXT,
+    created_at         TEXT NOT NULL,
+    updated_at         TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS segment_progress (
     client     TEXT NOT NULL,
     segment    TEXT NOT NULL,

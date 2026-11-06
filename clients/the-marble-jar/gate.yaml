@@ -23,5 +23,5 @@ require_sender_consent: true   # client.yaml sender.consent_to_send_in_name must
 
 # GDPR Art. 14: say where we got the data and how to opt out. Added to every first email in Layer 5.
 gdpr_notice:
-  nl: "Uw zakelijke contactgegevens vond ik via LinkedIn en FullEnrich. Liever geen berichten meer? Antwoord dan 'stop'."
+  nl: "Je zakelijke contactgegevens vond ik via LinkedIn en FullEnrich. Liever geen berichten meer? Antwoord dan 'stop'."
   en: "I found your business contact details via LinkedIn and FullEnrich. Prefer not to hear from me? Just reply 'stop'."

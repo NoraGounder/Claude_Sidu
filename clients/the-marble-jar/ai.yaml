@@ -20,5 +20,6 @@ fallback: none
 thresholds:
   not_a_buyer: 0.80      # drop the account
   admin_role: 0.70       # count a job title as a manual-admin vacancy
+  unsupported_claim: 0.50   # Layer 5: flag a draft when an unsupported claim is more likely than not
 max_titles_per_request: 15
 workers: 4               # parallel requests
