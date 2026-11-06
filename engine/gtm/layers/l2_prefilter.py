@@ -208,7 +208,11 @@ def run(cfg: ClientConfig, conn, limit: int | None = None, rescore: bool = False
     run_id = db.start_run(conn, cfg.slug, "L2", "crawl", f"{len(accounts)} accounts", 0.0, {"limit": limit})
 
     def work(acc):
-        site = crawl_site(fetcher_factory(), acc["website"]) if acc.get("website") else None
+        try:
+            site = crawl_site(fetcher_factory(), acc["website"]) if acc.get("website") else None
+        except Exception as exc:  # noqa: BLE001 - score the account without a site, flag it
+            from gtm.crawl import Page
+            site = SiteCrawl(home=Page(url=acc["website"], status=0, error=f"crawl_error:{type(exc).__name__}"))
         return acc, site
 
     summary = {"accounts": len(accounts), "tier_1": 0, "tier_2": 0, "tier_3": 0, "rejected_l2": 0,

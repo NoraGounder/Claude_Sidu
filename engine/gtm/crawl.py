@@ -128,8 +128,9 @@ class Fetcher:
                 page = parse_html(resp.url, html)
                 if len(page.text) < 300:
                     page = self._render(resp.url) or page
-        except requests.RequestException as exc:
-            # Network errors are not cached, so a later run retries them.
+        except Exception as exc:   # noqa: BLE001 - one bad site must never stop a crawl
+            # Includes errors raised while streaming the body (urllib3 read timeouts, broken
+            # connections) and parser errors. Not cached, so a later run retries them.
             return Page(url=url, status=0, error=type(exc).__name__)
         cache.write_text(json.dumps(page.__dict__, ensure_ascii=False), encoding="utf-8")
         return page

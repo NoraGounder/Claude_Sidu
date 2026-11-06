@@ -26,7 +26,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 |---|---|---|---|---|
 | 0 | Offer, ICP, qualification rules, budgets | config files | `clients/<client>/` | built |
 | 1 | Discover target accounts | Harvest API (Apify) | `gtm/layers/l1_discover.py` | built |
-| 2 | Cheap pre-filter: crawl site and careers pages, rules, AI review of unclear cases, score and tier | requests + BeautifulSoup (Crawl4AI fallback for JS sites), Python, Claude or Jev | `gtm/layers/l2_prefilter.py` | built |
+| 2 | Cheap pre-filter: crawl site and careers pages, rules, AI review of unclear cases, score and tier | requests + BeautifulSoup (Crawl4AI fallback for JS sites), Python, Jev Router via OpenRouter (Claude as fallback) | `gtm/layers/l2_prefilter.py`, `l2_ai_review.py` | built |
 | 3 | Find decision-makers and work emails (max 2 per account, stop on first hit) | Harvest API, LeadMagic, FullEnrich (Tier 1–2 misses only) | — | planned |
 | 4 | Quality and permission gates | MillionVerifier, suppression, GDPR rules | — | planned |
 | 5 | Personalisation and QA | Claude, Google Sheets review by Quailworks | — | planned |
@@ -43,7 +43,7 @@ python -m gtm --client the-marble-jar stats
 python -m gtm --client the-marble-jar export --status qualified_l1
 python -m gtm --client the-marble-jar prefilter --limit 20     # Layer 2 trial (free)
 python -m gtm --client the-marble-jar tiers --tier tier_1 --verbose
-python -m gtm --client the-marble-jar review-queue && ... apply-review --file data/the-marble-jar-reviews.jsonl
+python -m gtm --client the-marble-jar ai-review --dry-run      # AI review via Jev Router (OpenRouter)
 pytest -q
 ```
 

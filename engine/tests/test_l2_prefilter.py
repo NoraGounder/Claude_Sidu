@@ -183,6 +183,23 @@ def test_generic_and_non_job_links_are_not_titles():
     assert site.job_titles == ["Administratief medewerker", "Planner binnendienst"]
 
 
+def test_one_broken_site_does_not_stop_the_run(env):
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    _account(conn, "Kapotte Site BV", "https://kapot.example", ["logistics_nl"])
+    _account(conn, "Voorbeeld Logistiek", "https://voorbeeld-logistiek.example", ["logistics_nl"])
+    conn.commit()
+
+    class Exploding(FakeFetcher):
+        def get(self, url):
+            if "kapot" in url:
+                raise ValueError("broken response")
+            return super().get(url)
+
+    summary = l2_prefilter.run(cfg, conn, workers=2, fetcher_factory=lambda: Exploding(SITE_A))
+    assert summary["accounts"] == 2 and summary["tier_1"] == 1 and summary["unreachable"] == 1
+
+
 def test_excluded_names_are_dropped_before_crawling(env):
     cfg = load_client(CLIENT)
     conn = db.connect()

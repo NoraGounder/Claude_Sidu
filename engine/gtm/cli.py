@@ -114,6 +114,32 @@ def cmd_apply_review(args) -> int:
     return 0
 
 
+def cmd_ai_review(args) -> int:
+    from gtm.layers import l2_ai_review
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    rp = l2_ai_review.plan(cfg, conn, include_all=args.all, batch_size=args.batch, limit=args.limit,
+                           model=args.model)
+    print(f"AI review with {rp.model}: {len(rp.items)} accounts in {len(rp.batches)} batches, "
+          f"estimated ${rp.est_cost:.2f}")
+    if args.dry_run:
+        if rp.batches:
+            print("First prompt:\n" + l2_ai_review._prompt(rp.batches[0])[:2000])
+        print("Dry run: nothing was called or spent.")
+        return 0
+    if not rp.batches:
+        return 0
+    try:
+        t = l2_ai_review.run(cfg, conn, rp)
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    print(f"Reviewed {t['reviewed']} accounts in {t['batches']} batches: {t['changed_tier']} changed tier, "
+          f"{t['dropped']} dropped as not a buyer. Cost ${t['cost_usd']:.4f}. Models used: {', '.join(t['models'])}")
+    return 0
+
+
 def cmd_stats(args) -> int:
     cfg = load_client(args.client)
     conn = db.connect()
@@ -185,6 +211,14 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--out")
     r.add_argument("--all", action="store_true", help="every scored account, not only flagged ones")
     r.set_defaults(func=cmd_review_queue)
+
+    ai = sub.add_parser("ai-review", help="Layer 2 AI review through OpenRouter (default: Jev Router)")
+    ai.add_argument("--all", action="store_true", help="screen every scored account, not only flagged ones")
+    ai.add_argument("--batch", type=int, default=20, help="companies per request")
+    ai.add_argument("--limit", type=int)
+    ai.add_argument("--model", default="typesafe/jev-router")
+    ai.add_argument("--dry-run", action="store_true")
+    ai.set_defaults(func=cmd_ai_review)
 
     ar = sub.add_parser("apply-review", help="apply AI review verdicts from a JSONL file")
     ar.add_argument("--file", required=True)

@@ -14,6 +14,12 @@ general internet access; otherwise run it on a laptop.
    `engine/gtm/crawl.py` if not, and re-run with `--rescore` (pages are cached, so this is fast).
 2. Full run: `python -m gtm --client <client> prefilter` (or `--rescore` to redo everything from the cache).
 3. AI review. Rules cannot read every job title, and they cannot tell an association from a buyer.
+   Default: run it through OpenRouter with TypeSafe's Jev Router (needs OPENROUTER_API_KEY):
+   `python -m gtm --client <client> ai-review --dry-run` then `ai-review` (add `--all` to also screen
+   every account for non-buyers). Answers are strict JSON, checked against the crawled titles, and
+   each call's real cost is logged against the `openrouter` cap. Jev Router picks the model per request,
+   so cost varies; check `stats` after the first run and tune the estimate in limits.yaml.
+   Manual fallback (Claude Code reviews by hand):
    - Export: `python -m gtm --client <client> review-queue` (add `--all` to also screen every
      account for non-buyers).
    - Read `data/<client>-review-queue.jsonl`. For each account write one JSON line to
@@ -26,7 +32,6 @@ general internet access; otherwise run it on a laptop.
        public bodies and port authorities, software or IT companies, consultancies and staffing agencies.
        Give a short reason.
    - Apply: `python -m gtm --client <client> apply-review --file data/<client>-reviews.jsonl --reviewer claude`
-   - Jev can do this step instead once TypeSafe early access is granted (`--reviewer jev`).
 4. Report: counts per tier, top Tier 1 accounts with their evidence (`tiers --tier tier_1 --verbose`),
    unreachable sites, and how many the review changed.
 
