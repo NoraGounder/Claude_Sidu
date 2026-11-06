@@ -1,0 +1,120 @@
+# Layer 0: ideal customer profile. Layer 1 turns segments into searches; Layer 3 uses personas.
+# Industry IDs are LinkedIn industry codes (v2), checked against
+# github.com/HarvestAPI/linkedin-industry-codes-v2 on 2026-11-06.
+
+version: 1
+
+company:
+  employees_min: 50
+  employees_max: 500
+  # Values passed to the Harvest company-size filter. Confirm the exact spelling on the
+  # first live run (the engine stores the raw response, so a mismatch is easy to spot).
+  linkedin_company_sizes: ["51-200", "201-500"]
+
+industry_groups:
+  logistics:
+    label: Transport, logistics and warehousing
+    ids: [116, 87, 92, 93]   # Transportation/Logistics/Supply Chain; Freight; Truck; Warehousing
+  wholesale:
+    label: Wholesale and distribution
+    ids: [133, 134, 49, 1231, 1178, 1187, 1171, 1166]   # Wholesale; Import/Export; Building materials; Food; Hardware/Plumbing/Heating; Machinery; Electrical; Metals
+  installation:
+    label: Installation and technical services
+    ids: [48, 435, 453, 51]  # Construction; Specialty trade contractors; Building equipment contractors; Civil engineering
+  manufacturing:
+    label: Manufacturing
+    ids: [25, 55, 135, 840, 23, 743, 146]   # Manufacturing; Machinery; Industrial machinery; Fabricated metal; Food & beverage; Plastics & rubber; Packaging
+  facilities:
+    label: Facilities services
+    ids: [122]
+
+# One search per segment. LinkedIn caps a search at 20 pages x 50 companies = 1,000,
+# so broad groups are split by country.
+segments:
+  - name: logistics_nl
+    enabled: true
+    industry_group: logistics
+    locations: [Netherlands]
+    max_items: 1000
+  - name: wholesale_nl
+    enabled: true
+    industry_group: wholesale
+    locations: [Netherlands]
+    max_items: 1000
+  - name: installation_nl
+    enabled: true
+    industry_group: installation
+    locations: [Netherlands]
+    max_items: 1000
+  - name: manufacturing_nl
+    enabled: true
+    industry_group: manufacturing
+    locations: [Netherlands]
+    max_items: 1000
+  - name: facilities_nl
+    enabled: false          # lower fit; switch on if the first four run dry
+    industry_group: facilities
+    locations: [Netherlands]
+    max_items: 500
+  # Phase 2. Start with Flanders: Dutch copy works there; Wallonia needs French copy.
+  - name: logistics_be
+    enabled: false
+    industry_group: logistics
+    locations: [Belgium]
+    max_items: 1000
+  - name: wholesale_be
+    enabled: false
+    industry_group: wholesale
+    locations: [Belgium]
+    max_items: 1000
+
+allowed_countries: [NL, BE]
+
+exclusions:
+  # Company names containing any of these are dropped in Layer 1 (case-insensitive).
+  name_keywords:
+    - uitzendbureau
+    - uitzend
+    - detachering
+    - recruitment
+    - staffing
+    - werving
+    - consultancy
+    - consulting
+    - software
+    - automatisering
+    - gemeente
+    - provincie
+    - rijkswaterstaat
+    - ministerie
+  domains: [themarblejar.io]
+  # Real do-not-contact list (current clients, open deals, partners): private/exclusions.csv
+
+# Layer 3: who we contact, in priority order. Max 2 per account.
+personas:
+  operations:
+    - COO
+    - Chief Operating Officer
+    - Operations Director
+    - Directeur Operations
+    - Operationeel Directeur
+    - Head of Operations
+    - Hoofd Operations
+    - Operations Manager
+    - Manager Operations
+    - Logistiek Manager
+    - Supply Chain Manager
+  finance:
+    - CFO
+    - Financieel Directeur
+    - Finance Director
+    - Finance Manager
+    - Manager Financiën
+    - Hoofd Financiële Administratie
+    - Manager Financiële Administratie
+  owner_led:          # use only for companies under about 150 employees
+    - Algemeen Directeur
+    - Managing Director
+    - Directeur-eigenaar
+    - CEO
+  exclude_titles: [Intern, Stagiair, Assistant, Assistent, Student, Trainee]

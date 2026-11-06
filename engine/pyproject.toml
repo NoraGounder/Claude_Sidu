@@ -1,0 +1,23 @@
+[project]
+name = "quailworks-gtm"
+version = "0.1.0"
+description = "Quailworks lead engine: layered outbound pipeline orchestrated by Claude Code"
+requires-python = ">=3.11"
+dependencies = [
+  "pyyaml>=6.0",
+  "pydantic>=2.6",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+crawl = ["crawl4ai>=0.7"]
+
+[project.scripts]
+gtm = "gtm.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["gtm*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

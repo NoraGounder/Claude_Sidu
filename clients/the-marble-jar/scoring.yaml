@@ -1,0 +1,41 @@
+# Layer 0 rules, applied in Layer 2. Two separate scores (0-100), then a tier.
+# Weights are a starting point. Calibrate on 10 accounts the founder calls perfect and 10 he
+# calls a poor fit before launch: perfect must land in Tier 1, poor fit below Tier 3.
+
+fit:
+  employees:
+    in_range: 30          # 50-500
+    sweet_spot: [80, 300]
+    sweet_spot_bonus: 10
+  industry_group:
+    logistics: 25
+    wholesale: 25
+    installation: 20
+    manufacturing: 20
+    facilities: 15
+  country:
+    NL: 15
+    BE: 10
+  website_reachable: 5
+  dutch_language_site: 5
+
+signals:
+  # Found on careers pages and in job ads during Layer 2.
+  admin_job_ad: 30            # administratief medewerker, crediteuren-/debiteurenadministratie, orderverwerking, data entry
+  multiple_admin_ads: 15      # two or more such roles open at once
+  manual_process_language: 20 # Excel, handmatig, papieren, dubbel invoeren, overtypen in an ad or on the site
+  erp_mention: 10             # Exact, AFAS, SAP Business One, Navision, Twinfield: tells us what to integrate with
+  new_ops_or_finance_leader: 15   # joined in the last 90 days (from Layer 3 people search)
+  headcount_growth: 10        # clear growth signs (several open roles, new site or warehouse)
+
+tiers:
+  tier_1: {fit_min: 60, signal_min: 50}
+  tier_2: {fit_min: 60, signal_min: 25}
+  tier_2_fit_only: {fit_min: 75}
+  tier_3: {fit_min: 50}
+  # Anything below tier_3 is dropped before we pay for contacts.
+
+enrichment_policy:
+  tier_1: {max_contacts: 2, fallback: fullenrich}
+  tier_2: {max_contacts: 2, fallback: fullenrich}
+  tier_3: {max_contacts: 1, fallback: none}

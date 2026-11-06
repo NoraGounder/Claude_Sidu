@@ -1,0 +1,21 @@
+# This repository is PUBLIC. Never commit prospect data, client-private files or keys.
+
+# Pipeline data (SQLite database, exports, crawl caches)
+data/
+
+# Client-private config (exclusion lists, contracts, real contact details)
+clients/*/private/
+
+# Secrets
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+build/
+dist/

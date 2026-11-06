@@ -1,0 +1,60 @@
+{
+  "_note": "Synthetic test data. Not real companies. Field names vary on purpose to test the normaliser.",
+  "items": [
+    {
+      "name": "Voorbeeld Logistiek BV",
+      "linkedinUrl": "https://www.linkedin.com/company/voorbeeld-logistiek",
+      "website": "https://www.voorbeeld-logistiek.example/",
+      "employeeCount": 180,
+      "industry": "Truck Transportation",
+      "headquarter": {"city": "Tilburg", "country": "NL"}
+    },
+    {
+      "name": "Voorbeeld Logistiek BV",
+      "linkedinUrl": "https://nl.linkedin.com/company/voorbeeld-logistiek/",
+      "website": "voorbeeld-logistiek.example",
+      "employeeCount": 180
+    },
+    {
+      "name": "FlexWerk Uitzendbureau",
+      "linkedinUrl": "https://www.linkedin.com/company/flexwerk-uitzend",
+      "website": "flexwerk.example",
+      "employeeCountRange": {"start": 201, "end": 500},
+      "location": "Utrecht, Netherlands"
+    },
+    {
+      "companyName": "Groot Distributie NV",
+      "url": "https://www.linkedin.com/company/groot-distributie",
+      "websiteUrl": "groot-distributie.example",
+      "staffCount": 2400,
+      "headquarters": {"country": "Netherlands"}
+    },
+    {
+      "name": "Bestaande Klant BV",
+      "linkedinUrl": "https://www.linkedin.com/company/bestaande-klant",
+      "website": "https://bestaande-klant.example",
+      "employeeCount": 120,
+      "headquarter": {"country": "NL"}
+    },
+    {
+      "name": "Vlaamse Groothandel",
+      "linkedinUrl": "https://www.linkedin.com/company/vlaamse-groothandel",
+      "website": "vlaamse-groothandel.example",
+      "employeeCount": "51-200 employees",
+      "location": "Antwerp, Flemish Region, Belgium",
+      "industries": [{"name": "Wholesale"}]
+    },
+    {
+      "name": "Deutsche Lager GmbH",
+      "linkedinUrl": "https://www.linkedin.com/company/deutsche-lager",
+      "website": "lager.example",
+      "employeeCount": 150,
+      "headquarter": {"country": "Germany"}
+    },
+    {
+      "name": "Zonder Site Installatie",
+      "linkedinUrl": "https://www.linkedin.com/company/zonder-site",
+      "employees": "201-500"
+    }
+  ]
+}

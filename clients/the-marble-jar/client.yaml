@@ -1,0 +1,30 @@
+# Layer 0: client identity and operating model.
+# Public repo: real names, contact details and contracts belong in ./private/ (gitignored).
+
+client: the-marble-jar
+display_name: The Marble Jar
+website: https://themarblejar.io
+offices: [Breda (NL), Kochi (IN)]
+
+operating_model: done_for_you   # Quailworks runs everything; the client only takes meetings
+
+language:
+  default: nl        # Dutch first for NL operations buyers
+  fallback: en
+
+sender:
+  mode: founder                  # founder | agency_rep
+  details: private/sender.yaml   # name, title, signature, booking link
+  consent_to_send_in_name: pending   # pending | granted. Layer 6 refuses to send until granted.
+
+handoff:
+  channel: email + calendar invite   # client never logs into our tools
+  outcome_capture: one-word reply (qualified / not a fit / follow up)
+
+approvals_pending:
+  - Lead offer (Automation Sprint) and the 5-day prototype promise
+  - Email templates and the reply guide
+  - Which client logos and results we may name
+  - Consent to send in the founder's name
+  - Data processing agreement between Quailworks and The Marble Jar
+  - Exclusion list (current clients, open deals, partners, competitors)
