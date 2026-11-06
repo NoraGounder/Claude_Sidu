@@ -88,6 +88,15 @@ exclusions:
     - provincie
     - rijkswaterstaat
     - ministerie
+    # Seen in the first live Layer 2 sample: associations, port authorities, training bodies
+    - vereniging
+    - association
+    - federatie
+    - stichting
+    - port of
+    - havenbedrijf
+    - training
+    - academy
   domains: [themarblejar.io]
   # Real do-not-contact list (current clients, open deals, partners): private/exclusions.csv
 

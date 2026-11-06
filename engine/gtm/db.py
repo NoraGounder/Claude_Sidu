@@ -45,6 +45,33 @@ CREATE TABLE IF NOT EXISTS suppression (
     PRIMARY KEY (client, kind, value)
 );
 
+CREATE TABLE IF NOT EXISTS l2_scores (
+    account_id      INTEGER PRIMARY KEY REFERENCES accounts(id),
+    fit             INTEGER NOT NULL,
+    signal          INTEGER NOT NULL,
+    tier            TEXT NOT NULL,
+    reachable       INTEGER NOT NULL,
+    dutch_site      INTEGER NOT NULL,
+    careers_url     TEXT,
+    job_link_count  INTEGER DEFAULT 0,
+    job_titles      TEXT DEFAULT '[]',
+    flags           TEXT DEFAULT '[]',
+    breakdown       TEXT DEFAULT '{}',
+    scored_at       TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS evidence (
+    id          INTEGER PRIMARY KEY,
+    account_id  INTEGER NOT NULL REFERENCES accounts(id),
+    layer       TEXT NOT NULL,
+    signal      TEXT NOT NULL,
+    label       TEXT NOT NULL,
+    url         TEXT NOT NULL,
+    quote       TEXT,
+    found_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_evidence_account ON evidence(account_id);
+
 CREATE TABLE IF NOT EXISTS segment_progress (
     client     TEXT NOT NULL,
     segment    TEXT NOT NULL,
@@ -71,15 +98,29 @@ CREATE TABLE IF NOT EXISTS runs (
 """
 
 
+MIGRATIONS = [
+    ("l2_scores", "home_title", "TEXT"),
+]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, column, ctype in MIGRATIONS:
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ctype}")
+    conn.commit()
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
     db_path = path or data_dir() / "engine.db"
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
 
 

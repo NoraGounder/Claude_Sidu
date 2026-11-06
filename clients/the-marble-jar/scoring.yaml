@@ -32,9 +32,10 @@ signals:
   headcount_growth: 10        # clear growth signs (several open roles, new site or warehouse)
 
 tiers:
+  # Maximum fit is 90, and a Dutch company in range with a working site scores 75-90 on fit
+  # alone. So Tier 1 and 2 need real signals; fit-only accounts are Tier 3 (cheapest handling).
   tier_1: {fit_min: 60, signal_min: 50}
   tier_2: {fit_min: 60, signal_min: 25}
-  tier_2_fit_only: {fit_min: 75}
   tier_3: {fit_min: 50}
   # Anything below tier_3 is dropped before we pay for contacts.
 

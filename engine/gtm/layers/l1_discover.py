@@ -137,13 +137,19 @@ def _headquarters(item: dict):
     return location
 
 
+def band_midpoint(start: int | None, end: int | None) -> float | None:
+    if not (start or end):
+        return None
+    return ((start or end) + (end or start)) / 2
+
+
 def size_ok(acc: dict, employees_min: int, employees_max: int) -> bool:
-    start, end = acc.get("range_start"), acc.get("range_end")
-    if start or end:
-        low, high = start or end, end or start
-        return high >= employees_min and low <= employees_max
-    count = acc.get("employee_count")
-    return count is None or employees_min <= count <= employees_max
+    """A size band is in range when its midpoint is: 51-200 and 201-500 pass, 11-50 and 501-1000
+    do not. Without a band, the plain count decides; with neither, the account passes."""
+    mid = band_midpoint(acc.get("range_start"), acc.get("range_end"))
+    if mid is None:
+        mid = acc.get("employee_count")
+    return mid is None or employees_min <= mid <= employees_max
 
 
 def hard_filter(cfg: ClientConfig, acc: dict, suppressed: dict[str, set[str]]) -> str | None:
