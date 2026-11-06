@@ -9,6 +9,15 @@ from urllib.parse import urlparse
 COUNTRY_CODES = {
     "netherlands": "NL", "nederland": "NL", "the netherlands": "NL", "nl": "NL",
     "belgium": "BE", "belgië": "BE", "belgie": "BE", "belgique": "BE", "be": "BE",
+    # Short-mode LinkedIn locations are "City, Province" with no country. Provinces that exist in
+    # only one country (Limburg is in both, so it is left out).
+    "noord-holland": "NL", "north holland": "NL", "zuid-holland": "NL", "south holland": "NL",
+    "noord-brabant": "NL", "north brabant": "NL", "gelderland": "NL", "overijssel": "NL",
+    "zeeland": "NL", "friesland": "NL", "fryslân": "NL", "groningen": "NL", "drenthe": "NL",
+    "flevoland": "NL", "utrecht": "NL",
+    "flemish region": "BE", "vlaanderen": "BE", "flanders": "BE", "antwerpen": "BE", "antwerp": "BE",
+    "oost-vlaanderen": "BE", "west-vlaanderen": "BE", "vlaams-brabant": "BE", "flemish brabant": "BE",
+    "brussels": "BE", "bruxelles": "BE", "wallonia": "BE", "wallonie": "BE", "hainaut": "BE",
     "germany": "DE", "deutschland": "DE", "de": "DE",
     "united kingdom": "GB", "uk": "GB", "gb": "GB",
     "france": "FR", "fr": "FR",
@@ -74,29 +83,28 @@ def country_code(value: Any) -> str | None:
     return text.upper() if len(text) == 2 else None
 
 
-def employee_count(value: Any) -> tuple[int | None, str | None]:
-    """Returns (best single number, raw range text). Accepts ints, '51-200', {'start': 51, 'end': 200}."""
-    if value is None:
+def size_range(value: Any) -> tuple[int | None, int | None]:
+    """Company's stated size band. Accepts {'start': 51, 'end': 200}, '51-200 employees', '10,001+'."""
+    if value is None or isinstance(value, bool):
         return None, None
-    if isinstance(value, bool):
-        return None, None
-    if isinstance(value, (int, float)):
-        return int(value), None
     if isinstance(value, dict):
         start, end = value.get("start"), value.get("end")
-        if start or end:
-            label = f"{start or ''}-{end or ''}"
-            if start and end:
-                return int((int(start) + int(end)) / 2), label
-            return int(start or end), label
+        return (int(start) if start else None), (int(end) if end else None)
+    if isinstance(value, (int, float)):
         return None, None
-    text = str(value).replace(".", "").replace(",", "")
-    numbers = [int(n) for n in re.findall(r"\d+", text)]
+    numbers = [int(n) for n in re.findall(r"\d+", str(value).replace(".", "").replace(",", ""))]
     if len(numbers) >= 2:
-        return int((numbers[0] + numbers[1]) / 2), str(value)
+        return numbers[0], numbers[1]
     if len(numbers) == 1:
-        return numbers[0], str(value)
-    return None, str(value)
+        return numbers[0], None
+    return None, None
+
+
+def member_count(value: Any) -> int | None:
+    """LinkedIn member count: a plain number, often lower than the real headcount."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return int(value)
 
 
 def has_keyword(name: str, keywords: list[str]) -> str | None:

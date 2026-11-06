@@ -45,6 +45,14 @@ CREATE TABLE IF NOT EXISTS suppression (
     PRIMARY KEY (client, kind, value)
 );
 
+CREATE TABLE IF NOT EXISTS segment_progress (
+    client     TEXT NOT NULL,
+    segment    TEXT NOT NULL,
+    next_page  INTEGER NOT NULL DEFAULT 1,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (client, segment)
+);
+
 CREATE TABLE IF NOT EXISTS runs (
     id           INTEGER PRIMARY KEY,
     client       TEXT NOT NULL,
@@ -118,6 +126,25 @@ def month_spend(conn, client: str, vendor: str) -> float:
         (client, vendor, month),
     ).fetchone()
     return float(row["spent"])
+
+
+# ---------- search progress (so monthly runs continue instead of re-buying page 1) ----------
+
+def next_page(conn, client: str, segment: str) -> int:
+    row = conn.execute(
+        "SELECT next_page FROM segment_progress WHERE client=? AND segment=?", (client, segment)
+    ).fetchone()
+    return int(row["next_page"]) if row else 1
+
+
+def set_next_page(conn, client: str, segment: str, page: int) -> None:
+    conn.execute(
+        "INSERT INTO segment_progress(client, segment, next_page, updated_at) VALUES (?,?,?,?)"
+        " ON CONFLICT(client, segment) DO UPDATE SET next_page=excluded.next_page,"
+        " updated_at=excluded.updated_at",
+        (client, segment, page, now_iso()),
+    )
+    conn.commit()
 
 
 # ---------- accounts ----------

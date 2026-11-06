@@ -18,6 +18,9 @@ fit:
     BE: 10
   website_reachable: 5
   dutch_language_site: 5
+  # Seen in the first live Layer 1 data (e.g. "Hilti Nederland BV"): local arms of large groups
+  # often buy software at group level, so they fit less well than independent companies.
+  subsidiary_of_large_group: -15
 
 signals:
   # Found on careers pages and in job ads during Layer 2.

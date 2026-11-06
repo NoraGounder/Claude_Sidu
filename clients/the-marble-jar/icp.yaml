@@ -29,44 +29,45 @@ industry_groups:
     ids: [122]
 
 # One search per segment. LinkedIn caps a search at 20 pages x 50 companies = 1,000,
-# so broad groups are split by country.
+# so broad groups are split by country. max_items is per monthly run: 4 x 300 full-mode
+# companies = $4.80, inside Apify's free $5 a month. The next run continues from the next page.
 segments:
   - name: logistics_nl
     enabled: true
     industry_group: logistics
     locations: [Netherlands]
-    max_items: 1000
+    max_items: 300
   - name: wholesale_nl
     enabled: true
     industry_group: wholesale
     locations: [Netherlands]
-    max_items: 1000
+    max_items: 300
   - name: installation_nl
     enabled: true
     industry_group: installation
     locations: [Netherlands]
-    max_items: 1000
+    max_items: 300
   - name: manufacturing_nl
     enabled: true
     industry_group: manufacturing
     locations: [Netherlands]
-    max_items: 1000
+    max_items: 300
   - name: facilities_nl
     enabled: false          # lower fit; switch on if the first four run dry
     industry_group: facilities
     locations: [Netherlands]
-    max_items: 500
+    max_items: 300
   # Phase 2. Start with Flanders: Dutch copy works there; Wallonia needs French copy.
   - name: logistics_be
     enabled: false
     industry_group: logistics
     locations: [Belgium]
-    max_items: 1000
+    max_items: 300
   - name: wholesale_be
     enabled: false
     industry_group: wholesale
     locations: [Belgium]
-    max_items: 1000
+    max_items: 300
 
 allowed_countries: [NL, BE]
 

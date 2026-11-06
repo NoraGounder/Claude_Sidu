@@ -14,17 +14,21 @@ from gtm.layers import l1_discover
 
 def cmd_discover(args) -> int:
     cfg = load_client(args.client)
-    plans = l1_discover.plan(cfg, args.segment, args.max_items, args.mode)
+    conn = db.connect()
+    plans = l1_discover.plan(cfg, args.segment, args.max_items, args.mode, conn=conn)
+    for name in l1_discover.exhausted_segments(cfg, conn):
+        print(f"Segment {name} has used all 20 LinkedIn search pages. Split it (for example by "
+              f"size band or region) in icp.yaml to find more companies.")
     if not plans:
-        print("No enabled segments. Enable one in icp.yaml or pass --segment.")
+        print("Nothing to run: no enabled segments with pages left.")
         return 1
 
-    conn = db.connect()
     total = sum(p.est_cost for p in plans)
     print(f"Layer 1 plan for {cfg.slug}: {len(plans)} search(es), up to "
           f"{sum(p.max_items for p in plans)} companies, estimated ${total:.2f}")
     for p in plans:
-        print(f"  - {p.segment.name}: up to {p.max_items} companies, est. ${p.est_cost:.2f}")
+        print(f"  - {p.segment.name}: pages {p.start_page}-{p.start_page + p.pages - 1}, "
+              f"up to {p.max_items} companies, est. ${p.est_cost:.2f}")
         if args.verbose or args.dry_run:
             print("    input:", json.dumps(p.actor_input, ensure_ascii=False))
 
@@ -98,8 +102,9 @@ def build_parser() -> argparse.ArgumentParser:
     d = sub.add_parser("discover", help="Layer 1: find target accounts")
     d.add_argument("--segment", action="append", help="segment name from icp.yaml (repeatable)")
     d.add_argument("--max-items", type=int, help="cap companies per segment (default: icp.yaml)")
-    d.add_argument("--mode", choices=["short", "full"], default="short",
-                   help="Harvest scraper mode; 'full' adds detail at a higher price")
+    d.add_argument("--mode", choices=["short", "full"], default="full",
+                   help="Harvest scraper mode. 'full' (default) includes website, size and HQ; "
+                        "'short' is half the price but lacks them")
     d.add_argument("--dry-run", action="store_true", help="show searches and cost, call nothing")
     d.add_argument("--fixture", help="read saved actor output from a JSON file instead of Apify")
     d.add_argument("--verbose", action="store_true")

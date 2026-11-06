@@ -55,6 +55,35 @@
       "name": "Zonder Site Installatie",
       "linkedinUrl": "https://www.linkedin.com/company/zonder-site",
       "employees": "201-500"
+    },
+    {
+      "_case": "full-mode shape: first office is abroad, HQ is NL; few LinkedIn members but stated size in range",
+      "name": "Regio Installatie Groep",
+      "linkedinUrl": "https://www.linkedin.com/company/regio-installatie/",
+      "website": "https://regio-installatie.example",
+      "employeeCount": 38,
+      "employeeCountRange": {"start": 51, "end": 200},
+      "locations": [
+        {"country": "GB", "city": "London", "headquarter": false},
+        {"country": "NL", "city": "Breda", "headquarter": true}
+      ]
+    },
+    {
+      "_case": "full-mode shape: has a Dutch office but HQ in the US",
+      "name": "Overzee Supply Inc",
+      "linkedinUrl": "https://www.linkedin.com/company/overzee-supply/",
+      "website": "overzee-supply.example",
+      "employeeCountRange": {"start": 51, "end": 200},
+      "locations": [
+        {"country": "NL", "city": "Leiden", "headquarter": false},
+        {"country": "US", "city": "Irvine", "headquarter": true}
+      ]
+    },
+    {
+      "_case": "short-mode shape: city and province only",
+      "name": "Korte Modus Transport",
+      "linkedinUrl": "https://www.linkedin.com/company/korte-modus/",
+      "location": {"linkedinText": "Zoetermeer, Zuid-Holland"}
     }
   ]
 }

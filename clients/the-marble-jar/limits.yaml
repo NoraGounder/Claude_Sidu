@@ -2,7 +2,7 @@
 # monthly budget. Raise a cap only when the user asks.
 
 month_budget_usd:
-  apify: 15
+  apify: 5          # = Apify Free plan's monthly credit, so Layer 1 costs nothing out of pocket
   leadmagic: 40
   fullenrich: 20
   millionverifier: 5
@@ -11,8 +11,8 @@ month_budget_usd:
 # Unit prices used for estimates before a run (USD per item). Apify's actual run cost
 # replaces the estimate in the ledger when the run reports it. Check vendor pages monthly.
 unit_price_usd:
-  "harvestapi/linkedin-company-search:short": 0.001    # $1.00 per 1,000 (Apify store, 2026-11-06)
-  "harvestapi/linkedin-company-search:full": 0.004     # unverified estimate
+  "harvestapi/linkedin-company-search:short": 0.002    # $2.00 per 1,000 on Free/Starter plan (2026-11-06)
+  "harvestapi/linkedin-company-search:full": 0.004     # $4.00 per 1,000 on Free/Starter plan (2026-11-06)
   "harvestapi/linkedin-profile-search:full": 0.0032    # $3.20 per 1,000 (Apify store, 2026-11-06)
 
 sending:
