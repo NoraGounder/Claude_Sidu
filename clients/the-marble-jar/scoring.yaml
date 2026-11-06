@@ -42,6 +42,7 @@ tiers:
   # Anything below tier_3 is dropped before we pay for contacts.
 
 enrichment_policy:
-  tier_1: {max_contacts: 2, fallback: fullenrich}
-  tier_2: {max_contacts: 2, fallback: fullenrich}
-  tier_3: {max_contacts: 1, fallback: none}
+  # Layer 3. FullEnrich is itself a waterfall over 20+ providers, so there is no second provider.
+  tier_1: {max_contacts: 2}
+  tier_2: {max_contacts: 2}
+  tier_3: {max_contacts: 1}

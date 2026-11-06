@@ -3,8 +3,8 @@
 
 month_budget_usd:
   apify: 5          # = Apify Free plan's monthly credit, so Layer 1 costs nothing out of pocket
-  leadmagic: 40
-  fullenrich: 20
+  leadmagic: 0       # not used: plans start at $99/month; FullEnrich covers people search and email
+  fullenrich: 55     # FullEnrich Pro, about 1,000 credits a month (people search + work email)
   millionverifier: 5
   openrouter: 5     # TypeSafe Jev 1.14 decisions only (see ai.yaml). Actual cost per request is logged.
 
@@ -17,6 +17,11 @@ unit_price_usd:
   # TypeSafe Jev 1.14: $0.042 per million input tokens, output free. A first test request
   # cost $0.000017; estimate $0.0001 per account request. Actual cost is logged in jev_calls.
   "openrouter:typesafe/jev-1.14:request": 0.0001
+  # FullEnrich Pro: $55 per 1,000 credits. People search 0.25 credit per person returned;
+  # work email 1 credit, only when found (docs.fullenrich.com, 2026-11-06).
+  "fullenrich:credit": 0.055
+  "fullenrich:person_returned": 0.01375
+  "fullenrich:work_email": 0.055
 
 sending:
   max_emails_per_day: 120

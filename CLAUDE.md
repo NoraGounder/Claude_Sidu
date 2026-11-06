@@ -34,7 +34,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 | 0 | Offer, ICP, qualification rules, budgets | config files | `clients/<client>/` | built |
 | 1 | Discover target accounts | Harvest API (Apify) | `gtm/layers/l1_discover.py` | built |
 | 2 | Cheap pre-filter: crawl site and careers pages, deterministic rules, Jev 1.14 decisions (non-buyers, ICP fit, admin job titles), score and tier | requests + BeautifulSoup, Crawl4AI browser for blocked and JavaScript pages, TypeSafe Jev 1.14 | `gtm/layers/l2_prefilter.py`, `l2_jev.py` | built |
-| 3 | Find decision-makers and work emails (max 2 per account, stop on first hit) | Harvest API, LeadMagic, FullEnrich (Tier 1–2 misses only) | — | planned |
+| 3 | Find decision-makers (FullEnrich people search), rank them with Jev 1.14 (titles only), find work emails for the chosen ones (max 2 per Tier 1–2 account, 1 for Tier 3) | FullEnrich, TypeSafe Jev 1.14 | `gtm/layers/l3_contacts.py` | built |
 | 4 | Quality and permission gates | MillionVerifier, suppression, GDPR rules | — | planned |
 | 5 | Personalisation and QA | Claude, Google Sheets review by Quailworks | — | planned |
 | 6 | Sending and reply handling | Smartlead + SmartSenders mailboxes | — | planned |
@@ -52,6 +52,8 @@ python -m gtm --client the-marble-jar prefilter --limit 20     # Layer 2 trial (
 python -m gtm --client the-marble-jar tiers --tier tier_1 --verbose
 python -m gtm --client the-marble-jar jev --dry-run            # Jev 1.14 decisions (shows first request)
 python -m gtm --client the-marble-jar jev                      # decide all scored accounts
+python -m gtm --client the-marble-jar contacts --dry-run       # Layer 3 plan and cost
+python -m gtm --client the-marble-jar contacts --limit 10      # Layer 3 small live test
 pytest -q
 ```
 

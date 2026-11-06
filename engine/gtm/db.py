@@ -99,6 +99,39 @@ CREATE TABLE IF NOT EXISTS jev_calls (
     created_at     TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS contacts (
+    id              INTEGER PRIMARY KEY,
+    client          TEXT NOT NULL,
+    account_id      INTEGER NOT NULL REFERENCES accounts(id),
+    person_id       TEXT,
+    full_name       TEXT,
+    first_name      TEXT,
+    last_name       TEXT,
+    title           TEXT,
+    linkedin_url    TEXT,
+    country         TEXT,
+    persona         TEXT,
+    jev_relevance   REAL,
+    rank            INTEGER,
+    status          TEXT NOT NULL,      -- candidate | selected | email_found | no_email | skipped
+    status_reason   TEXT,
+    email           TEXT,
+    email_status    TEXT,               -- as reported by the provider, e.g. DELIVERABLE, CATCH_ALL
+    email_source    TEXT,
+    data_source     TEXT NOT NULL,      -- where the personal data came from (GDPR Art. 14)
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_contacts_person ON contacts(client, account_id, person_id);
+CREATE INDEX IF NOT EXISTS ix_contacts_status ON contacts(client, status);
+
+CREATE TABLE IF NOT EXISTS l3_progress (
+    account_id   INTEGER PRIMARY KEY REFERENCES accounts(id),
+    searched_at  TEXT NOT NULL,
+    found        INTEGER NOT NULL,
+    credits      REAL
+);
+
 CREATE TABLE IF NOT EXISTS segment_progress (
     client     TEXT NOT NULL,
     segment    TEXT NOT NULL,

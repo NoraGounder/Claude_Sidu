@@ -129,6 +129,45 @@ def cmd_jev(args) -> int:
     return 0
 
 
+def cmd_contacts(args) -> int:
+    """Layer 3: decision-makers and work emails (FullEnrich), ranked by Jev 1.14."""
+    from gtm.layers import l3_contacts
+    from gtm.sources.fullenrich import FullEnrichError
+    from gtm.sources.jev import JevPolicyError, JevUnavailable
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    cp = l3_contacts.plan(cfg, conn, limit=args.limit, search_limit=args.search_limit)
+    selected = conn.execute("SELECT COUNT(*) FROM contacts WHERE client=? AND status='selected'",
+                            (cfg.slug,)).fetchone()[0]
+    print(f"Layer 3 plan: people search for {len(cp.accounts)} accounts (up to {cp.search_limit} people each), "
+          f"estimated ${cp.est_search_cost:.2f}; {selected} selected contacts already waiting for an email.")
+    if args.dry_run:
+        for acc in cp.accounts[:10]:
+            print(f"  - [{acc['tier']}] {acc['name']} ({acc['domain']}) fit {acc['fit']} signal {acc['signal']}")
+        print("Dry run: nothing was called or spent.")
+        return 0
+    try:
+        if not args.emails_only and cp.accounts:
+            t = l3_contacts.find_people(cfg, conn, cp)
+            print(f"People search: {t['accounts']} accounts, {t['people_returned']} people returned, "
+                  f"{t['candidates']} passed the checks, {t['selected']} selected. Cost ${t['cost_usd']:.2f}.")
+        if not args.skip_emails:
+            e = l3_contacts.find_emails(cfg, conn, limit=args.limit)
+            print(f"Work emails: {e['requested']} requested, {e['found']} found, {e['catch_all']} catch-all, "
+                  f"{e['not_found']} not found. Cost ${e['cost_usd']:.2f}.")
+    except (JevUnavailable, JevPolicyError) as exc:
+        print(f"Stopped by Jev: {exc}. No other model was used; run again to continue.")
+        return 4
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    except FullEnrichError as exc:
+        print(f"Stopped by FullEnrich: {exc}")
+        return 5
+    return 0
+
+
 def cmd_stats(args) -> int:
     cfg = load_client(args.client)
     conn = db.connect()
@@ -203,6 +242,14 @@ def build_parser() -> argparse.ArgumentParser:
     j.add_argument("--purge-legacy", action="store_true",
                    help="remove AI verdicts made before the Jev 1.14 policy (Jev Router)")
     j.set_defaults(func=cmd_jev)
+
+    c = sub.add_parser("contacts", help="Layer 3: decision-makers and work emails (FullEnrich + Jev 1.14)")
+    c.add_argument("--limit", type=int, help="only the first N accounts / contacts")
+    c.add_argument("--search-limit", type=int, default=4, help="people returned per account (0.25 credit each)")
+    c.add_argument("--emails-only", action="store_true", help="skip people search; find emails for selected contacts")
+    c.add_argument("--skip-emails", action="store_true", help="people search and selection only")
+    c.add_argument("--dry-run", action="store_true")
+    c.set_defaults(func=cmd_contacts)
 
     s = sub.add_parser("stats", help="counts by status and spend this month")
     s.set_defaults(func=cmd_stats)
