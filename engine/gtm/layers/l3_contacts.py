@@ -109,11 +109,11 @@ def screen(cfg: ClientConfig, account: dict, people: list[dict]) -> list[dict]:
     return kept
 
 
-def relevance_request(account: dict, candidates: list[dict]) -> tuple[dict, dict]:
+def relevance_request(account: dict, candidates: list[dict], offer: str = "") -> tuple[dict, dict]:
     """Jev request with job titles only (no names: data minimisation)."""
     state = {"company": account["name"], "industry": account.get("industry"),
              "employees": account.get("employee_range"),
-             "offer": "Automating manual operations and finance admin (invoices, orders, data entry)"}
+             "offer": offer or "Automating manual operations and finance admin (invoices, orders, data entry)"}
     questions = {}
     for n, c in enumerate(candidates):
         questions[f"c{n}"] = {
@@ -174,7 +174,7 @@ def find_people(cfg: ClientConfig, conn, cp: ContactPlan, fe: FullEnrichClient |
             conn.execute("INSERT OR REPLACE INTO l3_progress(account_id, searched_at, found, credits)"
                          " VALUES (?,?,?,?)", (acc["id"], db.now_iso(), len(candidates), res.credits))
             if candidates:
-                state, questions = relevance_request(acc, candidates)
+                state, questions = relevance_request(acc, candidates, cfg.icp.offer_summary)
                 try:
                     result = jev.decide(state, questions)
                 except JevUnavailable as exc:

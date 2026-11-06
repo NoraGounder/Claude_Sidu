@@ -50,6 +50,8 @@ class Exclusions(BaseModel):
 
 class ICP(BaseModel):
     version: int = 1
+    buyer_profile: str = ""
+    offer_summary: str = ""
     company: CompanyRules
     industry_groups: dict[str, IndustryGroup]
     segments: list[Segment]

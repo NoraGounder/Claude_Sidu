@@ -9,7 +9,7 @@ offices: [Breda (NL), Kochi (IN)]
 operating_model: done_for_you   # Quailworks runs everything; the client only takes meetings
 
 language:
-  default: nl        # Dutch first for NL operations buyers
+  default: en        # English-speaking market (US, UK, Ireland) since 2026-11-06
   fallback: en
 
 sender:
@@ -22,6 +22,7 @@ handoff:
   outcome_capture: one-word reply (qualified / not a fit / follow up)
 
 approvals_pending:
+  - The main outbound offer (see open-questions.md); ICP and copy are provisional until then
   - Lead offer (Automation Sprint) and the 5-day prototype promise
   - Email templates and the reply guide
   - Which client logos and results we may name

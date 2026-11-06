@@ -4,6 +4,7 @@ import json
 import shutil
 
 import pytest
+from conftest import legacy_nl
 
 from gtm import db
 from gtm.config import REPO_ROOT, load_client
@@ -61,6 +62,7 @@ SITE_B = {
 def env(tmp_path, monkeypatch):
     clients = tmp_path / "clients"
     shutil.copytree(REPO_ROOT / "clients" / CLIENT, clients / CLIENT, ignore=shutil.ignore_patterns("private"))
+    legacy_nl(clients / CLIENT)
     monkeypatch.setenv("GTM_CLIENTS_DIR", str(clients))
     monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path / "data"))
     return tmp_path

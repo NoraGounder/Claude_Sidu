@@ -4,6 +4,17 @@
 
 version: 1
 
+# Used by TypeSafe Jev 1.14 for ICP scoring. PROVISIONAL until the offer is confirmed.
+buyer_profile: >-
+  English-speaking companies in the United States, the United Kingdom or Ireland with 50-500
+  employees in logistics, wholesale and distribution, installation and technical services, or
+  manufacturing, that run operations and finance processes (invoices, orders, planning) where
+  manual work can be automated or replaced with well-designed custom software.
+# What we offer, in one line, for Jev's contact-relevance question. PROVISIONAL (open-questions.md).
+offer_summary: >-
+  Design-first automation and custom software for manual operations and finance work
+  (invoices, orders, data entry). Mendix is not offered.
+
 company:
   employees_min: 50
   employees_max: 500
@@ -28,48 +39,33 @@ industry_groups:
     label: Facilities services
     ids: [122]
 
-# One search per segment. LinkedIn caps a search at 20 pages x 50 companies = 1,000,
-# so broad groups are split by country. max_items is per monthly run: 4 x 300 full-mode
-# companies = $4.80, inside Apify's free $5 a month. The next run continues from the next page.
+# One search per segment. LinkedIn caps a search at 20 pages x 50 companies = 1,000, so broad
+# groups are split by country. max_items is per monthly run (4 x 300 full-mode companies = $4.80,
+# inside Apify's free $5 a month); the next run continues from the next page.
+#
+# 2026-11-06: target market changed to English-speaking clients, US + UK + Ireland first.
+# Industry groups below are PROVISIONAL: they fit an operations-automation offer, which Mithun has
+# not confirmed yet (see open-questions.md). Enable segments only after the offer is confirmed.
 segments:
-  - name: logistics_nl
-    enabled: true
-    industry_group: logistics
-    locations: [Netherlands]
-    max_items: 300
-  - name: wholesale_nl
-    enabled: true
-    industry_group: wholesale
-    locations: [Netherlands]
-    max_items: 300
-  - name: installation_nl
-    enabled: true
-    industry_group: installation
-    locations: [Netherlands]
-    max_items: 300
-  - name: manufacturing_nl
-    enabled: true
-    industry_group: manufacturing
-    locations: [Netherlands]
-    max_items: 300
-  - name: facilities_nl
-    enabled: false          # lower fit; switch on if the first four run dry
-    industry_group: facilities
-    locations: [Netherlands]
-    max_items: 300
-  # Phase 2. Start with Flanders: Dutch copy works there; Wallonia needs French copy.
-  - name: logistics_be
-    enabled: false
-    industry_group: logistics
-    locations: [Belgium]
-    max_items: 300
-  - name: wholesale_be
-    enabled: false
-    industry_group: wholesale
-    locations: [Belgium]
-    max_items: 300
+  - {name: logistics_us,     enabled: false, industry_group: logistics,     locations: [United States],  max_items: 300}
+  - {name: wholesale_us,     enabled: false, industry_group: wholesale,     locations: [United States],  max_items: 300}
+  - {name: manufacturing_us, enabled: false, industry_group: manufacturing, locations: [United States],  max_items: 300}
+  - {name: installation_us,  enabled: false, industry_group: installation,  locations: [United States],  max_items: 300}
+  - {name: logistics_uk,     enabled: false, industry_group: logistics,     locations: [United Kingdom], max_items: 300}
+  - {name: wholesale_uk,     enabled: false, industry_group: wholesale,     locations: [United Kingdom], max_items: 300}
+  - {name: manufacturing_uk, enabled: false, industry_group: manufacturing, locations: [United Kingdom], max_items: 300}
+  - {name: installation_uk,  enabled: false, industry_group: installation,  locations: [United Kingdom], max_items: 300}
+  - {name: logistics_ie,     enabled: false, industry_group: logistics,     locations: [Ireland],        max_items: 300}
+  - {name: wholesale_ie,     enabled: false, industry_group: wholesale,     locations: [Ireland],        max_items: 300}
+  - {name: manufacturing_ie, enabled: false, industry_group: manufacturing, locations: [Ireland],        max_items: 300}
+  - {name: installation_ie,  enabled: false, industry_group: installation,  locations: [Ireland],        max_items: 300}
+  # Previous market (Dutch-speaking), kept for reference and tests. Not part of the current target.
+  - {name: logistics_nl,     enabled: false, industry_group: logistics,     locations: [Netherlands],    max_items: 300}
+  - {name: wholesale_nl,     enabled: false, industry_group: wholesale,     locations: [Netherlands],    max_items: 300}
+  - {name: installation_nl,  enabled: false, industry_group: installation,  locations: [Netherlands],    max_items: 300}
+  - {name: manufacturing_nl, enabled: false, industry_group: manufacturing, locations: [Netherlands],    max_items: 300}
 
-allowed_countries: [NL, BE]
+allowed_countries: [US, GB, IE]   # English-speaking, cold-email rules allow B2B outreach with opt-out
 
 exclusions:
   # Company names containing any of these are dropped in Layer 1 (case-insensitive).

@@ -1,47 +1,37 @@
 # The Marble Jar: offer and qualification (Layer 0)
 
-Status: **draft, waiting for the founder's confirmation.** The Marble Jar is moving away from
-Mendix work, so no message mentions Mendix.
+Status: **PROVISIONAL.** The main outbound offer is not chosen yet. It depends on Mithun's answers
+in `open-questions.md`. Until then, ICP, scoring and copy are working assumptions, and no live
+search or sending runs for the new market.
 
-## One service
+## Confirmed (2026-11-06)
 
-**Automation Sprint.** We take one manual operations or finance process and automate it, at a
-fixed price, in 2–3 weeks. The process is designed first and built second, which is The Marble
-Jar's edge: people actually like using what they get.
+- **Mendix is no longer offered.** It must not appear in any outreach.
+- **Market:** English-speaking clients. First countries: United States, United Kingdom, Ireland.
+- Custom development is still listed on themarblejar.io.
+- A **new platform launches in November 2026**. Its name and positioning are not confirmed (do not
+  assume it is pebls).
+- The **website refresh** (add newer clients, remove Mendix, introduce the new platform) is a
+  separate project from outbound lead generation.
 
-Typical first processes:
+## Not assumed
 
-- Invoice intake → AI extraction → approval → booking (this is the demo on themarblejar.io)
-- Order intake from email or PDF → order entry
-- Planning or status updates that are now copied between Excel and email
+- That integrations, automation or other development services have stopped. Ask Mithun.
+- That custom development is the main outbound offer. Ask Mithun.
+- Anything about the new platform beyond its launch month.
 
-## One entry step (what the email asks for)
+## Working hypothesis (used by the provisional copy, to be replaced)
 
-A free 45-minute **process scan**. Within 5 working days they get a clickable prototype of their
-own process, automated, and a fixed price to build it.
-
-## One audience
-
-Operations-heavy companies in the Netherlands (Belgium in phase 2) with 50–500 employees, in
-logistics, wholesale, installation and technical services, and manufacturing. Buyers: COO,
-operations director or manager, CFO or finance manager. At companies under about 150 people,
-also the managing director.
-
-Why they buy: their own job ads show the pain. Hiring another admin clerk to type invoices or
-orders costs about €40–50k a year, every year. Automating it is a one-off cost.
-
-## Proof we can use (pending approval)
-
-- The live invoice-automation demo on the homepage
-- Client logos and results, only once approved
-- Studio in Breda, delivery team in India: design-led and still affordable
+Design-first automation and custom software for manual operations and finance work, sold as a
+fixed-price first project with a free first step (a short process scan and a clickable prototype).
+This is a placeholder taken from what the current website shows, not a confirmed offer.
 
 ## What counts as a qualified meeting
 
 All four must be true. This is what Quailworks is paid for.
 
 1. The company matches the ICP in `icp.yaml`: country, size, sector, and not excluded.
-2. The person makes or influences the buying decision for operations or finance processes.
+2. The person makes or influences the buying decision for what we offer.
 3. They replied with interest in the offer, not just curiosity about the sender.
 4. The meeting took place.
 
@@ -49,7 +39,8 @@ The founder confirms after each call with one word: qualified, not a fit, or fol
 
 ## Disqualify
 
-- Fewer than 50 or more than 500 employees
-- Staffing agencies, consultancies, IT and software companies, automation agencies (competitors)
+- Fewer than 50 or more than 500 employees (provisional, see open questions)
+- Staffing agencies, consultancies, IT and software companies, agencies that compete with The Marble Jar
 - Government and public sector bodies (long procurement)
 - Current clients, open deals and partners (see `private/exclusions.csv`)
+- Companies outside the target countries, or not English-speaking

@@ -4,6 +4,7 @@ import shutil
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from conftest import legacy_nl
 import yaml
 
 from gtm import db
@@ -18,6 +19,7 @@ NOW = datetime(2026, 11, 6, 12, 0, tzinfo=timezone.utc)
 def env(tmp_path, monkeypatch):
     clients = tmp_path / "clients"
     shutil.copytree(REPO_ROOT / "clients" / CLIENT, clients / CLIENT, ignore=shutil.ignore_patterns("private"))
+    legacy_nl(clients / CLIENT)
     monkeypatch.setenv("GTM_CLIENTS_DIR", str(clients))
     monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path / "data"))
     return clients / CLIENT

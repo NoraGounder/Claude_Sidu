@@ -14,10 +14,13 @@ fit:
     manufacturing: 20
     facilities: 15
   country:
-    NL: 15
-    BE: 10
+    US: 15
+    GB: 15
+    IE: 12
+    NL: 15      # previous market
+    BE: 10      # previous market
   website_reachable: 5
-  dutch_language_site: 5
+  dutch_language_site: 0    # no longer relevant: English-speaking market
   # Seen in the first live Layer 1 data (e.g. "Hilti Nederland BV"): local arms of large groups
   # often buy software at group level, so they fit less well than independent companies.
   subsidiary_of_large_group: -15

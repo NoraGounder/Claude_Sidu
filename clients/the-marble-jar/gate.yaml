@@ -9,7 +9,7 @@ catch_all:                     # the mail server accepts any address, so deliver
 
 freshness_days: 45             # older verifications are re-checked with MillionVerifier before sending
 
-contact_countries: [NL, BE]    # contact's own location, when known
+contact_countries: [US, GB, IE]   # contact's own location, when known
 
 role_prefixes: [info, sales, contact, office, admin, hello, support, finance, administratie, facturen,
                 factuur, inkoop, verkoop, hr, jobs, vacatures, receptie, service, noreply, no-reply,
@@ -24,4 +24,6 @@ require_sender_consent: true   # client.yaml sender.consent_to_send_in_name must
 # GDPR Art. 14: say where we got the data and how to opt out. Added to every first email in Layer 5.
 gdpr_notice:
   nl: "Je zakelijke contactgegevens vond ik via LinkedIn en FullEnrich. Liever geen berichten meer? Antwoord dan 'stop'."
-  en: "I found your business contact details via LinkedIn and FullEnrich. Prefer not to hear from me? Just reply 'stop'."
+  # US CAN-SPAM needs a physical postal address and a working opt-out; UK PECR / Irish ePrivacy need
+  # the sender's identity and an easy opt-out for corporate addresses. Address is the one on themarblejar.io.
+  en: "I found your business contact details via LinkedIn and FullEnrich. Prefer not to hear from me? Just reply 'stop'. The Marble Jar BV, Verlengde Poolseweg 16, 4818 CL Breda, The Netherlands."

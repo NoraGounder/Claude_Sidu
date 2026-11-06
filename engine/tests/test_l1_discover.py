@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from conftest import legacy_nl
 
 from gtm import budget, db
 from gtm.cli import main
@@ -21,6 +22,7 @@ def env(tmp_path, monkeypatch):
     clients = tmp_path / "clients"
     shutil.copytree(REPO_ROOT / "clients" / CLIENT, clients / CLIENT,
                     ignore=shutil.ignore_patterns("private"))
+    legacy_nl(clients / CLIENT)
     private = clients / CLIENT / "private"
     private.mkdir()
     (private / "exclusions.csv").write_text(
@@ -132,3 +134,15 @@ def test_cli_dry_run_spends_nothing(env, capsys):
     assert "estimated $4.80" in out and "Dry run" in out and "pages 1-6" in out
     conn = db.connect()
     assert conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 0
+
+
+def test_real_config_targets_english_speaking_market_and_is_switched_off(tmp_path, monkeypatch):
+    """Guard: until Mithun confirms the offer, no search runs, and only US/UK/IE are allowed."""
+    monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path / "data"))
+    cfg = load_client(CLIENT)
+    assert cfg.icp.allowed_countries == ["US", "GB", "IE"]
+    assert [s.name for s in cfg.icp.segments if s.enabled] == []
+    assert l1_discover.plan(cfg, None, None, conn=db.connect()) == []
+    assert "Mendix is not offered" in cfg.icp.offer_summary
+    assert "mendix" not in (REPO_ROOT / "clients" / CLIENT / "templates" / "sequence.yaml").read_text().lower() \
+        .replace("never mention mendix", "")

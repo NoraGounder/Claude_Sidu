@@ -76,7 +76,7 @@ def build_request(cfg: ClientConfig, item: dict) -> tuple[dict, dict, dict[str, 
         },
         "icp_fit": {
             "type": "score",
-            "instructions": "How well does this company match the buyer profile? " + ICP,
+            "instructions": "How well does this company match the buyer profile? " + (cfg.icp.buyer_profile or ICP),
             "criteria": ["Poor fit", "Possible fit", "Strong fit"],
         },
     }

@@ -26,6 +26,11 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
    ICP scoring and classification; crawling, deterministic checks and data processing stay in Python.
    Every request logs the reported model ID, tokens and cost (table `jev_calls`). Never print or store
    the API key. The policy lives in `clients/<client>/ai.yaml` and is enforced by `gtm/sources/jev.py`.
+7. **The Marble Jar (2026-11-06):** Mendix is not offered and never appears in outreach. Market: English-speaking
+   clients, US + UK + Ireland first. The main offer is NOT confirmed: ICP, scoring and copy are provisional and all
+   Layer 1 segments stay switched off until Mithun answers `clients/the-marble-jar/open-questions.md`. Do not assume
+   integrations or other services have stopped, do not assume the November 2026 platform is pebls, and do not change
+   website positioning (the website refresh is a separate project).
 
 ## The pipeline
 
