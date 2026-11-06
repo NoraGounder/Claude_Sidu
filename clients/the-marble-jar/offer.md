@@ -7,7 +7,8 @@ search or sending runs for the new market.
 ## Confirmed (2026-11-06)
 
 - **Mendix is no longer offered.** It must not appear in any outreach.
-- **Market:** English-speaking clients. First countries: United States, United Kingdom, Ireland.
+- **Market:** the Netherlands is the primary market (most current customers are Dutch), plus
+  English-speaking clients in the United States, United Kingdom and Ireland. All emails are in English.
 - Custom development is still listed on themarblejar.io.
 - A **new platform launches in November 2026**. Its name and positioning are not confirmed (do not
   assume it is pebls).
@@ -43,4 +44,4 @@ The founder confirms after each call with one word: qualified, not a fit, or fol
 - Staffing agencies, consultancies, IT and software companies, agencies that compete with The Marble Jar
 - Government and public sector bodies (long procurement)
 - Current clients, open deals and partners (see `private/exclusions.csv`)
-- Companies outside the target countries, or not English-speaking
+- Companies outside the target countries

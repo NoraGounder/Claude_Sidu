@@ -9,7 +9,7 @@ catch_all:                     # the mail server accepts any address, so deliver
 
 freshness_days: 45             # older verifications are re-checked with MillionVerifier before sending
 
-contact_countries: [US, GB, IE]   # contact's own location, when known
+contact_countries: [US, GB, IE, NL]   # contact's own location, when known
 
 role_prefixes: [info, sales, contact, office, admin, hello, support, finance, administratie, facturen,
                 factuur, inkoop, verkoop, hr, jobs, vacatures, receptie, service, noreply, no-reply,

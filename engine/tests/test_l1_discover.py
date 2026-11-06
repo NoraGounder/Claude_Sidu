@@ -137,10 +137,10 @@ def test_cli_dry_run_spends_nothing(env, capsys):
 
 
 def test_real_config_targets_english_speaking_market_and_is_switched_off(tmp_path, monkeypatch):
-    """Guard: until Mithun confirms the offer, no search runs, and only US/UK/IE are allowed."""
+    """Guard: until Mithun confirms the offer, no search runs, and only US/UK/IE/NL are allowed."""
     monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path / "data"))
     cfg = load_client(CLIENT)
-    assert cfg.icp.allowed_countries == ["US", "GB", "IE"]
+    assert cfg.icp.allowed_countries == ["US", "GB", "IE", "NL"]
     assert [s.name for s in cfg.icp.segments if s.enabled] == []
     assert l1_discover.plan(cfg, None, None, conn=db.connect()) == []
     assert "Mendix is not offered" in cfg.icp.offer_summary

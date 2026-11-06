@@ -9,7 +9,8 @@ offices: [Breda (NL), Kochi (IN)]
 operating_model: done_for_you   # Quailworks runs everything; the client only takes meetings
 
 language:
-  default: en        # English-speaking market (US, UK, Ireland) since 2026-11-06
+  default: en        # all outreach in English, Dutch companies included (2026-11-06)
+  by_country: {}     # optional per-country override for a later test, e.g. {NL: nl}
   fallback: en
 
 sender:

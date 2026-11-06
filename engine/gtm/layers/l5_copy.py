@@ -178,8 +178,9 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
     for contact in rows:
         account = dict(conn.execute("SELECT * FROM accounts WHERE id=?", (contact["account_id"],)).fetchone())
         score = conn.execute("SELECT dutch_site FROM l2_scores WHERE account_id=?", (account["id"],)).fetchone()
-        # Dutch companies always get Dutch; others get Dutch only if their site is Dutch.
-        lang = "nl" if (account.get("country") == "NL" or (score and score["dutch_site"])) else "en"
+        # Language comes from client.yaml: one default, with optional per-country overrides.
+        lang_cfg = cfg.client.get("language", {})
+        lang = (lang_cfg.get("by_country") or {}).get(account.get("country") or "", lang_cfg.get("default", "en"))
         facts = facts_for(conn, account)
         hooks = supported_hooks(seq, facts)
 

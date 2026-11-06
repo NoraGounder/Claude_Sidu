@@ -82,7 +82,30 @@ def test_cleaning():
     assert l5_copy.clean_first_name("ANNA") == "Anna"
 
 
+def _dutch_default(client_dir):
+    import yaml
+    path = client_dir / "client.yaml"
+    data = yaml.safe_load(path.read_text())
+    data["language"]["default"] = "nl"
+    path.write_text(yaml.safe_dump(data))
+
+
+def test_default_language_is_english_even_for_dutch_companies(env):
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    acc = _setup(conn)
+    conn.execute("UPDATE accounts SET country='NL' WHERE id=?", (acc,))
+    conn.commit()
+    l5_copy.draft(cfg, conn, jev=JevClient(cfg.ai, session=StubJev()))
+    d = conn.execute("SELECT * FROM drafts").fetchone()
+    body = json.loads(d["steps_json"])[0]["body"]
+    assert d["language"] == "en"
+    assert "I saw the administratief medewerker crediteuren vacancy at Voorbeeld Groothandel." in body
+    assert "Verlengde Poolseweg 16, 4818 CL Breda" in body          # postal address in the footer
+
+
 def test_draft_uses_only_facts_and_preview_without_sender(env):
+    _dutch_default(env)
     cfg = load_client(CLIENT)
     conn = db.connect()
     _setup(conn, evidence=[("erp_mention", "Exact", "https://voorbeeld.example/vacatures/x", "…Exact Online…")])
@@ -120,6 +143,7 @@ def test_generic_hook_and_english_when_no_facts(env):
 
 
 def test_fact_check_flag_and_review_round_trip(env, tmp_path):
+    _dutch_default(env)          # this test edits Dutch text
     (env / "private").mkdir()
     (env / "private" / "sender.yaml").write_text("first_name: Sam\nfull_name: Sam Example\n")
     cfg = load_client(CLIENT)

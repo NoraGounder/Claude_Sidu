@@ -17,10 +17,11 @@ D is needed before the first email goes out.
 5. **First step for prospects:** can you deliver a free 45-minute process scan plus a clickable
    prototype within 5 working days? If not, what free first step can you offer (audit, demo, workshop)?
 
-## B. Who to target in the US, UK and Ireland
+## B. Who to target (Netherlands first, then the US, UK and Ireland)
 
 6. Which industries and company sizes have you delivered for, and any to avoid? Is 50-500
-   employees right?
+   employees right? In the Netherlands, should we target all industries, or only the
+   operations-heavy ones we use now (logistics, wholesale, installation, manufacturing)?
 7. Who signed your past deals: COO, CFO, CTO / Head of IT, operations manager, founder?
 8. Do you already have English-speaking clients (US, UK, Ireland)?
 9. Can you serve US clients well: time zones (Breda and Kochi), meetings, contracts, invoicing?
