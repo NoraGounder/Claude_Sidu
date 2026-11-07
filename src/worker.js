@@ -1,6 +1,7 @@
 // Edge entry point for quailworks.co.
-// Redirects www to the apex domain, serves the static site from ./site,
-// and attaches security headers to every response.
+// Redirects www to the apex domain, serves the site packed from ./site
+// (see scripts/build.mjs), and attaches security headers to every response.
+import FILES from './site-files.js';
 
 const CSP = [
   "default-src 'self'",
@@ -27,21 +28,46 @@ const SECURITY_HEADERS = {
   'Cross-Origin-Opener-Policy': 'same-origin',
 };
 
+// Decode once per isolate.
+const ASSETS = new Map(
+  Object.entries(FILES).map(([path, f]) => [path, { type: f.type, etag: f.etag, body: Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0)) }]),
+);
+
+function resolve(pathname) {
+  let p = decodeURIComponent(pathname);
+  if (p.endsWith('/')) p += 'index.html';
+  if (ASSETS.has(p)) return p;
+  if (ASSETS.has(p + '.html')) return p + '.html';
+  return null;
+}
+
+function cacheControl(path) {
+  if (path.startsWith('/assets/fonts/')) return 'public, max-age=31536000, immutable';
+  if (path.endsWith('.html')) return 'public, max-age=0, must-revalidate';
+  return 'public, max-age=3600, must-revalidate';
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request) {
     const url = new URL(request.url);
 
     if (url.hostname.startsWith('www.')) {
       url.hostname = url.hostname.slice(4);
       return Response.redirect(url.toString(), 301);
     }
-
-    const asset = await env.ASSETS.fetch(request);
-    const response = new Response(asset.body, asset);
-    for (const [name, value] of Object.entries(SECURITY_HEADERS)) response.headers.set(name, value);
-    if (url.pathname.startsWith('/assets/fonts/')) {
-      response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD', ...SECURITY_HEADERS } });
     }
-    return response;
+
+    const path = resolve(url.pathname);
+    const asset = ASSETS.get(path || '/404.html');
+    const status = path ? 200 : 404;
+    const headers = new Headers({ 'Content-Type': asset.type, 'Cache-Control': cacheControl(path || '/404.html'), ...SECURITY_HEADERS });
+    if (path) headers.set('ETag', asset.etag);
+
+    if (path && request.headers.get('If-None-Match') === asset.etag) {
+      return new Response(null, { status: 304, headers });
+    }
+    return new Response(request.method === 'HEAD' ? null : asset.body, { status, headers });
   },
 };

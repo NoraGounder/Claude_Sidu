@@ -1,16 +1,11 @@
 // Cloudflare deploy config for quailworks.co
+// `wrangler deploy` runs scripts/build.mjs first, which packs ./site into the Worker.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "quailworks-site",
   "main": "src/worker.js",
   "compatibility_date": "2025-09-01",
-  "assets": {
-    "directory": "./site",
-    "binding": "ASSETS",
-    "run_worker_first": true,
-    "not_found_handling": "404-page",
-    "html_handling": "auto-trailing-slash"
-  },
+  "build": { "command": "node scripts/build.mjs" },
   "routes": [
     { "pattern": "quailworks.co", "custom_domain": true },
     { "pattern": "www.quailworks.co", "custom_domain": true }
