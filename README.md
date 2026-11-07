@@ -34,16 +34,17 @@ Alternatives I rejected:
 **You (anything that needs payment or an account in your name):**
 1. [x] Create a Cloudflare account and add a card: https://dash.cloudflare.com/sign-up
 2. [x] Buy `quailworks.co`: *Domain Registration → Register Domains*. Turn auto-renew on.
-3. [x] Create the API token and save it in Claude's secure credential form. **Still to do:** add *Zone → DNS → Edit* to it, which the email records below need.
-4. [ ] Start Google Workspace (14-day free trial): https://workspace.google.com/business/signup/welcome. Use "I have a domain" → `quailworks.co`, and make your own address (e.g. `firstname@quailworks.co`). Send Claude the verification TXT value Google shows you; it isn't secret.
-5. [ ] In Google Admin, generate the DKIM key (*Apps → Google Workspace → Gmail → Authenticate email*), send Claude the TXT value, then click *Start authentication*.
+3. [x] Create the API token and save it in Claude's secure credential form (Workers, Workers Routes, Zone Settings, DNS Edit).
+4. [x] Start Google Workspace (14-day free trial): https://workspace.google.com/business/signup/welcome. Use "I have a domain" → `quailworks.co`, and make your own address (e.g. `firstname@quailworks.co`). Send Claude the verification TXT value Google shows you; it isn't secret.
+5. [x] In Google Admin, generate the DKIM key (*Apps → Google Workspace → Gmail → Authenticate email*), send Claude the TXT value, then click *Start authentication*.
 
 **Claude (via the Cloudflare API):**
 - [x] Deploy the site to `quailworks.co` and `www.quailworks.co` (www redirects to the apex)
 - [x] SSL in Full (strict) mode, always HTTPS, minimum TLS 1.2, TLS 1.3
-- [x] Google Workspace MX (`smtp.google.com`), SPF and DMARC (`p=none` for monitoring)
-- [ ] Google verification TXT and DKIM, once Workspace is created
-- [ ] Add `hello@quailworks.co` as a free alias (you'll need to click this in Google Admin once)
+- [x] Google Workspace MX (`smtp.google.com`) and SPF
+- [x] Google verification TXT and DKIM (added by Google's Cloudflare connection; SPF, DKIM and DMARC all PASS on a test email)
+- [x] DMARC tightened to `p=quarantine` after the passing test
+- [x] `hello@quailworks.co` added as an alias of `sid@quailworks.co`
 - [ ] Activate the contact form: Claude sends a test submission, you click the activation email
 - [ ] Turn on Web Analytics, then do a final check of HTTPS, headers, email authentication and the form
 
