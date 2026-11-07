@@ -7,7 +7,7 @@ site/              everything that gets published (HTML, CSS, JS, fonts, images)
 src/worker.js      edge script: serves the site, www → apex redirect, security headers
 scripts/build.mjs  packs site/ into the Worker (runs automatically on deploy)
 wrangler.jsonc     Cloudflare deploy config (custom domains)
-docs/            internal notes, never published
+docs/              internal notes, never published
 ```
 
 Edit the files in `site/`, then run `npx wrangler deploy`, which packs and publishes them. The site's files ship inside the Worker rather than as separately uploaded static assets, because this cloud environment's credential proxy can't pass Cloudflare's asset-upload tokens.
@@ -17,7 +17,7 @@ Edit the files in `site/`, then run `npx wrangler deploy`, which packs and publi
 | Need | Choice | Cost | Why this one |
 |---|---|---|---|
 | Domain | `quailworks.co` on Cloudflare Registrar | at cost, roughly $26–30/yr | No markup on renewals, WHOIS privacy included, and Claude can manage it by API |
-| Hosting, CDN, DNS, SSL | Cloudflare Workers (static assets) | $0 | Global edge, DDoS protection, free tier covers 100k requests/day |
+| Hosting, CDN, DNS, SSL | Cloudflare Workers | $0 | Global edge, DDoS protection, free tier covers 100k requests/day |
 | Email, calendar, docs, video | Google Workspace Business Starter, 1 seat | $7/mo annual, $8.40 flexible | Best deliverability, and every GTM tool (Clay, HubSpot, Instantly, Apollo) plugs into Google. Aliases are free |
 | Booking link | Google Calendar appointment schedule | included | No extra tool to pay for |
 | Contact form | FormSubmit, with a mailto fallback | $0 | Works on static hosting. Submissions go to `hello@` |
