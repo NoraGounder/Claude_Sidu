@@ -203,7 +203,7 @@
       submit.disabled = true;
       submit.textContent = 'Sending…';
 
-      fetch('https://formsubmit.co/ajax/' + CONTACT_EMAIL, {
+      fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(data)

@@ -45,7 +45,7 @@ Alternatives I rejected:
 - [x] Google verification TXT and DKIM (added by Google's Cloudflare connection; SPF, DKIM and DMARC all PASS on a test email)
 - [x] DMARC tightened to `p=quarantine` after the passing test
 - [x] `hello@quailworks.co` added as an alias of `sid@quailworks.co`
-- [ ] Activate the contact form: Claude sends a test submission, you click the activation email
+- [ ] Contact form email: onboard `quailworks.co` to **Email Sending** only (never Email Routing, which would replace Google's MX), and verify `hello@quailworks.co` as a destination address
 - [ ] Turn on Web Analytics, then do a final check of HTTPS, headers, email authentication and the form
 
 ## Day to day

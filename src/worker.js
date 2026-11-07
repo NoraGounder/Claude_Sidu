@@ -1,6 +1,7 @@
 // Edge entry point for quailworks.co.
 // Redirects www to the apex domain, serves the site packed from ./site
-// (see scripts/build.mjs), and attaches security headers to every response.
+// (see scripts/build.mjs), handles the contact form at POST /api/contact,
+// and attaches security headers to every response.
 import FILES from './site-files.js';
 
 const CSP = [
@@ -10,8 +11,8 @@ const CSP = [
   "style-src 'self'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self' https://formsubmit.co https://cloudflareinsights.com",
-  "form-action 'self' https://formsubmit.co",
+  "connect-src 'self' https://cloudflareinsights.com",
+  "form-action 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",
@@ -27,6 +28,77 @@ const SECURITY_HEADERS = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   'Cross-Origin-Opener-Policy': 'same-origin',
 };
+
+// ── Contact form ────────────────────────────────────────────────────────────
+const CONTACT_TO = 'hello@quailworks.co';
+const CONTACT_FROM = { email: 'website@quailworks.co', name: 'Quailworks website' };
+const ALLOWED_ORIGINS = new Set(['https://quailworks.co', 'https://www.quailworks.co']);
+const LIMITS = { name: 100, email: 254, company: 120, role: 120, focus: 80, message: 4000 };
+const EMAIL_RE = /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]{2,}$/;
+const recent = new Map(); // best-effort per-isolate rate limit: ip -> [timestamps]
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...SECURITY_HEADERS },
+  });
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+function rateLimited(ip) {
+  const now = Date.now();
+  const hits = (recent.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
+  hits.push(now);
+  recent.set(ip, hits);
+  if (recent.size > 5000) recent.clear();
+  return hits.length > 5;
+}
+
+async function handleContact(request, env) {
+  const origin = request.headers.get('Origin');
+  if (origin && !ALLOWED_ORIGINS.has(origin) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    return json({ success: false, error: 'Forbidden origin' }, 403);
+  }
+  if (!(request.headers.get('Content-Type') || '').includes('application/json')) return json({ success: false, error: 'Expected JSON' }, 415);
+
+  const raw = await request.text();
+  if (raw.length > 20000) return json({ success: false, error: 'Message too large' }, 413);
+  let data;
+  try { data = JSON.parse(raw); } catch { return json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  // Honeypot: bots fill hidden fields. Pretend success, send nothing.
+  if (data._honey) return json({ success: true });
+
+  const f = {};
+  for (const [key, max] of Object.entries(LIMITS)) f[key] = String(data[key] ?? '').trim().slice(0, max);
+  if (!f.name || !f.company || !EMAIL_RE.test(f.email)) return json({ success: false, error: 'Please complete name, work email and company.' }, 422);
+
+  if (rateLimited(request.headers.get('CF-Connecting-IP') || 'unknown')) return json({ success: false, error: 'Too many requests' }, 429);
+
+  const rows = [['Name', f.name], ['Email', f.email], ['Company', f.company], ['Role', f.role || '—'], ['Wants to fix', f.focus || '—']];
+  const text = rows.map(([k, v]) => `${k}: ${v}`).join('\n') + `\n\nMessage:\n${f.message || '—'}\n\nReply directly to this email to respond to ${f.name}.`;
+  const html = `<table cellpadding="6" style="font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse">${rows
+    .map(([k, v]) => `<tr><td style="color:#6B6A64;padding-right:16px">${k}</td><td><strong>${esc(v)}</strong></td></tr>`)
+    .join('')}</table><p style="font-family:Arial,sans-serif;font-size:14px;white-space:pre-wrap">${esc(f.message || '—')}</p><p style="font-family:Arial,sans-serif;font-size:12px;color:#6B6A64">Sent from the contact form on quailworks.co. Reply to respond to ${esc(f.name)}.</p>`;
+
+  try {
+    await env.EMAIL.send({
+      to: CONTACT_TO,
+      from: CONTACT_FROM,
+      replyTo: { email: f.email, name: f.name },
+      subject: `New enquiry: ${f.company}${f.focus ? ' — ' + f.focus : ''}`,
+      text,
+      html,
+    });
+    return json({ success: true });
+  } catch (err) {
+    console.error('contact send failed', err && err.code, err && err.message);
+    return json({ success: false, error: 'Could not send right now' }, 502);
+  }
+}
 
 // Decode once per isolate.
 const ASSETS = new Map(
@@ -48,12 +120,16 @@ function cacheControl(path) {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.hostname.startsWith('www.')) {
       url.hostname = url.hostname.slice(4);
       return Response.redirect(url.toString(), 301);
+    }
+    if (url.pathname === '/api/contact') {
+      if (request.method !== 'POST') return json({ success: false, error: 'Method not allowed' }, 405);
+      return handleContact(request, env);
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD', ...SECURITY_HEADERS } });

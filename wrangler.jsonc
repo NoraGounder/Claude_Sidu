@@ -10,6 +10,13 @@
     { "pattern": "quailworks.co", "custom_domain": true },
     { "pattern": "www.quailworks.co", "custom_domain": true }
   ],
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "destination_address": "hello@quailworks.co",
+      "allowed_sender_addresses": ["website@quailworks.co"]
+    }
+  ],
   "workers_dev": false,
   "preview_urls": false,
   "observability": { "enabled": true }
