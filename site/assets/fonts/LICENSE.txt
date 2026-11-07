@@ -1,0 +1,5 @@
+Geist and Geist Mono — Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font)
+Instrument Serif — Copyright 2022 The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)
+
+All fonts in this directory are licensed under the SIL Open Font License, Version 1.1.
+https://openfontlicense.org

@@ -34,17 +34,19 @@ Research done in November 2026 to position the Quailworks site. The sources were
 | Pattern | Quailworks version |
 |---|---|
 | Category claim | "Pipeline, engineered." |
-| Differentiator | The engineering-services heritage: "We were an engineering firm before we were a GTM agency." Specs, versioning, testing, monitoring |
-| 3 service buckets | Outbound engine / Inbound capture and routing / RevOps and CRM data |
-| System visual | A live "revenue-engine" run log in the hero, plus a 5-step Detect → Enrich → Score → Act → Learn section |
-| Dated milestones | Week 0 audit → Weeks 1–2 blueprint → Weeks 2–4 build → ongoing |
+| Differentiator | The engineering-services heritage: "We were an engineering firm before we were a GTM firm." Specs, versioning, testing and monitoring |
+| 3 service buckets | Signal-based outbound / Inbound routing / RevOps and data |
+| System visual | A live product-style "revenue engine" console in the hero (signal → account score → automated play), plus a 5-stage Detect → Enrich → Score → Act → Learn section |
+| Proof without fabrication | Four "Blueprints" (reference architectures with trigger, logic, output and stack) stand in for case studies until real ones exist |
+| Enterprise trust | An Enterprise section (your environment, least privilege, NDA/DPA, compliance-aware outreach, audit trail, monitoring), plus security headers, a privacy notice and self-hosted fonts |
+| Dated milestones | Week 0 audit → Weeks 1–2 blueprint → Weeks 2–6 build → ongoing |
 | Ownership | "You own everything", stated in the principles and the FAQ |
-| Entry offer | A GTM audit as the low-risk first step (most peers lead with a call) |
+| Entry offer | A GTM audit as the low-risk first step, plus a real contact form |
 
 ## Gaps to close next (ranked by impact)
 
 1. **Proof.** This is the biggest gap against every benchmark. Add 2–3 case studies with numbers, even ones from earlier engineering-services work reframed as systems builds. Add client logos once you have permission. Nothing on the site is fabricated today, so this section is simply missing.
-2. **A real booking link** (Cal.com or Calendly) instead of mailto.
+2. **A booking link** (Cal.com or Calendly) next to the contact form.
 3. **Clay Solutions Partner / HubSpot partner badges** once you've earned them. Buyers use these to vet agencies.
 4. **Published starting prices.** Few peers publish them, so doing it would stand out.
 5. **A lead magnet:** a newsletter or a free "GTM teardown" page. The Kiln and ColdIQ both run one.

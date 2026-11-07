@@ -1,36 +1,60 @@
 # Quailworks website
 
-The marketing site for Quailworks, a GTM engineering agency. It's a single static page (`index.html`) with no build step and no dependencies apart from Google Fonts.
+The production site for **quailworks.co**, the GTM engineering firm.
 
-- `index.html`: the whole site (HTML, CSS and JS inline)
-- `docs/gtm-agency-benchmark.md`: competitor research behind the positioning
+```
+site/                 everything that gets published
+  index.html          homepage
+  privacy.html        privacy notice
+  404.html            not-found page
+  _headers            security headers (CSP, HSTS, …) and caching
+  assets/css|js|fonts self-hosted styles, script and fonts (no third-party requests)
+  og.png, favicon.svg, apple-touch-icon.png, robots.txt, sitemap.xml
+wrangler.jsonc        Cloudflare deploy config (serves ./site)
+docs/                 internal notes, never published
+```
 
-## Hosting: Cloudflare (recommended)
+There's no build step. Edit the files in `site/` and deploy.
 
-Cloudflare gives you the domain, DNS, hosting and a forwarding email address in one free account. You only pay for the domain, at cost. Once it's connected to this repo, **every push to `main` goes live**, and every other branch gets its own preview URL. That's what lets Claude Code manage the site end to end.
+## Decisions
 
-### One-time setup (about 15 minutes, done by a human)
+| Area | Choice | Why |
+|---|---|---|
+| Domain | **quailworks.co** | Exact brand match, credible for enterprise buyers, and short. `quailworks.com` belongs to an unrelated company, and `.xyz` reads as low-trust and hurts email deliverability. |
+| Hosting, DNS, email | **Cloudflare**, one account | Domain sold at cost, free global hosting and DDoS protection, and free email forwarding for `hello@quailworks.co`. Every push to `main` deploys automatically. |
+| Contact form | FormSubmit, with a mailto fallback | Works on static hosting with no server or account. Submissions arrive at `hello@quailworks.co`. |
+| Analytics | Cloudflare Web Analytics | Cookie-free, so no cookie banner is needed. |
+| Fonts | Self-hosted (Geist, Geist Mono, Instrument Serif) | Faster, GDPR-clean, and lets the CSP block all third-party scripts. |
 
-1. **Create a Cloudflare account** at dash.cloudflare.com.
-2. **Buy the domain:** Domain Registration → Register Domains. Payment details can't be entered by Claude, so this step is yours.
-3. **Connect this repo:** Workers & Pages → Create → Pages → Connect to Git → pick `NoraGounder/Claude_Sidu`.
+## One-time setup (about 15 minutes, needs the account owner)
+
+Payment details can't be entered by Claude, so these steps are yours. Everything after them is handled from Claude Code.
+
+1. **Create a Cloudflare account** at dash.cloudflare.com and add a payment method.
+2. **Buy the domain:** *Domain Registration → Register Domains* → `quailworks.co`. Keep auto-renew on.
+3. **Connect this repo:** *Workers & Pages → Create → Import a repository* → GitHub → `NoraGounder/Claude_Sidu`.
    - Production branch: `main`
-   - Framework preset: `None`
    - Build command: *(leave empty)*
-   - Build output directory: `/`
-4. **Add the custom domain:** open the Pages project → Custom domains → add `yourdomain` and `www.yourdomain`. DNS is configured automatically because the domain is on Cloudflare.
-5. **Set up email:** Email → Email Routing → forward `hello@yourdomain` to your Gmail.
+   - Deploy command: `npx wrangler deploy` (auto-detected from `wrangler.jsonc`)
+4. **Attach the domain:** open the new `quailworks-site` Worker → *Settings → Domains & Routes → Add → Custom domain*. Add `quailworks.co`, then `www.quailworks.co`.
+   Then go to *Rules → Redirect Rules → Templates → "Redirect from WWW to root"*.
+5. **Set up email:** *Email → Email Routing* on `quailworks.co` → create `hello@quailworks.co` → forward to your Gmail → verify.
+6. **Activate the form:** submit the contact form once on the live site. FormSubmit emails an activation link to `hello@`; click it.
+7. **Turn on analytics:** *Analytics & Logs → Web Analytics → Add site → quailworks.co*.
 
-### Day-to-day changes (Claude Code)
+## Day to day
 
-Ask Claude Code for a change. It edits `index.html` and pushes to a branch, Cloudflare posts a preview URL, and merging to `main` publishes it.
+Ask Claude Code for any change. It edits `site/`, checks the result on desktop and mobile, and pushes. Cloudflare builds a preview for every branch and publishes `main` to quailworks.co within about a minute.
 
-## Alternative: GitHub Pages
+To preview locally:
 
-The repo is public, so GitHub Pages also works for free. Go to Settings → Pages → Source: *Deploy from a branch* → `main` / `root`. Then point the domain's DNS at GitHub: four `A` records to `185.199.108.153`, `185.199.109.153`, `185.199.110.153` and `185.199.111.153`, plus a `CNAME` for `www` to `noragounder.github.io`. You'd still buy the domain somewhere else, and email forwarding isn't included.
+```bash
+npx wrangler dev
+```
 
-## Before going live
+## Content still to add
 
-- [ ] Choose the domain, then update the contact email in `index.html` (search for `hello@quailworks.co`).
-- [ ] Swap the mailto CTA for a booking link (Cal.com or Calendly) if you have one.
-- [ ] Add case studies and client logos (see "Gaps to close" in the benchmark doc).
+- [ ] 2–3 case studies with numbers (the biggest gap compared with competitors; see `docs/gtm-agency-benchmark.md`)
+- [ ] Client logos, once you have permission
+- [ ] A booking link (Cal.com or Calendly) alongside the form
+- [ ] Partner badges (Clay, HubSpot) once earned

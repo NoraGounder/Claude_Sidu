@@ -1,0 +1,11 @@
+// Cloudflare deployment config: serves the static site in ./site
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quailworks-site",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./site",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  }
+}

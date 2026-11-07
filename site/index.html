@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quailworks — GTM Engineering for Revenue Teams</title>
+  <meta name="description" content="Quailworks is a GTM engineering firm. We design, build and run signal-based outbound, inbound routing and RevOps systems inside your stack — engineered to production standards and owned by you." />
+  <link rel="canonical" href="https://quailworks.co/" />
+  <meta name="theme-color" content="#F5F4EF" />
+  <meta name="color-scheme" content="light" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Quailworks" />
+  <meta property="og:url" content="https://quailworks.co/" />
+  <meta property="og:title" content="Quailworks — Pipeline, engineered." />
+  <meta property="og:description" content="GTM engineering for revenue teams: signal-based outbound, inbound routing and RevOps systems, built in your stack and owned by you." />
+  <meta property="og:image" content="https://quailworks.co/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://quailworks.co/og.png" />
+
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="preload" href="assets/fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script>document.documentElement.classList.add('js')</script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "name": "Quailworks",
+    "url": "https://quailworks.co/",
+    "logo": "https://quailworks.co/apple-touch-icon.png",
+    "email": "hello@quailworks.co",
+    "description": "GTM engineering firm building signal-based outbound, inbound routing and RevOps systems for B2B revenue teams.",
+    "knowsAbout": ["GTM engineering", "Revenue operations", "Outbound automation", "Lead routing", "CRM data quality", "Clay", "HubSpot", "Salesforce"]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <!-- ═══ NAV ═══ -->
+  <header class="nav" id="nav">
+    <div class="wrap">
+      <a class="brand" href="#top" aria-label="Quailworks — home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14.5" cy="14.5" r="9.75" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M21 21l7 7" stroke="#FF4F00" stroke-width="3.5"/></svg>
+        Quailworks
+      </a>
+      <nav aria-label="Primary">
+        <ul class="nav-links">
+          <li><a href="#services">Services</a></li>
+          <li><a href="#engine">Approach</a></li>
+          <li><a href="#blueprints">Blueprints</a></li>
+          <li><a href="#enterprise">Enterprise</a></li>
+          <li><a href="#engagements">Engagements</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta">
+        <a class="btn btn-ink btn-sm" href="#contact">Book a consultation <span class="arr" aria-hidden="true">→</span></a>
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><span></span></button>
+      </div>
+    </div>
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="#services">Services</a>
+      <a href="#engine">Approach</a>
+      <a href="#blueprints">Blueprints</a>
+      <a href="#enterprise">Enterprise</a>
+      <a href="#engagements">Engagements</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn btn-ink" href="#contact">Book a consultation <span class="arr" aria-hidden="true">→</span></a>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ═══ HERO ═══ -->
+    <section class="section hero" id="top">
+      <div class="wrap">
+        <div class="hero-top">
+          <div>
+            <span class="label reveal">GTM engineering firm</span>
+            <h1 class="display reveal d1">Pipeline,<br /><em>engineered</em><span class="dot">.</span></h1>
+          </div>
+          <div class="hero-side reveal d2">
+            <p class="lede">
+              We design, build and run the systems behind modern go-to-market: signal-based
+              outbound, inbound routing and trusted CRM data. Everything is engineered to
+              production standards, runs inside your stack and belongs to you.
+            </p>
+            <div class="hero-ctas">
+              <a class="btn btn-ink" href="#contact">Book a consultation <span class="arr" aria-hidden="true">→</span></a>
+              <a class="btn btn-line" href="#engine">How we work</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-meta reveal d3" aria-label="Capabilities">
+          <span>Outbound systems</span>
+          <span>Inbound routing</span>
+          <span>RevOps &amp; CRM data</span>
+          <span>AI research agents</span>
+        </div>
+
+        <!-- Console -->
+        <div class="console-wrap reveal d3">
+          <div class="console" role="img" aria-label="Illustration of the Quailworks revenue engine: a buying signal is detected, the account is enriched and scored, and automated actions route it to the right rep and update the CRM.">
+            <div class="console-bar" aria-hidden="true">
+              <div class="dots"><i></i><i></i><i></i></div>
+              <div class="console-title"><b>revenue-engine</b> / production</div>
+              <div class="console-status"><span class="pulse"></span>Live · all systems healthy</div>
+            </div>
+            <div class="console-grid" aria-hidden="true">
+              <div class="pane pane-signals">
+                <div class="pane-head"><span>Buying signals</span><span>Real-time</span></div>
+                <ul class="signals" id="signals">
+                  <li class="sig active"><span class="sig-type">Job change</span><span class="sig-time">just now</span><span class="sig-text">Former champion <b>Dana Okafor</b> joined Northwind Freight as VP Sales</span></li>
+                  <li class="sig"><span class="sig-type">Web intent</span><span class="sig-time">4m ago</span><span class="sig-text"><b>Fabrikam Payments</b> viewed /pricing three times this week</span></li>
+                  <li class="sig"><span class="sig-type">Hiring</span><span class="sig-time">11m ago</span><span class="sig-text"><b>Contoso Analytics</b> opened 6 SDR roles in Chicago</span></li>
+                  <li class="sig"><span class="sig-type">Funding</span><span class="sig-time">26m ago</span><span class="sig-text"><b>Tailspin Health</b> announced a $60M Series C</span></li>
+                </ul>
+              </div>
+
+              <div class="pane pane-account">
+                <div class="pane-head"><span>Account</span><span class="tier" id="acct-tier">Tier 1</span></div>
+                <div class="acct-name" id="acct-name">Northwind Freight</div>
+                <div class="acct-meta" id="acct-meta">Logistics · 1,200 employees · Series C</div>
+                <div class="scores">
+                  <div class="score"><span>ICP fit</span><div class="bar"><i></i></div><b>92</b></div>
+                  <div class="score"><span>Intent</span><div class="bar"><i></i></div><b>81</b></div>
+                  <div class="score"><span>Timing</span><div class="bar"><i></i></div><b>88</b></div>
+                </div>
+                <div class="sub-head">Buying committee</div>
+                <ul class="people" id="people">
+                  <li class="person"><span class="avatar">DO</span><div><b>Dana Okafor</b><small>VP Sales · former champion</small></div><span class="verified">✓ verified</span></li>
+                  <li class="person"><span class="avatar">LO</span><div><b>Luis Ortega</b><small>Head of Revenue Operations</small></div><span class="verified">✓ verified</span></li>
+                  <li class="person"><span class="avatar">PN</span><div><b>Priya Nair</b><small>Chief Financial Officer</small></div><span class="verified">✓ verified</span></li>
+                </ul>
+              </div>
+
+              <div class="pane pane-actions">
+                <div class="pane-head"><span>Automated play</span><span class="pill" id="play-name">Champion moved</span></div>
+                <ol class="actions" id="actions">
+                  <li class="act done"><span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-4.8" stroke="#4CC38A" stroke-width="1.6"/></svg></span><span>Enriched through a 3-provider waterfall</span></li>
+                  <li class="act done"><span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-4.8" stroke="#4CC38A" stroke-width="1.6"/></svg></span><span>Scored against your closed-won model</span></li>
+                  <li class="act done"><span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-4.8" stroke="#4CC38A" stroke-width="1.6"/></svg></span><span>Routed to <b>Maya Rivera</b>, AE West</span></li>
+                  <li class="act done"><span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-4.8" stroke="#4CC38A" stroke-width="1.6"/></svg></span><span>Warm intro drafted for rep review</span></li>
+                  <li class="act done"><span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-4.8" stroke="#4CC38A" stroke-width="1.6"/></svg></span><span>LinkedIn touch queued</span></li>
+                  <li class="act done"><span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-4.8" stroke="#4CC38A" stroke-width="1.6"/></svg></span><span>Salesforce opportunity created</span></li>
+                  <li class="act done"><span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-4.8" stroke="#4CC38A" stroke-width="1.6"/></svg></span><span>Alert posted to <b>#pipeline-west</b></span></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+          <p class="console-caption">Illustrative interface. Companies and people shown are fictional.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ STACK ═══ -->
+    <section class="section stack" aria-labelledby="stack-title">
+      <div class="wrap">
+        <div class="stack-head">
+          <span class="label" id="stack-title">Platforms we engineer on</span>
+          <p>We build on the tools you already license, and add only what's missing.</p>
+        </div>
+        <ul class="stack-grid">
+          <li>Clay</li><li>Salesforce</li><li>HubSpot</li><li>Attio</li><li>Apollo</li><li>ZoomInfo</li><li>Snowflake</li>
+          <li>Outreach</li><li>Instantly</li><li>HeyReach</li><li>n8n</li><li>Claude</li><li>OpenAI</li><li>Slack</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══ THE GAP ═══ -->
+    <section class="section" id="problem">
+      <div class="wrap gap-grid">
+        <div class="reveal">
+          <span class="label">The gap</span>
+          <p class="statement">Your market sends buying signals every day. <em>Most revenue teams act on a fraction of them, days too late.</em></p>
+        </div>
+        <ol class="gap-list">
+          <li class="reveal d1">
+            <span class="n">01</span>
+            <div>
+              <h3>Research done by hand</h3>
+              <p>Sellers spend hours building lists and researching accounts, one browser tab at a time. None of that work compounds.</p>
+            </div>
+          </li>
+          <li class="reveal d2">
+            <span class="n">02</span>
+            <div>
+              <h3>Signals that never trigger anything</h3>
+              <p>Job changes, funding rounds, hiring sprees and pricing-page visits all show intent, but no system turns them into action.</p>
+            </div>
+          </li>
+          <li class="reveal d3">
+            <span class="n">03</span>
+            <div>
+              <h3>A CRM nobody trusts</h3>
+              <p>Duplicates, stale fields and missing routing rules. Leads go cold, and forecasts become guesswork.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ═══ SERVICES ═══ -->
+    <section class="section tint" id="services">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="reveal">
+            <span class="label">Services</span>
+            <h2 class="display h2 muted-em">Three systems.<br /><em>One revenue engine.</em></h2>
+          </div>
+          <p class="lede reveal d1">Start with the system that hurts most. Each one stands on its own, and they get stronger when they share the same data.</p>
+        </div>
+
+        <div class="services-grid">
+          <article class="svc reveal">
+            <div class="svc-top">
+              <span class="svc-n">01 — Outbound</span>
+              <svg class="svc-icon" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="18" cy="26" r="13"/><circle cx="18" cy="26" r="7"/><circle cx="18" cy="26" r="1.6" fill="currentColor"/><path d="M18 26L37 7M29 7h8v8" stroke="#FF4F00"/></svg>
+            </div>
+            <h3>Signal-based outbound</h3>
+            <p>Find accounts that are ready to buy, and reach them with a reason to reply.</p>
+            <ul>
+              <li>TAM mapping and account tiering</li>
+              <li>Signal tracking: hiring, funding, job changes, tech stack</li>
+              <li>Waterfall enrichment and email verification</li>
+              <li>AI account research and personalisation at scale</li>
+              <li>Sending infrastructure and deliverability</li>
+              <li>Multichannel sequences across email and LinkedIn</li>
+            </ul>
+          </article>
+          <article class="svc reveal d1">
+            <div class="svc-top">
+              <span class="svc-n">02 — Inbound</span>
+              <svg class="svc-icon" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M5 9h34L26 24v11l-8 4V24z"/><path d="M22 2v12M17.5 9.5L22 14l4.5-4.5" stroke="#FF4F00"/></svg>
+            </div>
+            <h3>Inbound routing</h3>
+            <p>Make every hand-raiser actionable in minutes, not days.</p>
+            <ul>
+              <li>Instant enrichment and qualification of new leads</li>
+              <li>Fit and intent scoring with territory-aware routing</li>
+              <li>Speed-to-lead alerts in Slack or Teams</li>
+              <li>Website visitor identification</li>
+              <li>Inbound-led outbound plays</li>
+              <li>Automated meeting-prep briefs for sellers</li>
+            </ul>
+          </article>
+          <article class="svc reveal d2">
+            <div class="svc-top">
+              <span class="svc-n">03 — RevOps</span>
+              <svg class="svc-icon" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><ellipse cx="22" cy="10" rx="14" ry="5"/><path d="M8 10v24c0 2.8 6.3 5 14 5s14-2.2 14-5V10"/><path d="M8 22c0 2.8 6.3 5 14 5s14-2.2 14-5" stroke="#FF4F00"/></svg>
+            </div>
+            <h3>RevOps and data</h3>
+            <p>Turn your CRM into a source of truth you can automate on.</p>
+            <ul>
+              <li>CRM audit, deduplication and normalisation</li>
+              <li>Automated, always-fresh account enrichment</li>
+              <li>Lifecycle stages and lead scoring models</li>
+              <li>Closed-won lookalike modelling</li>
+              <li>Pipeline reporting leadership can trust</li>
+              <li>Workflow automation across your tools</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ENGINE ═══ -->
+    <section class="section dark" id="engine">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="reveal">
+            <span class="label">Approach</span>
+            <h2 class="display h2 muted-em">How a signal<br /><em>becomes pipeline.</em></h2>
+          </div>
+          <p class="lede reveal d1">Every system we ship follows the same architecture. Each stage has a written spec, an owner, and an alert for when something breaks.</p>
+        </div>
+
+        <div class="flow">
+          <div class="flow-track" aria-hidden="true"></div>
+          <div class="stage reveal">
+            <div class="node">01</div>
+            <h3>Detect</h3>
+            <p>Hiring, funding, job changes, stack shifts, website visits and product usage, tracked continuously across your market.</p>
+            <div class="runs"><span>Runs on</span>Clay · scrapers · webhooks</div>
+          </div>
+          <div class="stage reveal d1">
+            <div class="node">02</div>
+            <h3>Enrich</h3>
+            <p>Waterfall enrichment across several providers, so every email and phone number is verified before anything is sent.</p>
+            <div class="runs"><span>Runs on</span>Clay · data providers</div>
+          </div>
+          <div class="stage reveal d2">
+            <div class="node">03</div>
+            <h3>Score</h3>
+            <p>Fit, intent and timing, scored against your own closed-won deals rather than a generic ICP template.</p>
+            <div class="runs"><span>Runs on</span>CRM history · LLMs</div>
+          </div>
+          <div class="stage reveal d3">
+            <div class="node">04</div>
+            <h3>Act</h3>
+            <p>Each signal fires the play that fits: a personal email, a LinkedIn touch, an ad audience or an alert to the right owner.</p>
+            <div class="runs"><span>Runs on</span>Sequencers · Slack · ads</div>
+          </div>
+          <div class="stage reveal d4">
+            <div class="node">05</div>
+            <h3>Learn</h3>
+            <p>Replies, meetings and revenue sync back to the CRM. Every two weeks, plays that aren't working get cut.</p>
+            <div class="runs"><span>Runs on</span>Salesforce · HubSpot · BI</div>
+          </div>
+        </div>
+        <p class="loop-note reveal">
+          <svg viewBox="0 -3 34 22" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M31 9a7 7 0 01-7 7H10a7 7 0 010-14h17"/><path d="M24 -1l3 3-3 3"/></svg>
+          Outcomes feed back into scoring, so the engine gets more accurate every cycle.
+        </p>
+      </div>
+    </section>
+
+    <!-- ═══ BLUEPRINTS ═══ -->
+    <section class="section" id="blueprints">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="reveal">
+            <span class="label">Blueprints</span>
+            <h2 class="display h2 muted-em">Reference architectures<br /><em>we deploy.</em></h2>
+          </div>
+          <p class="lede reveal d1">Proven patterns, adapted to your market, data and stack. Most engagements start with one of these and grow from there.</p>
+        </div>
+
+        <div class="bp-grid">
+          <article class="bp reveal">
+            <div class="bp-top"><span class="code">BP-01</span><span>Typical build · 2–3 weeks</span></div>
+            <h3>Champion tracking</h3>
+            <p>When a past buyer or power user changes jobs, they become your warmest possible lead. Most teams find out months later, if at all.</p>
+            <dl class="spec">
+              <div><dt>Trigger</dt><dd>A known champion starts at a new company</dd></div>
+              <div><dt>Logic</dt><dd>Detect the move, check fit, map the new buying committee</dd></div>
+              <div><dt>Output</dt><dd>Warm intro drafted, opportunity created, owner alerted</dd></div>
+              <div><dt>Stack</dt><dd>Clay · CRM · LinkedIn data · Slack</dd></div>
+            </dl>
+          </article>
+          <article class="bp reveal d1">
+            <div class="bp-top"><span class="code">BP-02</span><span>Typical build · 2–4 weeks</span></div>
+            <h3>Inbound fast lane</h3>
+            <p>Demo requests and high-intent visits are enriched, qualified and routed in seconds, with a research brief already waiting for the seller.</p>
+            <dl class="spec">
+              <div><dt>Trigger</dt><dd>Form fill, demo request or high-intent visit</dd></div>
+              <div><dt>Logic</dt><dd>Enrich, score, apply territory and segment rules</dd></div>
+              <div><dt>Output</dt><dd>Owner assigned, alert sent, meeting brief generated</dd></div>
+              <div><dt>Stack</dt><dd>Forms · Clay · CRM · Slack or Teams</dd></div>
+            </dl>
+          </article>
+          <article class="bp reveal">
+            <div class="bp-top"><span class="code">BP-03</span><span>Typical build · 3–5 weeks</span></div>
+            <h3>TAM engine</h3>
+            <p>Your whole addressable market in one living table, deduplicated, tiered by lookalike modelling and refreshed automatically.</p>
+            <dl class="spec">
+              <div><dt>Trigger</dt><dd>New ICP, new market or a scheduled refresh</dd></div>
+              <div><dt>Logic</dt><dd>Source, normalise and dedupe, then tier against closed-won</dd></div>
+              <div><dt>Output</dt><dd>Tiered account universe synced to the CRM</dd></div>
+              <div><dt>Stack</dt><dd>Clay · data providers · CRM · warehouse</dd></div>
+            </dl>
+          </article>
+          <article class="bp reveal d1">
+            <div class="bp-top"><span class="code">BP-04</span><span>Typical build · 3–6 weeks</span></div>
+            <h3>CRM integrity loop</h3>
+            <p>Continuous deduplication, normalisation and enrichment that keeps your system of record accurate, without a quarterly clean-up project.</p>
+            <dl class="spec">
+              <div><dt>Trigger</dt><dd>Record created or updated, or a nightly sweep</dd></div>
+              <div><dt>Logic</dt><dd>Match, merge, normalise, re-enrich and flag decay</dd></div>
+              <div><dt>Output</dt><dd>Clean records, data-quality report, exception queue</dd></div>
+              <div><dt>Stack</dt><dd>Salesforce or HubSpot · Clay · n8n</dd></div>
+            </dl>
+          </article>
+        </div>
+        <p class="note reveal">Build times are indicative and depend on data access and scope. We confirm them in writing after the audit.</p>
+      </div>
+    </section>
+
+    <!-- ═══ PROCESS ═══ -->
+    <section class="section tint" id="process">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="reveal">
+            <span class="label">Process</span>
+            <h2 class="display h2 muted-em">From audit to production<br /><em>in weeks, not quarters.</em></h2>
+          </div>
+          <p class="lede reveal d1">A short audit, a written blueprint, then a build inside your own accounts. Nothing gets built until you've signed off on the spec.</p>
+        </div>
+        <div class="timeline">
+          <div class="phase reveal">
+            <div class="phase-dot"></div>
+            <span class="when">Week 0</span>
+            <h3>Audit</h3>
+            <p>We map your ICP, data, stack and funnel, and find where pipeline leaks.</p>
+            <div class="deliv"><span>Deliverable</span>Audit report and prioritised roadmap</div>
+          </div>
+          <div class="phase reveal d1">
+            <div class="phase-dot"></div>
+            <span class="when">Weeks 1–2</span>
+            <h3>Blueprint</h3>
+            <p>We specify the signals, scoring model, routing rules and plays, and agree them with you.</p>
+            <div class="deliv"><span>Deliverable</span>Signed-off system specification</div>
+          </div>
+          <div class="phase reveal d2">
+            <div class="phase-dot"></div>
+            <span class="when">Weeks 2–6</span>
+            <h3>Build and launch</h3>
+            <p>We build in your accounts, test on real data and put the first plays into market.</p>
+            <div class="deliv"><span>Deliverable</span>Production system and runbooks</div>
+          </div>
+          <div class="phase reveal d3">
+            <div class="phase-dot"></div>
+            <span class="when">Ongoing</span>
+            <h3>Operate or hand over</h3>
+            <p>We run and optimise the system with you, or hand it over to your team with full training.</p>
+            <div class="deliv"><span>Deliverable</span>Fortnightly reviews, or a full handover</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ WHY ═══ -->
+    <section class="section" id="why">
+      <div class="wrap why-grid">
+        <div class="reveal">
+          <span class="label">Why Quailworks</span>
+          <p class="statement">We were an engineering firm before we were a GTM firm. <em>It shows in what we ship.</em></p>
+          <p class="why-copy">
+            Anyone can wire up a workflow that runs once. The hard part is a system that
+            still works six months later, after your ICP shifts, a data provider changes
+            its API and the person who built it has moved on. That's the part we're good at.
+          </p>
+        </div>
+        <ol class="principles">
+          <li class="reveal d1">
+            <span class="n">01</span>
+            <div>
+              <h3>Specs before automations</h3>
+              <p>Every build starts with a written spec covering inputs, logic, outputs and owners. No mystery workflows.</p>
+            </div>
+          </li>
+          <li class="reveal d2">
+            <span class="n">02</span>
+            <div>
+              <h3>Production standards</h3>
+              <p>Versioned, tested on real data and monitored, so you hear about a failure before your pipeline feels it.</p>
+            </div>
+          </li>
+          <li class="reveal d3">
+            <span class="n">03</span>
+            <div>
+              <h3>You own everything</h3>
+              <p>Your accounts, domains, data, prompts and documentation. No black boxes and no lock-in.</p>
+            </div>
+          </li>
+          <li class="reveal d4">
+            <span class="n">04</span>
+            <div>
+              <h3>Senior engineers on a small roster</h3>
+              <p>We take on a few clients at a time. The engineer who scopes your system is the one who builds it.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ═══ ENTERPRISE ═══ -->
+    <section class="section dark" id="enterprise">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="reveal">
+            <span class="label">Enterprise</span>
+            <h2 class="display h2 muted-em">Built for environments<br /><em>where governance matters.</em></h2>
+          </div>
+          <p class="lede reveal d1">Large organisations need more than clever automations. We build the way your security, legal and RevOps teams expect.</p>
+        </div>
+        <div class="ent-grid">
+          <div class="ent reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h2M7 16.5h2"/></svg>
+            <h3>Built in your environment</h3>
+            <p>Systems live in your CRM, workspaces and cloud accounts, under your access controls and audit logs.</p>
+          </div>
+          <div class="ent reveal d1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg>
+            <h3>Least-privilege access</h3>
+            <p>We request only the permissions a build needs, through your SSO or password manager, and give them back at handover.</p>
+          </div>
+          <div class="ent reveal d2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+            <h3>Confidentiality by default</h3>
+            <p>Mutual NDAs and data processing agreements as standard. Your data never trains shared models.</p>
+          </div>
+          <div class="ent reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+            <h3>Compliance-aware outreach</h3>
+            <p>Opt-outs, suppression lists and regional rules such as GDPR and CAN-SPAM are designed in from day one.</p>
+          </div>
+          <div class="ent reveal d1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h7"/></svg>
+            <h3>Documented and auditable</h3>
+            <p>Specs, change logs and runbooks for every system, so your team can inspect, extend and operate it.</p>
+          </div>
+          <div class="ent reveal d2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6h5"/></svg>
+            <h3>Monitored in production</h3>
+            <p>Health checks and alerts on every critical step, so a broken integration gets fixed before it costs pipeline.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ENGAGEMENTS ═══ -->
+    <section class="section" id="engagements">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="reveal">
+            <span class="label">Engagements</span>
+            <h2 class="display h2 muted-em">Three ways<br /><em>to work with us.</em></h2>
+          </div>
+          <p class="lede reveal d1">Most clients start with an audit. It's the fastest way to find out whether there's a system worth building, and what it's worth to you.</p>
+        </div>
+        <div class="plans">
+          <article class="plan reveal">
+            <span class="meta">1–2 weeks · Fixed fee</span>
+            <h3>GTM audit</h3>
+            <p>A clear-eyed teardown of how pipeline is created today, and where it leaks.</p>
+            <ul>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>ICP, data and tech-stack review</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>Funnel and CRM health assessment</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>Prioritised roadmap with expected impact</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>Yours to keep, whoever builds it</li>
+            </ul>
+            <a class="btn btn-line" href="#contact">Start with an audit</a>
+          </article>
+          <article class="plan featured reveal d1">
+            <span class="meta">4–6 weeks · Fixed scope <span class="plan-tag">Recommended</span></span>
+            <h3>Build sprint</h3>
+            <p>One production system, designed, built, launched and documented end to end.</p>
+            <ul>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>Written blueprint and sign-off</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>Built and tested in your accounts</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>First plays live in market</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>Runbooks, SOPs and team training</li>
+            </ul>
+            <a class="btn btn-accent" href="#contact">Scope a build <span class="arr" aria-hidden="true">→</span></a>
+          </article>
+          <article class="plan reveal d2">
+            <span class="meta">Monthly · Retained</span>
+            <h3>Embedded team</h3>
+            <p>A dedicated GTM engineer who runs, improves and extends your systems.</p>
+            <ul>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>New plays and experiments every cycle</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>Fortnightly performance reviews</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>Monitoring, maintenance and support</li>
+              <li><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6"/></svg>A shared channel with our engineers</li>
+            </ul>
+            <a class="btn btn-line" href="#contact">Talk to us</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ FAQ ═══ -->
+    <section class="section tint" id="faq">
+      <div class="wrap faq-grid">
+        <div class="reveal">
+          <span class="label">FAQ</span>
+          <h2 class="display h2 muted-em">Questions,<br /><em>answered.</em></h2>
+          <p class="lede">Anything else? Write to <a href="mailto:hello@quailworks.co">hello@quailworks.co</a>.</p>
+        </div>
+        <div class="reveal d1">
+          <details>
+            <summary>What is GTM engineering?<span class="pm" aria-hidden="true"></span></summary>
+            <p>It's engineering applied to go-to-market: the data pipelines, automations and AI agents that find, research, prioritise and reach the right accounts, and keep your CRM accurate. Your sellers spend their time selling instead of preparing to sell.</p>
+          </details>
+          <details>
+            <summary>Do we need to use Clay?<span class="pm" aria-hidden="true"></span></summary>
+            <p>No. Clay is often the right core for enrichment and orchestration, but we're tool-agnostic. We build on whatever fits, including n8n, custom code, your data warehouse and your CRM's native automation, starting with the tools you already license.</p>
+          </details>
+          <details>
+            <summary>Do you run campaigns, or only build systems?<span class="pm" aria-hidden="true"></span></summary>
+            <p>Both. Some clients want a system built and handed to their own team. Others retain us to operate and improve it every month. The audit is where we work out which model fits.</p>
+          </details>
+          <details>
+            <summary>Who owns what you build?<span class="pm" aria-hidden="true"></span></summary>
+            <p>You do. Everything lives in your accounts: CRM, workspaces, sending domains, data, prompts and documentation. If we stopped working together tomorrow, the system would keep running.</p>
+          </details>
+          <details>
+            <summary>Can you work with our security and procurement teams?<span class="pm" aria-hidden="true"></span></summary>
+            <p>Yes. We complete security questionnaires and vendor onboarding, sign NDAs and DPAs, and work inside your environment under your access controls. Tell us your requirements early and we'll build to them.</p>
+          </details>
+          <details>
+            <summary>How is an engagement priced?<span class="pm" aria-hidden="true"></span></summary>
+            <p>Audits are a fixed fee. Build sprints are fixed-scope and quoted after the audit, so you know the cost before work starts. Embedded engineering is a monthly retainer. You'll have a written proposal within a few days of our first call.</p>
+          </details>
+          <details>
+            <summary>How quickly will something be live?<span class="pm" aria-hidden="true"></span></summary>
+            <p>Build sprints usually run four to six weeks from blueprint sign-off, with the first plays in market inside that window. Data access and approvals are the usual pacing items, so we plan around them from day one.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CONTACT ═══ -->
+    <section class="section dark" id="contact">
+      <div class="wrap contact-grid">
+        <div class="reveal">
+          <span class="label">Contact</span>
+          <h2 class="display h2 muted-em">Find out where your <em>pipeline leaks.</em></h2>
+          <ol class="next">
+            <li><span class="n">01</span><div><b>We reply within one business day</b>with a few questions about your team, market and stack.</div></li>
+            <li><span class="n">02</span><div><b>A 30-minute working session</b>where we walk through your funnel and where it's losing pipeline.</div></li>
+            <li><span class="n">03</span><div><b>A written recommendation</b>covering the three things we'd fix first, whether or not we work together.</div></li>
+          </ol>
+          <p class="direct">Prefer email? <a href="mailto:hello@quailworks.co">hello@quailworks.co</a></p>
+        </div>
+
+        <div class="form-card reveal d1">
+          <form id="contact-form" action="https://formsubmit.co/hello@quailworks.co" method="POST" novalidate>
+            <input type="hidden" name="_subject" value="New enquiry from quailworks.co" />
+            <input type="hidden" name="_template" value="table" />
+            <div class="hp" aria-hidden="true"><label>Leave this empty <input type="text" name="_honey" tabindex="-1" autocomplete="off" /></label></div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="f-name">Full name</label>
+                <input id="f-name" name="name" type="text" autocomplete="name" required placeholder="Jane Smith" />
+              </div>
+              <div class="field">
+                <label for="f-email">Work email</label>
+                <input id="f-email" name="email" type="email" autocomplete="email" required placeholder="jane@company.com" />
+              </div>
+              <div class="field">
+                <label for="f-company">Company</label>
+                <input id="f-company" name="company" type="text" autocomplete="organization" required placeholder="Company name" />
+              </div>
+              <div class="field">
+                <label for="f-role">Role <i>(optional)</i></label>
+                <input id="f-role" name="role" type="text" autocomplete="organization-title" placeholder="e.g. VP Revenue Operations" />
+              </div>
+              <div class="field full">
+                <label for="f-focus">What would you like to fix first?</label>
+                <select id="f-focus" name="focus">
+                  <option>Outbound pipeline generation</option>
+                  <option>Inbound conversion and routing</option>
+                  <option>CRM data quality and RevOps</option>
+                  <option>AI research and automation</option>
+                  <option>Not sure yet, we'd like an audit</option>
+                </select>
+              </div>
+              <div class="field full">
+                <label for="f-msg">Anything we should know? <i>(optional)</i></label>
+                <textarea id="f-msg" name="message" placeholder="Team size, current stack, what you've tried so far…"></textarea>
+              </div>
+            </div>
+            <div class="form-foot">
+              <small>By submitting, you agree to our <a href="privacy.html">privacy notice</a>. We'll only use your details to respond.</small>
+              <button class="btn btn-accent" type="submit">Request a consultation <span class="arr" aria-hidden="true">→</span></button>
+            </div>
+            <div class="form-status" id="form-status" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer">
+    <div class="wrap">
+      <div class="foot-grid">
+        <div class="foot-brand">
+          <a class="brand" href="#top" aria-label="Quailworks — home">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14.5" cy="14.5" r="9.75" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M21 21l7 7" stroke="#FF6A26" stroke-width="3.5"/></svg>
+            Quailworks
+          </a>
+          <p>GTM engineering for revenue teams. Systems that find, prioritise and reach your next customers, built to last.</p>
+        </div>
+        <div class="foot-col">
+          <h4>Services</h4>
+          <ul>
+            <li><a href="#services">Signal-based outbound</a></li>
+            <li><a href="#services">Inbound routing</a></li>
+            <li><a href="#services">RevOps and CRM data</a></li>
+            <li><a href="#blueprints">Blueprints</a></li>
+          </ul>
+        </div>
+        <div class="foot-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="#engine">Approach</a></li>
+            <li><a href="#enterprise">Enterprise</a></li>
+            <li><a href="#engagements">Engagements</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+        <div class="foot-col">
+          <h4>Contact</h4>
+          <ul>
+            <li><a href="mailto:hello@quailworks.co">hello@quailworks.co</a></li>
+            <li><a href="#contact">Book a consultation</a></li>
+            <li><a href="privacy.html">Privacy notice</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="wordmark" aria-hidden="true">Quailworks<span>.</span></div>
+      <div class="foot-bottom">
+        <span>© <span id="year">2026</span> Quailworks. All rights reserved.</span>
+        <span>Pipeline, engineered.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js" defer></script>
+</body>
+</html>
