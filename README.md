@@ -20,7 +20,7 @@ Edit the files in `site/`, then run `npx wrangler deploy`, which packs and publi
 | Hosting, CDN, DNS, SSL | Cloudflare Workers | $0 | Global edge, DDoS protection, free tier covers 100k requests/day |
 | Email, calendar, docs, video | Google Workspace Business Starter, 1 seat | $7/mo annual, $8.40 flexible | Best deliverability, and every GTM tool (Clay, HubSpot, Instantly, Apollo) plugs into Google. Aliases are free |
 | Booking link | Google Calendar appointment schedule | included | No extra tool to pay for |
-| Contact form | FormSubmit, with a mailto fallback | $0 | Works on static hosting. Submissions go to `hello@` |
+| Contact form | Own endpoint (`POST /api/contact` in the Worker) via Cloudflare Email Service, with a mailto fallback | $0 | No third party; validation and spam protection built in. Submissions go to `hello@` with the visitor as reply-to |
 | Analytics | Cloudflare Web Analytics | $0 | Cookie-free, so no cookie banner |
 | **Total** | | **about $10/month** | |
 
