@@ -35,6 +35,17 @@ const CONTACT_FROM = { email: 'website@quailworks.co', name: 'Quailworks website
 const ALLOWED_ORIGINS = new Set(['https://quailworks.co', 'https://www.quailworks.co']);
 const LIMITS = { name: 100, email: 254, company: 120, role: 120, focus: 80, message: 4000 };
 const EMAIL_RE = /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]{2,}$/;
+const FOCUS_OPTIONS = new Set([
+  'Outbound pipeline generation',
+  'Inbound conversion and routing',
+  'CRM data quality and RevOps',
+  'AI research and automation',
+  "Not sure yet, we'd like an audit",
+]);
+const MIN_FILL_MS = 3000; // humans take longer than this to fill the form
+const URL_RE = /(https?:\/\/|www\.)\S+/gi;
+// Strip control characters (incl. CR/LF, which could inject email headers) from single-line fields.
+const oneLine = (v) => v.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
 const recent = new Map(); // best-effort per-isolate rate limit: ip -> [timestamps]
 
 function json(body, status = 200) {
@@ -64,19 +75,41 @@ async function handleContact(request, env) {
   }
   if (!(request.headers.get('Content-Type') || '').includes('application/json')) return json({ success: false, error: 'Expected JSON' }, 415);
 
+  if (Number(request.headers.get('Content-Length') || 0) > 20000) return json({ success: false, error: 'Message too large' }, 413);
   const raw = await request.text();
   if (raw.length > 20000) return json({ success: false, error: 'Message too large' }, 413);
   let data;
   try { data = JSON.parse(raw); } catch { return json({ success: false, error: 'Invalid JSON' }, 400); }
 
-  // Honeypot: bots fill hidden fields. Pretend success, send nothing.
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+
+  // Rate limit before doing any work: Cloudflare's rate limiter (per location),
+  // plus a per-isolate backstop over a longer window.
+  if (env.CONTACT_LIMITER) {
+    const { success } = await env.CONTACT_LIMITER.limit({ key: ip });
+    if (!success) return json({ success: false, error: 'Too many requests. Please email hello@quailworks.co.' }, 429);
+  }
+  if (rateLimited(ip)) return json({ success: false, error: 'Too many requests. Please email hello@quailworks.co.' }, 429);
+
+  // Spam traps. Bots get a normal-looking success response and nothing is sent.
   if (data._honey) return json({ success: true });
+  const elapsed = Number(data._t);
+  if (!Number.isFinite(elapsed) || elapsed < MIN_FILL_MS) return json({ success: true });
 
   const f = {};
-  for (const [key, max] of Object.entries(LIMITS)) f[key] = String(data[key] ?? '').trim().slice(0, max);
-  if (!f.name || !f.company || !EMAIL_RE.test(f.email)) return json({ success: false, error: 'Please complete name, work email and company.' }, 422);
+  for (const [key, max] of Object.entries(LIMITS)) f[key] = String(data[key] ?? '').slice(0, max);
+  for (const key of ['name', 'email', 'company', 'role', 'focus']) f[key] = oneLine(f[key]);
+  f.message = f.message.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim();
+  if (!FOCUS_OPTIONS.has(f.focus)) f.focus = '';
 
-  if (rateLimited(request.headers.get('CF-Connecting-IP') || 'unknown')) return json({ success: false, error: 'Too many requests' }, 429);
+  if (!f.name || !f.company || !EMAIL_RE.test(f.email)) {
+    return json({ success: false, error: 'Please complete name, work email and company.' }, 422);
+  }
+  // Links in name/company/role, or a link-stuffed message, are almost always spam.
+  const linksInHeaderFields = [f.name, f.company, f.role].some((v) => URL_RE.test(v));
+  URL_RE.lastIndex = 0;
+  const linkCount = (f.message.match(URL_RE) || []).length;
+  if (linksInHeaderFields || linkCount > 2) return json({ success: true });
 
   const rows = [['Name', f.name], ['Email', f.email], ['Company', f.company], ['Role', f.role || '—'], ['Wants to fix', f.focus || '—']];
   const text = rows.map(([k, v]) => `${k}: ${v}`).join('\n') + `\n\nMessage:\n${f.message || '—'}\n\nReply directly to this email to respond to ${f.name}.`;

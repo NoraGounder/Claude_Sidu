@@ -162,6 +162,7 @@
 
   /* Contact form ---------------------------------------------------------- */
   var form = document.getElementById('contact-form');
+  var formShownAt = Date.now();
   if (form) {
     var status = document.getElementById('form-status');
     var submit = form.querySelector('button[type="submit"]');
@@ -199,6 +200,7 @@
       var data = {};
       new FormData(form).forEach(function (v, k) { data[k] = typeof v === 'string' ? v.trim() : v; });
       if (data._honey) { showStatus('Thank you. We will be in touch shortly.'); form.reset(); return; }
+      data._t = Date.now() - formShownAt;
 
       submit.disabled = true;
       submit.textContent = 'Sending…';
