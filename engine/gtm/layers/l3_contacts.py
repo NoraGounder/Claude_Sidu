@@ -19,7 +19,7 @@ import json
 import re
 from dataclasses import dataclass
 
-from gtm import budget, db
+from gtm import brain, budget, db
 from gtm.config import ClientConfig
 from gtm.normalize import has_keyword, pick
 from gtm.sources.fullenrich import FullEnrichClient
@@ -109,11 +109,14 @@ def screen(cfg: ClientConfig, account: dict, people: list[dict]) -> list[dict]:
     return kept
 
 
-def relevance_request(account: dict, candidates: list[dict], offer: str = "") -> tuple[dict, dict]:
+def relevance_request(account: dict, candidates: list[dict], offer: str = "",
+                      seller: dict | None = None) -> tuple[dict, dict]:
     """Jev request with job titles only (no names: data minimisation)."""
     state = {"company": account["name"], "industry": account.get("industry"),
              "employees": account.get("employee_range"),
              "offer": offer or "Automating manual operations and finance admin (invoices, orders, data entry)"}
+    if seller:
+        state["seller_context"] = seller
     questions = {}
     for n, c in enumerate(candidates):
         questions[f"c{n}"] = {
@@ -174,7 +177,8 @@ def find_people(cfg: ClientConfig, conn, cp: ContactPlan, fe: FullEnrichClient |
             conn.execute("INSERT OR REPLACE INTO l3_progress(account_id, searched_at, found, credits)"
                          " VALUES (?,?,?,?)", (acc["id"], db.now_iso(), len(candidates), res.credits))
             if candidates:
-                state, questions = relevance_request(acc, candidates, cfg.icp.offer_summary)
+                state, questions = relevance_request(acc, candidates, cfg.icp.offer_summary,
+                                                     brain.jev_context(cfg, "contact"))
                 try:
                     result = jev.decide(state, questions)
                 except JevUnavailable as exc:

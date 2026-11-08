@@ -36,7 +36,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 
 | Layer | What it does | Tools | Code | Status |
 |---|---|---|---|---|
-| 0 | Offer, ICP, qualification rules, budgets | config files | `clients/<client>/` | built |
+| 0 | Offer, ICP, qualification rules, budgets, GTM brain (context for every Jev decision) | config files | `clients/<client>/`, `gtm/brain.py` | built |
 | 1 | Discover target accounts | Harvest API (Apify) | `gtm/layers/l1_discover.py` | built |
 | 2 | Cheap pre-filter: crawl site and careers pages, deterministic rules, Jev 1.14 decisions (non-buyers, ICP fit, admin job titles), score and tier | requests + BeautifulSoup, Crawl4AI browser for blocked and JavaScript pages, TypeSafe Jev 1.14 | `gtm/layers/l2_prefilter.py`, `l2_jev.py` | built |
 | 3 | Find decision-makers (FullEnrich people search), rank them with Jev 1.14 (titles only), find work emails for the chosen ones (max 2 per Tier 1–2 account, 1 for Tier 3) | FullEnrich, TypeSafe Jev 1.14 | `gtm/layers/l3_contacts.py` | built |
@@ -64,6 +64,7 @@ python -m gtm --client the-marble-jar draft && python -m gtm --client the-marble
 python -m gtm --client the-marble-jar push                     # Layer 6 dry run; --live uploads (paused)
 python -m gtm --client the-marble-jar start --region nl --i-confirm   # sends: only after the user approves
 python -m gtm --client the-marble-jar sync                     # replies, bounces, unsubscribes
+python -m gtm --client the-marble-jar learn                    # conversations per signal, opening, tier, persona, region
 pytest -q
 ```
 
@@ -79,6 +80,8 @@ secret. See `.env.example`.
 - `clients/<client>/scoring.yaml`: fit and signal scoring for Layer 2
 - `clients/<client>/limits.yaml`: monthly budget caps and send caps
 - `clients/<client>/ai.yaml`: AI policy (Jev 1.14 only, no fallback) and decision thresholds
+- `clients/<client>/brain.yaml`: GTM brain (offer, personas and pains, pillars, objections, competitors,
+  voice, signals). Each entry is confirmed, hypothesis or ask_mithun; only the first two reach Jev
 - `clients/<client>/gate.yaml`: Layer 4 send-gate rules and the GDPR notice text
 - `clients/<client>/private/exclusions.csv`: real do-not-contact list (gitignored)
 - `engine/gtm/`: the engine; `engine/tests/`: tests with synthetic data only

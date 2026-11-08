@@ -31,6 +31,9 @@ D is needed before the first email goes out.
 10. Which newer clients, logos and results may we name in outreach?
 11. When will the refreshed website be live (no Mendix, newer clients, new platform)? Emails link to
     themarblejar.io from email 2 on, so the timing decides whether we launch before or after it.
+16. Who do you compete with most (other agencies, the ERP partner, off-the-shelf software, "we'll
+    hire another admin")? Why do you win, and why do you lose?
+17. Forward one email or LinkedIn message you wrote that got a good reply, so outreach sounds like you.
 
 ## D. Before the first email
 

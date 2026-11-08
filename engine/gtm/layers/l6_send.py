@@ -23,7 +23,7 @@ from pathlib import Path
 
 import yaml
 
-from gtm import db
+from gtm import brain, db
 from gtm.config import ClientConfig
 from gtm.layers.l5_copy import load_sender
 from gtm.sources.jev import JevClient, JevResult, check_policy
@@ -251,7 +251,7 @@ def sync(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, jev: JevCli
                 continue
             masked = mask(text, [o["first_name"], o["last_name"], sender.get("first_name"), sender.get("full_name")])
             result: JevResult = jev.decide(
-                {"reply_to_a_sales_email": masked},
+                {"reply_to_a_sales_email": masked, "seller_context": brain.jev_context(cfg, "reply")},
                 {"category": {"type": "choice", "instructions": "What kind of reply is this?",
                               "criteria": REPLY_CATEGORIES}})
             conn.execute(

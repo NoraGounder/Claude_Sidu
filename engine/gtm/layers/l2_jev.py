@@ -15,7 +15,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
-from gtm import budget, db
+from gtm import budget, brain, db
 from gtm.config import ClientConfig
 from gtm.layers import l2_prefilter
 from gtm.sources.jev import JevClient, JevResult, JevUnavailable, check_policy, scrub
@@ -64,13 +64,17 @@ def build_request(cfg: ClientConfig, item: dict) -> tuple[dict, dict, dict[str, 
         "website_excerpt": (item["home_excerpt"] or "")[:1200],
         "open_job_titles": titles,
     }
+    seller = brain.jev_context(cfg, "account")
+    if seller:
+        state["seller_context"] = seller
     questions = {
         "not_a_buyer": {
             "type": "noul",
             "instructions": ("Is this organisation clearly NOT a commercial company that could buy process "
                              "automation? Not a buyer: trade associations, unions, foundations, media and "
                              "magazines, schools and training bodies, government bodies and port authorities, "
-                             "software or IT companies, consultancies, staffing agencies."),
+                             "software or IT companies, consultancies, staffing agencies, and companies that "
+                             "sell the same kind of service as the seller (see seller_context)."),
             "criteria": {"true": "Not a possible buyer (one of the listed types)",
                          "false": "A commercial operating company that could buy"},
         },

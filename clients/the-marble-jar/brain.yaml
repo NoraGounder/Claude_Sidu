@@ -1,0 +1,94 @@
+# The Marble Jar GTM brain: one place that describes how The Marble Jar goes to market.
+#
+# The structure follows Pancake's "GTM brain" (gtmbrain.si): market profile, personas, ICP, message
+# pillars, objections, competitors, voice, signals, stack, hiring. Pancake's study found that agents
+# given task-specific context like this made far better go-to-market decisions than with generic company
+# info (88% vs 48% of the best possible plan). The engine sends the compact part of this file to
+# TypeSafe Jev 1.14 with every qualification, contact and angle decision (gtm/brain.py).
+#
+# Every entry has a status:
+#   confirmed    stated by the user or Mithun (date in the note)
+#   hypothesis   our working assumption; Jev may use it, the copy must not state it as fact
+#   ask_mithun   unknown; never sent to Jev or used in copy until answered (open-questions.md)
+# `jev: false` keeps a note for people only (it does not help a decision and costs tokens).
+#
+# STATUS: PROVISIONAL. The main offer is not confirmed (CLAUDE.md rule 7). Do not add services,
+# claims, client names or results that Mithun has not confirmed. Never mention Mendix in outreach.
+# No personal data in this file: the repository is public.
+
+version: 1
+
+market_profile:
+  - {status: confirmed, note: "themarblejar.io", text: "The Marble Jar builds software from Breda (Netherlands) with a team in Kochi (India)."}
+  - {status: confirmed, jev: false, note: "2026-11-06", text: "Most current customers are Dutch. The Netherlands is the first market, then the US, UK and Ireland. All outreach is in English."}
+  - {status: confirmed, jev: false, note: "2026-11-06", text: "Mendix is no longer offered."}
+  - {status: confirmed, note: "2026-11-06", text: "Custom development is listed on themarblejar.io."}
+  - {status: confirmed, jev: false, note: "2026-11-06", text: "A new platform launches in November 2026. Name and positioning are not confirmed."}
+  - {status: ask_mithun, note: "open-questions.md A1", text: "Which service outbound leads with."}
+
+offer:
+  - {status: hypothesis, note: "offer.md working hypothesis", text: "Design-first automation and custom software that removes manual operations and finance work: retyping orders, handling invoices, data entry between systems."}
+  - {status: ask_mithun, note: "A2", text: "Whether integrations are offered, and for which systems."}
+  - {status: ask_mithun, note: "A3", text: "What the new platform is and whether to sell it."}
+  - {status: ask_mithun, note: "A5", text: "The free first step (process scan plus clickable prototype in 5 working days?)."}
+
+personas:
+  operations:
+    titles_from: icp.yaml personas.operations
+    pains:
+      - {status: hypothesis, text: "Orders arrive by email or PDF and are typed into the ERP by hand."}
+      - {status: hypothesis, text: "Planning and status updates live in spreadsheets and phone calls."}
+      - {status: hypothesis, text: "Every growth step means hiring more back-office staff."}
+  finance:
+    titles_from: icp.yaml personas.finance
+    pains:
+      - {status: hypothesis, text: "Incoming invoices are matched, approved and booked by hand."}
+      - {status: hypothesis, text: "Chasing approvals and fixing typing errors slows the month-end close."}
+  owner_led:
+    titles_from: icp.yaml personas.owner_led
+    pains:
+      - {status: hypothesis, text: "Admin headcount grows with revenue and margins do not."}
+      - {status: hypothesis, text: "Knowledge of how processes run sits with one or two people."}
+
+message_pillars:
+  - {status: hypothesis, text: "Grow without adding admin headcount: remove the retyping, not the people."}
+  - {status: hypothesis, text: "Design-first: the software is shaped around how the team already works."}
+  - {status: ask_mithun, note: "A2", text: "Works on top of the systems you already have (only if integrations are confirmed)."}
+  - {status: ask_mithun, note: "C10", text: "Proof: named clients and results."}
+
+objections:   # used for reply handling and Mithun's call prep, never put into a first email
+  - {status: hypothesis, objection: "We already have an ERP.", answer_direction: "We remove the manual steps around it, we do not replace it (check A2 first)."}
+  - {status: hypothesis, objection: "We tried automation or RPA before and it broke.", answer_direction: "Ask what broke; design-first means mapping the process before building."}
+  - {status: hypothesis, objection: "No time or IT capacity for a project.", answer_direction: "Small first step owned by The Marble Jar (depends on A5)."}
+  - {status: hypothesis, objection: "Too expensive / no budget this year.", answer_direction: "Compare with the cost of the next admin hire (needs A4 deal shape)."}
+  - {status: hypothesis, objection: "Is development done offshore?", answer_direction: "Confirm the wording with Mithun before using it."}
+
+competitors:  # what the buyer would otherwise do; companies of these types are not prospects
+  - {status: hypothesis, text: "Status quo: hire another administrative employee or keep using spreadsheets."}
+  - {status: hypothesis, text: "The ERP vendor's or reseller's own consultants and add-ons."}
+  - {status: hypothesis, text: "Off-the-shelf invoice or order automation software."}
+  - {status: hypothesis, text: "Other automation, RPA, low-code and software development agencies."}
+  - {status: ask_mithun, note: "C16", text: "Which competitors Mithun meets most and why he wins or loses."}
+
+voice:
+  - {status: confirmed, note: "templates/sequence.yaml rules", text: "Plain text, short, one question, no exclamation marks, no hype, no links in the first email."}
+  - {status: confirmed, note: "2026-11-06", text: "Sent in Mithun's name, in English."}
+  - {status: ask_mithun, note: "C17", text: "An email or message Mithun wrote that worked, to match his tone."}
+
+signals:      # why write now; points are in scoring.yaml, detection in gtm/signals.py
+  - {status: hypothesis, key: admin_job_ad, why_now: "Hiring for manual admin work shows the cost of the problem today."}
+  - {status: hypothesis, key: multiple_admin_ads, why_now: "Several admin roles open at once: the back office is not keeping up."}
+  - {status: hypothesis, key: manual_process_language, why_now: "The company itself mentions Excel, manual entry or paper."}
+  - {status: hypothesis, key: erp_mention, why_now: "Names the system the automation would work with."}
+  - {status: hypothesis, key: headcount_growth, why_now: "Growth multiplies every manual step."}
+  - {status: hypothesis, key: new_ops_or_finance_leader, why_now: "New leaders review processes in their first months."}
+
+stack:        # systems we detect on websites and in job ads (gtm/signals.py)
+  - {status: confirmed, note: "detection rules", text: "Exact Online / Globe / Synergy, AFAS, SAP Business One, Microsoft Dynamics / Navision, Twinfield, Isah, Ridder iQ, King ERP."}
+
+hiring:       # job titles that count as manual admin work (Layer 2, decided by Jev 1.14)
+  - {status: confirmed, note: "l2_jev.py", text: "Invoices, accounts payable or receivable, order entry or processing, data entry, back office, administrative planning support."}
+
+not_used:     # Pancake brain sections that do not apply to cold email for this client
+  influencers_and_experts: "Not used: no social or content channel in this pipeline."
+  keyword_portfolio: "Not used: no SEO or ads. Search keywords live in icp.yaml and gtm/signals.py."

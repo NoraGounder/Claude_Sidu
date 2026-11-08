@@ -75,6 +75,11 @@ class StubJev:
 
 @pytest.fixture()
 def env(tmp_path, monkeypatch):
+    return make_env(tmp_path, monkeypatch)
+
+
+def make_env(tmp_path, monkeypatch):
+    """Copy of the client config with a test sender, in a temporary clients and data folder."""
     clients = tmp_path / "clients"
     shutil.copytree(REPO_ROOT / "clients" / CLIENT, clients / CLIENT, ignore=shutil.ignore_patterns("private"))
     legacy_nl(clients / CLIENT)

@@ -74,6 +74,7 @@ class ClientConfig(BaseModel):
     limits: Limits
     scoring: dict[str, Any]
     ai: dict[str, Any] = Field(default_factory=dict)
+    brain: dict[str, Any] = Field(default_factory=dict)
 
     @property
     def private_dir(self) -> Path:
@@ -112,4 +113,5 @@ def load_client(slug: str) -> ClientConfig:
         limits=Limits.model_validate(_load_yaml(root / "limits.yaml")),
         scoring=_load_yaml(root / "scoring.yaml") if (root / "scoring.yaml").exists() else {},
         ai=_load_yaml(root / "ai.yaml") if (root / "ai.yaml").exists() else {},
+        brain=_load_yaml(root / "brain.yaml") if (root / "brain.yaml").exists() else {},
     )

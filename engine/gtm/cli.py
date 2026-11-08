@@ -318,6 +318,16 @@ def cmd_stats(args) -> int:
     return 0
 
 
+def cmd_learn(args) -> int:
+    from gtm import learn
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    for line in learn.format_report(learn.outcomes(cfg, conn), args.min_contacted):
+        print(line)
+    return 0
+
+
 def cmd_export(args) -> int:
     cfg = load_client(args.client)
     conn = db.connect()
@@ -408,6 +418,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sy = sub.add_parser("sync", help="Layer 6: pull replies, bounces, unsubscribes; classify replies")
     sy.set_defaults(func=cmd_sync)
+
+    le = sub.add_parser("learn", help="conversations started per signal, opening, tier, persona, region (free)")
+    le.add_argument("--min-contacted", type=int, default=1, help="hide groups with fewer contacted leads")
+    le.set_defaults(func=cmd_learn)
 
     s = sub.add_parser("stats", help="counts by status and spend this month")
     s.set_defaults(func=cmd_stats)

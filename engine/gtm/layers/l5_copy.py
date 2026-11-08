@@ -22,7 +22,7 @@ from pathlib import Path
 
 import yaml
 
-from gtm import db
+from gtm import brain, db
 from gtm.config import ClientConfig, data_dir
 from gtm.layers.l4_gate import load_rules
 from gtm.signals import RULES
@@ -98,7 +98,8 @@ def _pick(options: list[str], contact_id: int, salt: str) -> str:
     return options[int(digest, 16) % len(options)]
 
 
-def choose_request(seq: dict, account: dict, contact: dict, hooks: list[str]) -> tuple[dict, dict]:
+def choose_request(seq: dict, account: dict, contact: dict, hooks: list[str],
+                   seller: dict | None = None) -> tuple[dict, dict]:
     descriptions = {
         "admin_job_ad": "Open with the admin job vacancy they are hiring for",
         "growth": "Open with how many roles they are hiring for (growth)",
@@ -107,6 +108,8 @@ def choose_request(seq: dict, account: dict, contact: dict, hooks: list[str]) ->
     }
     state = {"company": account["name"], "industry": account.get("industry"),
              "contact_job_title": contact.get("title"), "contact_persona": contact.get("persona")}
+    if seller:
+        state["seller_context"] = seller
     questions = {"process": {
         "type": "choice",
         "instructions": "Which example process will matter most to this person?",
@@ -184,7 +187,7 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
         facts = facts_for(conn, account)
         hooks = supported_hooks(seq, facts)
 
-        state, questions = choose_request(seq, account, contact, hooks)
+        state, questions = choose_request(seq, account, contact, hooks, brain.jev_context(cfg, "angle"))
         choice = jev.decide(state, questions)          # JevUnavailable stops the run: no fallback
         _log_jev(conn, cfg, account["id"], choice)
         process = choice.answers["process"]["choice"]
