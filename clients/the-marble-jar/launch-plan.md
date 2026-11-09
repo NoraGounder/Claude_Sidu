@@ -10,7 +10,11 @@ plan optimises for **speed to real conversations with the right companies**, not
 - Import his best clients (`private/best_clients.csv`, then `best-clients`). They go on the
   do-not-contact list and become the model customer for Jev's lookalike check.
 - Move his answers into `brain.yaml` (ask_mithun becomes confirmed), `offer.md` and the templates.
-- After the offer is confirmed: buy Smartlead Pro and 4-5 SmartSenders mailboxes, and start warm-up (2-3 weeks).
+- Now, so warm-up (2-3 weeks) runs while we wait for Mithun: once he approves the domain names, buy
+  2-3 sending domains ($13 a year each) and 4-5 fresh SmartSenders mailboxes ($4.50 a month each), and
+  warm them up on Smartlead's free trial, then Base ($39) if the trial ends first. Warm-up is in every plan.
+- Upgrade to Smartlead Pro ($94) on the day the first leads are ready to upload: the engine needs the
+  API and webhooks, which start at Pro (smartlead.ai/pricing, 2026-11-09).
 
 ## Phase 1: warm channels and preparation (weeks 1-3)
 
