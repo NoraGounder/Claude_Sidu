@@ -396,6 +396,19 @@ def cmd_crm(args) -> int:
     return 0
 
 
+def cmd_retention(args) -> int:
+    from gtm import retention
+
+    cfg = load_client(args.client)
+    s = retention.run(cfg, db.connect(), apply=args.apply)
+    verb = "Deleted" if s["applied"] else "Would delete"
+    print(f"{verb}: {s['not_emailed']} people never emailed (older than 90 days), {s['no_reply']} people emailed "
+          f"without reply (older than 12 months), and the text of {s['reply_texts']} replies older than "
+          "12 months. Deals and the do-not-contact list are kept."
+          + ("" if s["applied"] else " Add --apply to delete."))
+    return 0
+
+
 def cmd_learn(args) -> int:
     from gtm import learn
 
@@ -517,6 +530,10 @@ def build_parser() -> argparse.ArgumentParser:
     cr = sub.add_parser("crm", help="Layer 7: mirror deals to HubSpot (dry run unless --live)")
     cr.add_argument("--live", action="store_true")
     cr.set_defaults(func=cmd_crm)
+
+    rt = sub.add_parser("retention", help="delete local data on the DPA schedule (dry run unless --apply)")
+    rt.add_argument("--apply", action="store_true")
+    rt.set_defaults(func=cmd_retention)
 
     le = sub.add_parser("learn", help="conversations started per signal, opening, tier, persona, region (free)")
     le.add_argument("--min-contacted", type=int, default=1, help="hide groups with fewer contacted leads")

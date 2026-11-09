@@ -119,3 +119,30 @@ def test_hubspot_needs_a_token(monkeypatch):
     monkeypatch.delenv("HUBSPOT_TOKEN", raising=False)
     with pytest.raises(HubSpotError):
         HubSpotClient()
+
+
+def test_retention_follows_the_dpa_schedule(env):
+    from datetime import datetime, timedelta, timezone
+
+    from gtm import retention
+
+    cfg, conn, cid = _replied(env, "Sounds useful, can we talk on Thursday?")
+    l7_handoff.handoff(cfg, conn)
+    acc = conn.execute("SELECT account_id FROM contacts WHERE id=?", (cid,)).fetchone()[0]
+    old = "2020-01-01T00:00:00+00:00"
+    conn.execute("INSERT INTO contacts(client, account_id, first_name, status, data_source, created_at, updated_at)"
+                 " VALUES (?,?,?,?,?,?,?)", (CLIENT, acc, "Old", "candidate", "FullEnrich", old, old))
+    _approved(conn, "Stil BV", "NL", "Sem", "sem@stil.example")
+    stub = StubSmartlead()
+    l6_send.push(cfg, conn, sl=SmartleadClient(api_key="test-key", session=stub))
+    db.add_suppression(conn, CLIENT, "email", "sem@stil.example", "asked to stop")
+    conn.commit()
+    later = datetime.now(timezone.utc) + timedelta(days=400)
+    dry = retention.run(cfg, conn, now=later)
+    assert dry["applied"] is False and dry["not_emailed"] >= 1 and dry["no_reply"] == 1 and dry["reply_texts"] == 1
+    assert conn.execute("SELECT COUNT(*) FROM contacts WHERE first_name='Old'").fetchone()[0] == 1   # dry run
+    retention.run(cfg, conn, apply=True, now=later)
+    assert conn.execute("SELECT COUNT(*) FROM contacts WHERE first_name IN ('Old','Sem')").fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM contacts WHERE id=?", (cid,)).fetchone()[0] == 1       # has a deal
+    assert conn.execute("SELECT text FROM replies").fetchone()[0] is None                          # text emptied
+    assert "sem@stil.example" in db.suppressed_values(conn, CLIENT, "email")                       # opt-out kept

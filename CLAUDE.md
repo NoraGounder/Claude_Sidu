@@ -73,6 +73,7 @@ python -m gtm --client the-marble-jar handoff                  # Layer 7: deals 
 python -m gtm --client the-marble-jar outcome 42 qualified     # also: booked, not a fit, follow up, proposal, won --value 25000
 python -m gtm --client the-marble-jar deals                    # pipeline and won revenue
 python -m gtm --client the-marble-jar crm                      # HubSpot dry run; --live writes after approval
+python -m gtm --client the-marble-jar retention                # DPA deletion schedule (dry run; --apply deletes local data)
 python -m gtm --client the-marble-jar learn                    # conversations, meetings and revenue per signal, opening, tier
 pytest -q
 ```
@@ -83,18 +84,19 @@ secret. See `.env.example`.
 
 ## Where things live
 
-- `clients/<client>/client.yaml`: identity, sender, language, approvals still pending
+- `clients/<client>/client.yaml`: identity, sender, language, the few things needed from the client
 - `clients/<client>/offer.md`: the offer and the definition of a qualified meeting
 - `clients/<client>/icp.yaml`: segments for Layer 1, personas for Layer 3, hard exclusions
 - `clients/<client>/scoring.yaml`: fit and signal scoring for Layer 2
 - `clients/<client>/limits.yaml`: monthly budget caps and send caps
 - `clients/<client>/ai.yaml`: AI policy (Jev 1.14 only, no fallback) and decision thresholds
 - `clients/<client>/brain.yaml`: GTM brain (offer, personas and pains, pillars, objections, competitors,
-  voice, signals). Each entry is confirmed, hypothesis or ask_mithun; only the first two reach Jev
+  voice, signals). Each entry is confirmed, decided, hypothesis or ask_mithun; ask_mithun never reaches Jev
 - `clients/<client>/private/best_clients.csv`: the client's best customers (gitignored). Never emailed;
   Jev 1.14 scores prospects for similarity to them (`jev_lookalike` in scoring.yaml)
-- `clients/the-marble-jar/launch-plan.md`: phases, volume (Tier 1–2, 40 a day) and monthly cost;
-  `call-agenda.md`: the 30-minute call with Mithun
+- `clients/<client>/decisions.md`: every decision Quailworks made instead of asking the client, with what
+  would change it
+- `clients/the-marble-jar/launch-plan.md`: phases, volume (Tier 1–2, 40 a day) and monthly cost
 - `clients/<client>/gate.yaml`: Layer 4 send-gate rules and the GDPR notice text
 - `clients/<client>/private/exclusions.csv`: real do-not-contact list (gitignored)
 - `engine/gtm/`: the engine; `engine/tests/`: tests with synthetic data only
