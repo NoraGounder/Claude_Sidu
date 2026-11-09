@@ -28,8 +28,8 @@ hooks:
     subject:
       nl: "vacature {job_title}"
       en: "your {job_title} vacancy"
-    nl: "Ik zag dat {company} een {job_title} zoekt. Gaat een deel van dat werk nu nog met de hand?"
-    en: "I saw the {job_title} vacancy at {company}. Is part of that work still done by hand?"
+    nl: "Ik zag dat {company} een {job_title} zoekt. Hoeveel van dat werk is gegevens overtypen van de ene plek naar de andere?"
+    en: "I saw the {job_title} vacancy at {company}. How much of that work is typing data from one place into another?"
   growth:
     subject:
       nl: "{open_roles} vacatures bij {company}"
@@ -44,10 +44,10 @@ hooks:
     en: "I saw that {company} works with {erp}. Do orders or invoices still get entered into it by hand?"
   generic:
     subject:
-      nl: "vraag over orders en facturen"
-      en: "question about orders and invoices"
-    nl: "Typen jullie bij {company} orders of facturen nog met de hand over? Bij veel bedrijven van jullie grootte kost dat elke week uren."
-    en: "Does {company} still retype orders or invoices by hand? At many companies your size that costs hours every week."
+      nl: "orders en facturen bij {company}"
+      en: "orders and invoices at {company}"
+    nl: "Hoe komen orders en facturen bij {company} nu in jullie systeem: met de hand overgetypt, of al automatisch?"
+    en: "How do incoming orders and invoices get into {company}'s systems today: typed in by hand, or already automated?"
 
 steps:
   - day: 0

@@ -77,6 +77,9 @@ def test_cleaning():
     assert l5_copy.clean_title("Administratief Medewerker Crediteuren (32-40 uur)") == "administratief medewerker crediteuren"
     assert l5_copy.clean_title("Medewerker Orderverwerking - Breda") == "medewerker orderverwerking"
     assert l5_copy.clean_title("SAP Key User Finance") == "SAP Key User Finance"
+    slogan = "Customer Service Export Representative, Antwerpen/België Ben jij de documentatie kanjer? De perfectionist"
+    assert l5_copy.clean_title(slogan) == "customer service export representative"
+    assert not l5_copy.usable_title("medewerker administratie en planning voor onze vestiging in Breda")
     assert l5_copy.clean_company("Voorbeeld Groothandel B.V.") == "Voorbeeld Groothandel"
     assert l5_copy.clean_company("Roll Group") == "Roll Group"
     assert l5_copy.clean_first_name("ANNA") == "Anna"
@@ -120,7 +123,7 @@ def test_draft_uses_only_facts_and_preview_without_sender(env):
     assert facts["job_title"]["source"] == "https://voorbeeld.example/vacatures"
     assert facts["erp"]["value"] == "Exact"
     body = steps[0]["body"]
-    assert "Ik zag dat Voorbeeld Groothandel een administratief medewerker crediteuren zoekt. Gaat een deel van dat werk nu nog met de hand?" in body
+    assert "Ik zag dat Voorbeeld Groothandel een administratief medewerker crediteuren zoekt. Hoeveel van dat werk is gegevens overtypen van de ene plek naar de andere?" in body
     assert body.splitlines()[0].endswith("Anna,")
     assert "Je zakelijke contactgegevens vond ik via LinkedIn en FullEnrich" in body     # GDPR line
     assert "http" not in body and "themarblejar.io" not in body                         # no links in email 1
@@ -178,3 +181,28 @@ def test_fact_check_flag_and_review_round_trip(env, tmp_path):
         w.writerows(rows)
     c = l5_copy.import_review(cfg, conn, str(tmp_path / "bad.csv"))
     assert c["approved"] == 0 and "GDPR notice" in c["errors"][0]
+
+
+class FlagFirstHook(StubJev):
+    """Flags the first opening it is asked to fact-check, then passes the next one."""
+
+    def __init__(self):
+        super().__init__()
+        self.checks = 0
+
+    def post(self, url, json=None, timeout=None):
+        if "unsupported_claim" in json["questions"]:
+            self.checks += 1
+            self.unsupported = 0.9 if self.checks == 1 else 0.05
+        return super().post(url, json=json, timeout=timeout)
+
+
+def test_flagged_opening_falls_back_to_a_safe_one(env):
+    (env / "private").mkdir()
+    (env / "private" / "sender.yaml").write_text("first_name: Sam\nfull_name: Sam Example\n")
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    _setup(conn)
+    l5_copy.draft(cfg, conn, jev=JevClient(cfg.ai, session=FlagFirstHook()))
+    d = conn.execute("SELECT * FROM drafts").fetchone()
+    assert d["status"] == "draft" and d["hook"] != "admin_job_ad" and d["qa_unsupported_p"] < 0.5

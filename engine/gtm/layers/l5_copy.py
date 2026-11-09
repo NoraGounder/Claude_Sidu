@@ -50,14 +50,23 @@ def clean_company(name: str) -> str:
     return out or name.strip()
 
 
+MAX_TITLE_WORDS = 5
+MAX_TITLE_CHARS = 40
+
+
 def clean_title(title: str) -> str:
     t = re.sub(r"\(.*?\)", "", title)                  # hours, locations in brackets
-    t = re.split(r"\s+[-–|]\s+|\s{2,}", t)[0]           # trailing " - Breda", " | 32 uur"
+    t = re.split(r"\s+[-–|/]\s+|\s{2,}|[,?!:;]", t)[0]   # trailing " - Breda", ", Antwerpen", "? Ben jij..."
     t = re.sub(r"\s+", " ", t).strip(" ,.-")
     if not any(len(w) > 1 and w.isupper() for w in t.split()):
         t = t[:1].lower() + t[1:]
         t = " ".join(w if any(c.isupper() for c in w[1:]) else w.lower() for w in t.split())
     return t
+
+
+def usable_title(title: str) -> bool:
+    """A job title we can quote in a sentence: short, one role, no slogan."""
+    return 0 < len(title.split()) <= MAX_TITLE_WORDS and len(title) <= MAX_TITLE_CHARS
 
 
 def clean_first_name(name: str) -> str:
@@ -77,7 +86,7 @@ def facts_for(conn, account: dict) -> dict:
                   if e["signal"] == "admin_job_ad" and e["label"].startswith("job title: ")]
     rule_titles = [t for t in titles
                    if any(re.search(p, t, re.I) for _, p in RULES["admin_job_ad"])]
-    exact = next((t for t in jev_titles + rule_titles if t in titles), None)
+    exact = next((t for t in jev_titles + rule_titles if t in titles and usable_title(clean_title(t))), None)
     if exact:
         facts["job_title"] = {"value": clean_title(exact), "raw": exact, "source": careers}
     if len(titles) >= 5:
@@ -180,7 +189,6 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
     totals = {"drafted": 0, "needs_review": 0, "preview": 0, "hooks": {}}
     for contact in rows:
         account = dict(conn.execute("SELECT * FROM accounts WHERE id=?", (contact["account_id"],)).fetchone())
-        score = conn.execute("SELECT dutch_site FROM l2_scores WHERE account_id=?", (account["id"],)).fetchone()
         # Language comes from client.yaml: one default, with optional per-country overrides.
         lang_cfg = cfg.client.get("language", {})
         lang = (lang_cfg.get("by_country") or {}).get(account.get("country") or "", lang_cfg.get("default", "en"))
@@ -194,26 +202,17 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
         hook = choice.answers["angle"]["choice"] if "angle" in choice.answers else hooks[0]
         angle_p = (choice.answers.get("angle", {}).get("probabilities") or {}).get(hook)
 
-        subject, steps = render(seq, lang, hook, process, facts, contact, account, sender,
-                                rules["gdpr_notice"][lang])
-        # Fact-check only what claims something about the company: the subject and the opening.
-        # Data minimisation: no names are sent.
-        hook_text = seq["hooks"][hook][lang].format(company=clean_company(account["name"]),
-                                                    job_title=facts.get("job_title", {}).get("value", ""),
-                                                    open_roles=facts.get("open_roles", {}).get("value", ""),
-                                                    erp=facts.get("erp", {}).get("value", ""))
-        qa_text = f"Subject: {subject}\n{hook_text}"
-        for name, placeholder in ((clean_first_name(contact["first_name"]), "[first name]"),
-                                  (contact.get("last_name") or "", "[last name]"),
-                                  (sender.get("first_name") or "", "[sender]")):
-            if name:
-                qa_text = re.sub(rf"\b{re.escape(name)}\b", placeholder, qa_text)
-        qa_state, qa_questions = qa_request(facts, account, qa_text)
-        qa = jev.decide(qa_state, qa_questions)
-        _log_jev(conn, cfg, account["id"], qa)
-        unsupported = float(qa.answers["unsupported_claim"]["noul"])
-
         threshold = cfg.ai["thresholds"]["unsupported_claim"]
+        # Try Jev's pick first; if the fact check flags it, fall back along hook_priority (ending with
+        # the neutral generic opening) instead of leaving the draft for a person.
+        order = [hook] + [h for h in seq["hook_priority"] if h in hooks and h != hook]
+        for attempt in order:
+            subject, steps = render(seq, lang, attempt, process, facts, contact, account, sender,
+                                    rules["gdpr_notice"][lang])
+            unsupported = _fact_check(cfg, conn, jev, seq, lang, attempt, subject, facts, contact, account, sender)
+            hook = attempt
+            if unsupported < threshold:
+                break
         status = "preview" if not sender_real else "needs_review" if unsupported >= threshold else "draft"
         ts = db.now_iso()
         conn.execute(
@@ -232,6 +231,25 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
         totals["preview"] += status == "preview"
         totals["hooks"][hook] = totals["hooks"].get(hook, 0) + 1
     return totals
+
+
+def _fact_check(cfg, conn, jev, seq, lang, hook, subject, facts, contact, account, sender) -> float:
+    """Jev 1.14 checks only what claims something about the company: the subject and the opening.
+    Data minimisation: no names are sent."""
+    hook_text = seq["hooks"][hook][lang].format(company=clean_company(account["name"]),
+                                                job_title=facts.get("job_title", {}).get("value", ""),
+                                                open_roles=facts.get("open_roles", {}).get("value", ""),
+                                                erp=facts.get("erp", {}).get("value", ""))
+    qa_text = f"Subject: {subject}\n{hook_text}"
+    for name, placeholder in ((clean_first_name(contact["first_name"]), "[first name]"),
+                              (contact.get("last_name") or "", "[last name]"),
+                              (sender.get("first_name") or "", "[sender]")):
+        if name:
+            qa_text = re.sub(rf"\b{re.escape(name)}\b", placeholder, qa_text)
+    qa_state, qa_questions = qa_request(facts, account, qa_text)
+    qa = jev.decide(qa_state, qa_questions)
+    _log_jev(conn, cfg, account["id"], qa)
+    return float(qa.answers["unsupported_claim"]["noul"])
 
 
 REVIEW_COLUMNS = ["draft_id", "tier", "company", "first_name", "contact_title", "language", "hook", "facts",
