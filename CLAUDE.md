@@ -26,11 +26,15 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
    ICP scoring and classification; crawling, deterministic checks and data processing stay in Python.
    Every request logs the reported model ID, tokens and cost (table `jev_calls`). Never print or store
    the API key. The policy lives in `clients/<client>/ai.yaml` and is enforced by `gtm/sources/jev.py`.
-7. **The Marble Jar (2026-11-06):** Mendix is not offered and never appears in outreach. Market: the Netherlands
-   first (most current customers are Dutch), plus the US, UK and Ireland; all emails in English. The main offer is NOT confirmed: ICP, scoring and copy are provisional and all
-   Layer 1 segments stay switched off until Mithun answers `clients/the-marble-jar/open-questions.md`. Do not assume
-   integrations or other services have stopped, do not assume the November 2026 platform is pebls, and do not change
-   website positioning (the website refresh is a separate project).
+7. **The Marble Jar (2026-11-09):** Mendix is not offered and never appears in outreach. Market: the Netherlands
+   first (most current customers are Dutch), plus the US, UK and Ireland later; all emails in English. The offer,
+   targeting and copy follow `clients/the-marble-jar/decisions.md`. Never claim integrations, timelines, fixed
+   prices or free work in outreach, never sell pebls or the new platform, and do not change website positioning
+   (the website refresh is a separate project).
+8. **Do not ask the client; decide.** Quailworks decides from the client's website, public data and our own
+   results, records the decision in `clients/<client>/decisions.md` with what would change it, and moves on.
+   Contact the client only for what we legally or physically cannot do for them (a signature, a calendar).
+   Bundle those into one message at launch. Never send the client questionnaires.
 
 ## The pipeline
 

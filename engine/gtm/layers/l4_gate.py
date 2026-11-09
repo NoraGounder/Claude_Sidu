@@ -94,6 +94,8 @@ def run(cfg: ClientConfig, conn, recheck: bool = False, mv: MillionVerifierClien
         now: datetime | None = None) -> GateResult:
     rules = load_rules(cfg)
     now = now or datetime.now(timezone.utc)
+    from gtm.layers.l1_discover import sync_exclusions
+    sync_exclusions(conn, cfg)          # private/exclusions.csv may have changed since Layer 1
     suppressed = {k: db.suppressed_values(conn, cfg.slug, k) for k in ("email", "domain", "company")}
     consent = str(cfg.client.get("sender", {}).get("consent_to_send_in_name", "pending")).lower() == "granted"
     rows = [dict(r) for r in conn.execute(

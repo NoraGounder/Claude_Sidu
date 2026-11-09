@@ -9,7 +9,8 @@
 # Every entry has a status:
 #   confirmed    stated by the user or Mithun (date in the note)
 #   hypothesis   our working assumption; Jev may use it, the copy must not state it as fact
-#   ask_mithun   unknown; never sent to Jev or used in copy until answered (open-questions.md)
+#   decided      Quailworks' own decision (decisions.md), used like confirmed until results say otherwise
+#   ask_mithun   unknown and not decidable by us; never sent to Jev or used in copy (keep this rare)
 # `jev: false` keeps a note for people only (it does not help a decision and costs tokens).
 #
 # STATUS: PROVISIONAL. The main offer is not confirmed (CLAUDE.md rule 7). Do not add services,
@@ -24,13 +25,14 @@ market_profile:
   - {status: confirmed, jev: false, note: "2026-11-06", text: "Mendix is no longer offered."}
   - {status: confirmed, note: "2026-11-06", text: "Custom development is listed on themarblejar.io."}
   - {status: confirmed, jev: false, note: "2026-11-06", text: "A new platform launches in November 2026. Name and positioning are not confirmed."}
-  - {status: ask_mithun, note: "open-questions.md A1", text: "Which service outbound leads with."}
+  - {status: confirmed, note: "themarblejar.io, 2026-11-09", text: "Positions itself as a design-first enterprise studio for automation and digitalisation: design, automate, digitalise. The homepage demo is an invoice flow: AI extraction, approval, fraud check, payment."}
+  - {status: decided, jev: false, note: "decisions.md D1", text: "Outbound leads with design-first automation of manual operations and finance work, plus custom software where off-the-shelf does not fit."}
 
 offer:
   - {status: hypothesis, note: "offer.md working hypothesis", text: "Design-first automation and custom software that removes manual operations and finance work: retyping orders, handling invoices, data entry between systems."}
-  - {status: ask_mithun, note: "A2", text: "Whether integrations are offered, and for which systems."}
-  - {status: ask_mithun, note: "A3", text: "What the new platform is and whether to sell it."}
-  - {status: ask_mithun, note: "A5", text: "The free first step (process scan plus clickable prototype in 5 working days?)."}
+  - {status: decided, jev: false, note: "decisions.md D2", text: "No claims about integrations, timelines or fixed prices in outreach."}
+  - {status: decided, jev: false, note: "decisions.md D3", text: "Neither pebls nor the new platform is sold in outbound."}
+  - {status: decided, jev: false, note: "decisions.md D4", text: "The next step offered is a 30-minute call; no free deliverables are promised."}
 
 personas:
   operations:
@@ -53,8 +55,8 @@ personas:
 message_pillars:
   - {status: hypothesis, text: "Grow without adding admin headcount: remove the retyping, not the people."}
   - {status: hypothesis, text: "Design-first: the software is shaped around how the team already works."}
-  - {status: ask_mithun, note: "A2", text: "Works on top of the systems you already have (only if integrations are confirmed)."}
-  - {status: ask_mithun, note: "C10", text: "Proof: named clients and results."}
+  - {status: confirmed, note: "themarblejar.io", text: "Example on the website: an invoice read, checked, approved and queued for payment automatically."}
+  - {status: decided, jev: false, note: "decisions.md D5", text: "No client names in outreach; the website already shows the logos."}
 
 objections:   # used for reply handling and Mithun's call prep, never put into a first email
   - {status: hypothesis, objection: "We already have an ERP.", answer_direction: "We remove the manual steps around it, we do not replace it (check A2 first)."}
@@ -68,12 +70,12 @@ competitors:  # what the buyer would otherwise do; companies of these types are 
   - {status: hypothesis, text: "The ERP vendor's or reseller's own consultants and add-ons."}
   - {status: hypothesis, text: "Off-the-shelf invoice or order automation software."}
   - {status: hypothesis, text: "Other automation, RPA, low-code and software development agencies."}
-  - {status: ask_mithun, note: "C16", text: "Which competitors Mithun meets most and why he wins or loses."}
+  - {status: decided, jev: false, note: "decisions.md D6", text: "Learn competitors from replies and meeting outcomes, not from questions."}
 
 voice:
   - {status: confirmed, note: "templates/sequence.yaml rules", text: "Plain text, short, one question, no exclamation marks, no hype, no links in the first email."}
   - {status: confirmed, note: "2026-11-06", text: "Sent in Mithun's name, in English."}
-  - {status: ask_mithun, note: "C17", text: "An email or message Mithun wrote that worked, to match his tone."}
+  - {status: decided, jev: false, note: "decisions.md D6", text: "Tone: short, plain and humble, written by Quailworks; adjusted from replies."}
 
 signals:      # why write now; points are in scoring.yaml, detection in gtm/signals.py
   - {status: hypothesis, key: admin_job_ad, why_now: "Hiring for manual admin work shows the cost of the problem today."}

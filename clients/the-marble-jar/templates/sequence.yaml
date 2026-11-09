@@ -1,6 +1,6 @@
 # Layer 5 copy for The Marble Jar. Written by people, filled only with facts we can show the source
-# for (engine/gtm/layers/l5_copy.py). STATUS: PROVISIONAL. The offer is not confirmed yet
-# (open-questions.md). English is the default; the Dutch text is kept from the previous market.
+# for (engine/gtm/layers/l5_copy.py). Offer and claims follow decisions.md (2026-11-09): no
+# integrations, timelines, fixed prices or free work. English is the default; Dutch is kept for a later test.
 # Never mention Mendix.
 #
 # Rules: plain text, no links in email 1, short, no exclamation marks, informal "je" (common in
@@ -56,9 +56,9 @@ steps:
 
       {hook}
 
-      Wij zijn The Marble Jar, een design-first studio in Breda. We automatiseren één zo'n proces in 2 tot 3 weken, voor een vaste prijs en bovenop jullie bestaande systemen: {process}.
+      Wij zijn The Marble Jar, een design-first studio in Breda. We ontwerpen en bouwen automatisering voor precies dit soort werk: {process}.
 
-      Zullen we in 45 minuten één proces met je doorlopen? Binnen 5 werkdagen heb je dan een klikbaar prototype van jullie eigen proces, kosteloos.
+      Is een gesprek van 30 minuten de moeite waard om te kijken of een van jullie processen in aanmerking komt?
 
       {signoff}
       {sender_first_name}
@@ -69,9 +69,9 @@ steps:
 
       {hook}
 
-      We are The Marble Jar, a design-first studio in Breda. We automate one such process in 2 to 3 weeks, at a fixed price and on top of your existing systems: {process}.
+      We are The Marble Jar, a design-first studio in Breda. We design and build automation for exactly this kind of work: {process}.
 
-      Shall we walk through one process together in 45 minutes? Within 5 working days you would have a clickable prototype of your own process, free of charge.
+      Would a 30-minute call be worth it, to see whether one of your processes is a good fit?
 
       {signoff}
       {sender_first_name}
@@ -85,7 +85,7 @@ steps:
 
       Op themarblejar.io staat een voorbeeld: een factuur die automatisch wordt uitgelezen, gecontroleerd, goedgekeurd en klaargezet voor betaling.
 
-      Zou zo'n prototype voor {company} nuttig zijn?
+      Zou zoiets voor {company} nuttig zijn?
 
       {sender_first_name}
     en: |
@@ -95,14 +95,14 @@ steps:
 
       There is an example on themarblejar.io: an invoice that is read, checked, approved and queued for payment automatically.
 
-      Would a prototype like that be useful for {company}?
+      Would something like that be useful for {company}?
 
       {sender_first_name}
   - day: 7
     nl: |
       {greeting} {first_name},
 
-      Even concreet: een extra administratieve kracht kost al snel 40.000 tot 50.000 euro per jaar, elk jaar weer. Eén proces automatiseren is een eenmalige investering.
+      Even concreet: een extra administratieve kracht kost al snel 40.000 tot 50.000 euro per jaar, elk jaar weer. Eén proces automatiseren is meestal een eenmalige investering.
 
       Is dit iets voor jou, of is er iemand anders bij {company} die hierover gaat?
 
@@ -110,7 +110,7 @@ steps:
     en: |
       {greeting} {first_name},
 
-      To put numbers on it: an extra admin employee easily costs 40,000 to 50,000 euros a year, every year. Automating one process is a one-off investment.
+      To put numbers on it: an extra admin employee easily costs 40,000 to 50,000 euros a year, every year. Automating one process is usually a one-off investment.
 
       Is this something for you, or is someone else at {company} the right person?
 

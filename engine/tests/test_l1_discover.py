@@ -136,13 +136,20 @@ def test_cli_dry_run_spends_nothing(env, capsys):
     assert conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 0
 
 
-def test_real_config_targets_english_speaking_market_and_is_switched_off(tmp_path, monkeypatch):
-    """Guard: until Mithun confirms the offer, no search runs, and only US/UK/IE/NL are allowed."""
+def test_real_config_launches_in_the_netherlands_only(tmp_path, monkeypatch):
+    """Guard (decisions.md D7): Dutch segments only until the Dutch results prove the message."""
     monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path / "data"))
     cfg = load_client(CLIENT)
     assert cfg.icp.allowed_countries == ["US", "GB", "IE", "NL"]
-    assert [s.name for s in cfg.icp.segments if s.enabled] == []
-    assert l1_discover.plan(cfg, None, None, conn=db.connect()) == []
+    assert {s.name for s in cfg.icp.segments if s.enabled} == {
+        "logistics_nl", "wholesale_nl", "installation_nl", "manufacturing_nl"}
     assert "Mendix is not offered" in cfg.icp.offer_summary
-    assert "mendix" not in (REPO_ROOT / "clients" / CLIENT / "templates" / "sequence.yaml").read_text().lower() \
-        .replace("never mention mendix", "")
+
+
+def test_copy_makes_no_claims_we_cannot_back():
+    """decisions.md D2-D4: no Mendix, pebls, integrations, timelines, fixed prices or free work."""
+    text = (REPO_ROOT / "clients" / CLIENT / "templates" / "sequence.yaml").read_text().lower()
+    body = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+    for banned in ("mendix", "pebls", "fixed price", "vaste prijs", "free of charge", "kosteloos",
+                   "existing systems", "bestaande systemen", "weeks", "weken", "working days", "werkdagen"):
+        assert banned not in body, banned

@@ -4,13 +4,13 @@
 
 version: 1
 
-# Used by TypeSafe Jev 1.14 for ICP scoring. PROVISIONAL until the offer is confirmed.
+# Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md D1, D8).
 buyer_profile: >-
   English-speaking companies in the United States, the United Kingdom, Ireland or the Netherlands with 50-500
   employees in logistics, wholesale and distribution, installation and technical services, or
   manufacturing, that run operations and finance processes (invoices, orders, planning) where
   manual work can be automated or replaced with well-designed custom software.
-# What we offer, in one line, for Jev's contact-relevance question. PROVISIONAL (open-questions.md).
+# What we offer, in one line, for Jev's contact-relevance question (decisions.md D1).
 offer_summary: >-
   Design-first automation and custom software for manual operations and finance work
   (invoices, orders, data entry). Mendix is not offered.
@@ -45,8 +45,8 @@ industry_groups:
 #
 # 2026-11-06: the Netherlands is the primary market (most current customers are Dutch), plus
 # English-speaking clients in the US, UK and Ireland. All emails in English.
-# Industry groups below are PROVISIONAL: they fit an operations-automation offer, which Mithun has
-# not confirmed yet (see open-questions.md). Enable segments only after the offer is confirmed.
+# 2026-11-09: Quailworks decided the offer (decisions.md). The Dutch segments are on; the US, UK and
+# Ireland stay off until the Dutch results show a working message (launch-plan.md, phase 3).
 segments:
   - {name: logistics_us,     enabled: false, industry_group: logistics,     locations: [United States],  max_items: 300}
   - {name: wholesale_us,     enabled: false, industry_group: wholesale,     locations: [United States],  max_items: 300}
@@ -61,10 +61,10 @@ segments:
   - {name: manufacturing_ie, enabled: false, industry_group: manufacturing, locations: [Ireland],        max_items: 300}
   - {name: installation_ie,  enabled: false, industry_group: installation,  locations: [Ireland],        max_items: 300}
   # Netherlands: in scope (emails in English). About 840 Dutch accounts are already scored (pages 1-6 used).
-  - {name: logistics_nl,     enabled: false, industry_group: logistics,     locations: [Netherlands],    max_items: 300}
-  - {name: wholesale_nl,     enabled: false, industry_group: wholesale,     locations: [Netherlands],    max_items: 300}
-  - {name: installation_nl,  enabled: false, industry_group: installation,  locations: [Netherlands],    max_items: 300}
-  - {name: manufacturing_nl, enabled: false, industry_group: manufacturing, locations: [Netherlands],    max_items: 300}
+  - {name: logistics_nl,     enabled: true , industry_group: logistics,     locations: [Netherlands],    max_items: 300}
+  - {name: wholesale_nl,     enabled: true , industry_group: wholesale,     locations: [Netherlands],    max_items: 300}
+  - {name: installation_nl,  enabled: true , industry_group: installation,  locations: [Netherlands],    max_items: 300}
+  - {name: manufacturing_nl, enabled: true , industry_group: manufacturing, locations: [Netherlands],    max_items: 300}
 
 allowed_countries: [US, GB, IE, NL]   # B2B cold email allowed with opt-out (check NL rules with legal before launch)
 

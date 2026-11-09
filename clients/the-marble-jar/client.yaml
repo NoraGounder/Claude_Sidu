@@ -23,10 +23,7 @@ handoff:
   channel: email + calendar invite   # client never logs into our tools
   outcome_capture: one-word reply (qualified / not a fit / follow up)
 
-approvals_pending:
-  - The main outbound offer (see open-questions.md); ICP and copy are provisional until then
-  - Lead offer (Automation Sprint) and the 5-day prototype promise
-  - Email templates and the reply guide
-  - Which client logos and results we may name
-  - Data processing agreement between Quailworks and The Marble Jar
-  - Exclusion list (current clients, open deals, partners, competitors)
+# Quailworks decides (decisions.md). Only these need The Marble Jar, in one message at launch:
+needed_from_client:
+  - Signature on the data processing agreement Quailworks prepares (GDPR Art. 28)
+  - A booking link or weekly time slots for meetings (until then Quailworks proposes times)

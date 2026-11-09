@@ -2,8 +2,8 @@
 competitors and signals in one place, in the structure of Pancake's GTM brains (gtmbrain.si).
 
 `jev_context` turns it into a short, compact block for TypeSafe Jev 1.14 requests, so every
-qualification, contact and angle decision sees the same task-specific context. Only `confirmed` and
-`hypothesis` entries are sent (not those marked `jev: false`); `ask_mithun` entries stay out until
+qualification, contact and angle decision sees the same task-specific context. Only `confirmed`,
+`decided` and `hypothesis` entries are sent (not those marked `jev: false`); `ask_mithun` entries stay out until
 they are answered. No personal
 data is ever part of the brain.
 """
@@ -15,7 +15,7 @@ from typing import Any
 
 from gtm.config import ClientConfig
 
-USABLE = {"confirmed", "hypothesis"}
+USABLE = {"confirmed", "decided", "hypothesis"}
 MAX_CHARS = 2500          # keeps each Jev request small (Jev bills input tokens)
 
 

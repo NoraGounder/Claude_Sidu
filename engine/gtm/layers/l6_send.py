@@ -83,6 +83,8 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
 
     consent = str(cfg.client.get("sender", {}).get("consent_to_send_in_name")).lower() == "granted"
     sender, sender_real = load_sender(cfg)
+    from gtm.layers.l1_discover import sync_exclusions
+    sync_exclusions(conn, cfg)          # last check before upload: the do-not-contact list is current
     suppressed = {k: db.suppressed_values(conn, cfg.slug, k) for k in ("email", "domain", "company")}
     rows = [dict(r) for r in conn.execute(
         "SELECT d.id AS draft_id, d.subject, d.steps_json, c.*, a.name AS company, a.domain AS account_domain,"
