@@ -42,7 +42,9 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
 - **D12. Footer address:** The Marble Jar BV, Verlengde Poolseweg 16, 4818 CL Breda, The
   Netherlands, as published on the website.
 - **D13. Sending domains:** Quailworks picks 2-3 brand variants of the company name (never
-  themarblejar.io itself) and sets them up.
+  themarblejar.io itself) and sets them up, with mailboxes in Mithun's name only (no made-up
+  personas, no unrelated pre-warmed domains). Quailworks sp. z o.o. is the registrant and pays;
+  if the engagement ends, Quailworks transfers the domains to The Marble Jar on request.
 - **D14. Consent:** sending in Mithun's name is confirmed (2026-11-06).
 
 ## Needed from Mithun (only what we cannot do for him)
