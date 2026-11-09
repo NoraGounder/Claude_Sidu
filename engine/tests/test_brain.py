@@ -56,8 +56,8 @@ def test_learn_counts_conversations_per_signal(env):
     l6_send.sync(cfg, conn, sl=sl, jev=JevClient(cfg.ai, session=StubJev()))
     report = learn.outcomes(cfg, conn)
     assert report["signal"]["admin_job_ad"]["conversations"] == 1 and "erp_mention" not in report["signal"]
-    assert report["tier"]["tier_1"] == {"contacted": 1, "replied": 1, "conversations": 1, "unsubscribed": 0,
-                                        "bounced": 0}
+    assert report["tier"]["tier_1"] == {"contacted": 1, "replied": 1, "conversations": 1, "meetings": 0, "won": 0,
+                                        "revenue_eur": 0.0, "unsubscribed": 0, "bounced": 0}
     assert any("admin_job_ad: 1 contacted" in line for line in learn.format_report(report))
 
 

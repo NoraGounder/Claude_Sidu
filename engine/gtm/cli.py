@@ -336,6 +336,66 @@ def cmd_best_clients(args) -> int:
     return 0
 
 
+def cmd_handoff(args) -> int:
+    from gtm.layers import l7_handoff
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    t = l7_handoff.handoff(cfg, conn)
+    print(f"Handoff: {t['briefs']} meeting briefs written (data/briefs/), {t['later']} 'not now' kept for later, "
+          f"{t['closed']} other replies closed. Answer each brief's reply from the Smartlead inbox within "
+          "4 working hours, then send Mithun the brief with the calendar invite.")
+    return 0
+
+
+def cmd_outcome(args) -> int:
+    from gtm.layers import l7_handoff
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    try:
+        deal = l7_handoff.record_outcome(cfg, conn, args.contact_id, " ".join(args.stage), args.value, args.note)
+    except ValueError as exc:
+        print(exc)
+        return 2
+    extra = " Added to best clients (excluded from outreach, used as a lookalike)." if deal["stage"] == "won" else ""
+    print(f"Deal for contact {args.contact_id}: stage {deal['stage']}"
+          + (f", value EUR {deal['value_eur']:,.0f}" if deal["value_eur"] else "") + "." + extra)
+    return 0
+
+
+def cmd_deals(args) -> int:
+    from gtm.layers import l7_handoff
+
+    cfg = load_client(args.client)
+    p = l7_handoff.pipeline(cfg, db.connect())
+    stages = ", ".join(f"{s} {n}" for s, n in sorted(p["by_stage"].items())) or "none yet"
+    print(f"Deals by stage: {stages}.")
+    print(f"Meetings held {p['meetings_held']}; open pipeline EUR {p['open_pipeline_eur']:,.0f}; "
+          f"won {p['won']} for EUR {p['won_eur']:,.0f}.")
+    return 0
+
+
+def cmd_crm(args) -> int:
+    from gtm.layers import l7_handoff
+    from gtm.sources.hubspot import HubSpotClient, HubSpotError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    plan = l7_handoff.plan_crm(cfg, conn)
+    print(f"HubSpot: {len(plan.creates)} deals to create (with company and contact), {len(plan.updates)} to update.")
+    if not args.live:
+        print("Dry run: nothing written. Add --live once CRM writes are approved.")
+        return 0
+    try:
+        t = l7_handoff.sync_crm(cfg, conn, plan, HubSpotClient())
+    except HubSpotError as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    print(f"HubSpot: created {t['created']}, updated {t['updated']}. Nothing was deleted.")
+    return 0
+
+
 def cmd_learn(args) -> int:
     from gtm import learn
 
@@ -439,6 +499,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     bc = sub.add_parser("best-clients", help="import private/best_clients.csv: exclude them, crawl, use as lookalikes")
     bc.set_defaults(func=cmd_best_clients)
+
+    ho = sub.add_parser("handoff", help="Layer 7: replies that need a person become deals and meeting briefs")
+    ho.set_defaults(func=cmd_handoff)
+
+    oc = sub.add_parser("outcome", help="Layer 7: record a deal stage, e.g. outcome 42 qualified / won --value 25000")
+    oc.add_argument("contact_id", type=int)
+    oc.add_argument("stage", nargs="+", help="interested, booked, held, qualified, not a fit, follow up, no show, "
+                    "proposal, won, lost, later")
+    oc.add_argument("--value", type=float, help="deal value in EUR (proposal or won)")
+    oc.add_argument("--note")
+    oc.set_defaults(func=cmd_outcome)
+
+    dl = sub.add_parser("deals", help="Layer 7: deals by stage, meetings held, pipeline and won revenue")
+    dl.set_defaults(func=cmd_deals)
+
+    cr = sub.add_parser("crm", help="Layer 7: mirror deals to HubSpot (dry run unless --live)")
+    cr.add_argument("--live", action="store_true")
+    cr.set_defaults(func=cmd_crm)
 
     le = sub.add_parser("learn", help="conversations started per signal, opening, tier, persona, region (free)")
     le.add_argument("--min-contacted", type=int, default=1, help="hide groups with fewer contacted leads")

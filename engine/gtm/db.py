@@ -203,6 +203,24 @@ CREATE TABLE IF NOT EXISTS replies (
     UNIQUE(client, contact_id, received_at)
 );
 
+CREATE TABLE IF NOT EXISTS deals (
+    id                  INTEGER PRIMARY KEY,
+    client              TEXT NOT NULL,
+    contact_id          INTEGER NOT NULL UNIQUE REFERENCES contacts(id),
+    account_id          INTEGER NOT NULL REFERENCES accounts(id),
+    stage               TEXT NOT NULL,       -- see gtm/layers/l7_handoff.py STAGES
+    outcome_note        TEXT,
+    value_eur           REAL,
+    reply_category      TEXT,
+    brief_path          TEXT,                -- data/briefs/..., local only
+    hubspot_company_id  TEXT,
+    hubspot_contact_id  TEXT,
+    hubspot_deal_id     TEXT,
+    hubspot_synced_at   TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS segment_progress (
     client     TEXT NOT NULL,
     segment    TEXT NOT NULL,
