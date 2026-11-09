@@ -58,6 +58,8 @@ MAX_TITLE_CHARS = 40
 ROLE_WORD = re.compile(r"medewerk|administrat|assist|co[oö]rdinat|specialist|officer|clerk|beheerder|planner|"
                        r"controller|boekhoud|binnendienst|backoffice|back office|orderverwerk|order entry|"
                        r"crediteur|debiteur|facturat|representative|secretar|receptionist", re.I)
+PERSON_NOUN = re.compile(r"(medewerker|administrator|co[oö]rdinator|beheerder|planner|controller|assistent|assistant|"
+                         r"specialist|boekhouder|secretaresse|officer|clerk|representative)$", re.I)
 NOT_A_JOB = re.compile(r"stage|stagiair|intern\b|internship|trainee|werkstudent|bijbaan|vakantie", re.I)
 
 
@@ -84,7 +86,8 @@ def clean_title(title: str) -> str:
 def usable_title(title: str) -> bool:
     """A job title we can quote in a sentence: short, names a role, not an internship, no slogan."""
     return (0 < len(title.split()) <= MAX_TITLE_WORDS and len(title) <= MAX_TITLE_CHARS
-            and bool(ROLE_WORD.search(title)) and not NOT_A_JOB.search(title))
+            and bool(ROLE_WORD.search(title)) and not NOT_A_JOB.search(title)
+            and (len(title.split()) > 1 or bool(PERSON_NOUN.search(title))))   # "Administratie" is a department
 
 
 def clean_first_name(name: str) -> str:
