@@ -54,9 +54,26 @@ MAX_TITLE_WORDS = 5
 MAX_TITLE_CHARS = 40
 
 
+# A quoted vacancy title must name a role; internships and fragments ("Fulltime", "Kantoor") are not used.
+ROLE_WORD = re.compile(r"medewerk|administrat|assist|co[oö]rdinat|specialist|officer|clerk|beheerder|planner|"
+                       r"controller|boekhoud|binnendienst|backoffice|back office|orderverwerk|order entry|"
+                       r"crediteur|debiteur|facturat|representative|secretar|receptionist", re.I)
+NOT_A_JOB = re.compile(r"stage|stagiair|intern\b|internship|trainee|werkstudent|bijbaan|vakantie", re.I)
+
+
+def _fix_encoding(text: str) -> str:
+    if "Ã" in text:
+        try:
+            return text.encode("latin-1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return text
+    return text
+
+
 def clean_title(title: str) -> str:
-    t = re.sub(r"\(.*?\)", "", title)                  # hours, locations in brackets
-    t = re.split(r"\s+[-–|/]\s+|\s{2,}|[,?!:;]", t)[0]   # trailing " - Breda", ", Antwerpen", "? Ben jij..."
+    t = re.sub(r"\(.*?\)", "", _fix_encoding(title))   # hours, locations in brackets
+    parts = [p for p in re.split(r"\s+[-–|/]\s+|\s{2,}|[,?!:;/]", t) if p.strip()] or [t]
+    t = next((p for p in parts if ROLE_WORD.search(p)), parts[0])   # "Fulltime / Accounts Administrator"
     t = re.sub(r"\s+", " ", t).strip(" ,.-")
     if not any(len(w) > 1 and w.isupper() for w in t.split()):
         t = t[:1].lower() + t[1:]
@@ -65,8 +82,9 @@ def clean_title(title: str) -> str:
 
 
 def usable_title(title: str) -> bool:
-    """A job title we can quote in a sentence: short, one role, no slogan."""
-    return 0 < len(title.split()) <= MAX_TITLE_WORDS and len(title) <= MAX_TITLE_CHARS
+    """A job title we can quote in a sentence: short, names a role, not an internship, no slogan."""
+    return (0 < len(title.split()) <= MAX_TITLE_WORDS and len(title) <= MAX_TITLE_CHARS
+            and bool(ROLE_WORD.search(title)) and not NOT_A_JOB.search(title))
 
 
 def clean_first_name(name: str) -> str:

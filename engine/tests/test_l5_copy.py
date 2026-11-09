@@ -80,6 +80,10 @@ def test_cleaning():
     slogan = "Customer Service Export Representative, Antwerpen/België Ben jij de documentatie kanjer? De perfectionist"
     assert l5_copy.clean_title(slogan) == "customer service export representative"
     assert not l5_copy.usable_title("medewerker administratie en planning voor onze vestiging in Breda")
+    assert l5_copy.clean_title("Fulltime / Accounts Administrator") == "accounts administrator"
+    assert l5_copy.clean_title("Medewerker CommerciÃ«le Binnendienst") == "medewerker commerciële binnendienst"
+    for fragment in ("Netherlands", "Fulltime", "Kantoor", "Meewerkstage Financiële Administratie", "Data Analysis"):
+        assert not l5_copy.usable_title(l5_copy.clean_title(fragment)), fragment
     assert l5_copy.clean_company("Voorbeeld Groothandel B.V.") == "Voorbeeld Groothandel"
     assert l5_copy.clean_company("Roll Group") == "Roll Group"
     assert l5_copy.clean_first_name("ANNA") == "Anna"
