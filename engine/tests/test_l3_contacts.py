@@ -42,6 +42,9 @@ class StubFE:
     def __init__(self):
         self.headers, self.posts = {}, []
 
+    def request(self, method, url, json=None, timeout=None):
+        return self.post(url, json=json, timeout=timeout) if method == "POST" else self.get(url, timeout=timeout)
+
     def post(self, url, json=None, timeout=None):
         self.posts.append((url, json))
         if url.endswith("/people/search"):
@@ -174,3 +177,23 @@ def test_jev_failure_stops_people_search(env):
                                 jev=JevClient(cfg.ai, session=StubJev(fail=True)))
     assert conn.execute("SELECT status FROM runs WHERE layer='L3-search'").fetchone()[0] == "failed"
     assert conn.execute("SELECT COUNT(*) FROM jev_calls WHERE status='failed'").fetchone()[0] == 1
+
+
+def test_fullenrich_waits_and_retries_on_rate_limit(monkeypatch):
+    waits = []
+    monkeypatch.setattr("gtm.sources.fullenrich.time.sleep", waits.append)
+
+    class Limited(StubFE):
+        def __init__(self):
+            super().__init__()
+            self.limited = 2
+
+        def request(self, method, url, json=None, timeout=None):
+            if self.limited:
+                self.limited -= 1
+                return Resp(429, {"code": "error.rate.limit", "message": "Too many requests. Try again in 1m"})
+            return super().request(method, url, json=json, timeout=timeout)
+
+    fe = FullEnrichClient(api_key="k", session=Limited())
+    res = fe.search_people("groothandel.example", ["COO"])
+    assert waits == [62.0, 62.0] and res.total >= 0
