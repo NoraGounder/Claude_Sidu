@@ -273,6 +273,37 @@ def _fact_check(cfg, conn, jev, seq, lang, hook, subject, facts, contact, accoun
     return float(qa.answers["unsupported_claim"]["noul"])
 
 
+BANNED = ("mendix", "pebls", "fixed price", "vaste prijs", "free of charge", "kosteloos", "existing systems",
+          "bestaande systemen", "working days", "werkdagen")
+
+
+def auto_approve(cfg: ClientConfig, conn) -> dict:
+    """Quailworks' own review (decisions.md, rule 8): approve drafts that passed every automatic check.
+    A draft is approved only when it is a real draft (sender known), Jev 1.14 found no unsupported claim,
+    the GDPR notice is in email 1, every step is filled in, and no banned claim appears. The rest stay
+    for a person (export-drafts)."""
+    rules = load_rules(cfg)
+    threshold = cfg.ai["thresholds"]["unsupported_claim"]
+    counts = {"approved": 0, "left_for_review": 0}
+    ts = db.now_iso()
+    for d in conn.execute("SELECT * FROM drafts WHERE client=? AND status IN ('draft','needs_review')",
+                          (cfg.slug,)).fetchall():
+        steps = json.loads(d["steps_json"])
+        text = " ".join(s["body"] for s in steps).lower() + " " + d["subject"].lower()
+        ok = (d["status"] == "draft" and (d["qa_unsupported_p"] or 0) < threshold
+              and rules["gdpr_notice"][d["language"]] in steps[0]["body"]
+              and all(s["body"].strip() and "{" not in s["body"] for s in steps)
+              and not any(b in text for b in BANNED))
+        if ok:
+            conn.execute("UPDATE drafts SET status='approved', review_note=?, reviewed_at=?, updated_at=? WHERE id=?",
+                         ("auto-approved by Quailworks: all checks passed", ts, ts, d["id"]))
+            counts["approved"] += 1
+        else:
+            counts["left_for_review"] += 1
+    conn.commit()
+    return counts
+
+
 REVIEW_COLUMNS = ["draft_id", "tier", "company", "first_name", "contact_title", "language", "hook", "facts",
                   "jev_fact_check", "status", "subject", "email_1", "email_2", "email_3", "email_4",
                   "decision", "note"]

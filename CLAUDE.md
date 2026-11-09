@@ -45,7 +45,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 | 2 | Cheap pre-filter: crawl site and careers pages, deterministic rules, Jev 1.14 decisions (non-buyers, ICP fit, admin job titles), score and tier | requests + BeautifulSoup, Crawl4AI browser for blocked and JavaScript pages, TypeSafe Jev 1.14 | `gtm/layers/l2_prefilter.py`, `l2_jev.py` | built |
 | 3 | Find decision-makers (FullEnrich people search), rank them with Jev 1.14 (titles only), find work emails for the chosen ones (max 2 per Tier 1–2 account; Tier 3 parked by the launch plan) | FullEnrich, TypeSafe Jev 1.14 | `gtm/layers/l3_contacts.py` | built |
 | 4 | Send gate: suppression, role/free-mail addresses, domain match, contact country, email status, catch-all cap, freshness, sender consent, GDPR source | Python rules (`gate.yaml`); MillionVerifier only to re-check stale emails | `gtm/layers/l4_gate.py` | built |
-| 5 | Drafts from human-written templates and crawled facts only; Jev 1.14 picks the angle and fact-checks the opening; Quailworks reviews in Google Sheets | Python templates, TypeSafe Jev 1.14, CSV round-trip | `gtm/layers/l5_copy.py` | built |
+| 5 | Drafts from human-written templates and crawled facts only; Jev 1.14 picks the angle and fact-checks the opening (a flagged opening falls back to a safer one); `approve` passes drafts that clear every check, the rest go to a person | Python templates, TypeSafe Jev 1.14, CSV round-trip | `gtm/layers/l5_copy.py` | built |
 | 6 | Upload approved, gate-ready leads (one campaign per region, checked mailboxes, one contact per company); start only with `--i-confirm` after approval; sync replies, bounces and unsubscribes (Jev 1.14 classifies masked replies) | Smartlead + SmartSenders mailboxes, TypeSafe Jev 1.14 | `gtm/layers/l6_send.py` | built (run locally: key goes in the URL) |
 | 7 | Handoff: replies needing a person become deals and one-page briefs with the first answer; outcomes (the client's one word, proposal, won with value) feed learning and lookalikes; HubSpot mirror (writes only with `--live` after approval) | HubSpot (free), templates/replies.yaml | `gtm/layers/l7_handoff.py` | built |
 
@@ -65,7 +65,8 @@ python -m gtm --client the-marble-jar jev                      # decide all scor
 python -m gtm --client the-marble-jar contacts --dry-run       # Layer 3 plan and cost
 python -m gtm --client the-marble-jar contacts --limit 10      # Layer 3 small live test
 python -m gtm --client the-marble-jar gate                     # Layer 4 send gate (free)
-python -m gtm --client the-marble-jar draft && python -m gtm --client the-marble-jar export-drafts   # Layer 5
+python -m gtm --client the-marble-jar draft && python -m gtm --client the-marble-jar approve   # Layer 5: drafts, then Quailworks' automatic review
+python -m gtm --client the-marble-jar export-drafts            # only the drafts left for a person
 python -m gtm --client the-marble-jar push                     # Layer 6 dry run; --live uploads (paused)
 python -m gtm --client the-marble-jar start --region nl --i-confirm   # sends: only after the user approves
 python -m gtm --client the-marble-jar sync                     # replies, bounces, unsubscribes

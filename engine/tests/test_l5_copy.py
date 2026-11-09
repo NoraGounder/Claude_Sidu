@@ -212,3 +212,20 @@ def test_flagged_opening_falls_back_to_a_safe_one(env):
     l5_copy.draft(cfg, conn, jev=JevClient(cfg.ai, session=FlagFirstHook()))
     d = conn.execute("SELECT * FROM drafts").fetchone()
     assert d["status"] == "draft" and d["hook"] != "admin_job_ad" and d["qa_unsupported_p"] < 0.5
+
+
+def test_auto_approve_only_clean_drafts(env):
+    (env / "private").mkdir()
+    (env / "private" / "sender.yaml").write_text("first_name: Sam\nfull_name: Sam Example\n")
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    _setup(conn)
+    l5_copy.draft(cfg, conn, jev=JevClient(cfg.ai, session=StubJev()))
+    assert l5_copy.auto_approve(cfg, conn) == {"approved": 1, "left_for_review": 0}
+    d = conn.execute("SELECT status, review_note FROM drafts").fetchone()
+    assert d["status"] == "approved" and "auto-approved" in d["review_note"]
+    # A flagged draft, or one that lost its GDPR notice, is left for a person
+    conn.execute("UPDATE drafts SET status='needs_review'")
+    assert l5_copy.auto_approve(cfg, conn) == {"approved": 0, "left_for_review": 1}
+    conn.execute("UPDATE drafts SET status='draft', steps_json=replace(steps_json, 'FullEnrich', '')")
+    assert l5_copy.auto_approve(cfg, conn) == {"approved": 0, "left_for_review": 1}

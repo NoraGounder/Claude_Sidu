@@ -233,6 +233,16 @@ def cmd_import_review(args) -> int:
     return 0 if not c["errors"] else 6
 
 
+def cmd_approve(args) -> int:
+    from gtm.layers import l5_copy
+
+    cfg = load_client(args.client)
+    c = l5_copy.auto_approve(cfg, db.connect())
+    print(f"Approved {c['approved']} drafts that passed every check; {c['left_for_review']} left for a person "
+          "(export-drafts).")
+    return 0
+
+
 def cmd_push(args) -> int:
     """Layer 6: upload eligible leads to Smartlead. Campaigns are not started."""
     from gtm.layers import l6_send
@@ -499,6 +509,9 @@ def build_parser() -> argparse.ArgumentParser:
     ir = sub.add_parser("import-review", help="Layer 5: apply approve/reject decisions and edits from the CSV")
     ir.add_argument("--file", required=True)
     ir.set_defaults(func=cmd_import_review)
+
+    ap = sub.add_parser("approve", help="Layer 5: approve drafts that passed every automatic check")
+    ap.set_defaults(func=cmd_approve)
 
     pu = sub.add_parser("push", help="Layer 6: upload eligible leads to Smartlead (dry run unless --live)")
     pu.add_argument("--live", action="store_true")
