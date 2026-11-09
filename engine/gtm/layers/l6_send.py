@@ -86,7 +86,7 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
     suppressed = {k: db.suppressed_values(conn, cfg.slug, k) for k in ("email", "domain", "company")}
     rows = [dict(r) for r in conn.execute(
         "SELECT d.id AS draft_id, d.subject, d.steps_json, c.*, a.name AS company, a.domain AS account_domain,"
-        " a.country AS account_country FROM drafts d JOIN contacts c ON c.id=d.contact_id"
+        " a.country AS account_country, a.status AS account_tier FROM drafts d JOIN contacts c ON c.id=d.contact_id"
         " JOIN accounts a ON a.id=c.account_id WHERE d.client=? AND d.status='approved'"
         " AND c.id NOT IN (SELECT contact_id FROM outbound) ORDER BY c.rank, c.id", (cfg.slug,)).fetchall()]
     window = (now - timedelta(days=sending["stagger_days_same_account"])).isoformat()
@@ -100,6 +100,9 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
             hold("sender_details_missing"); continue
         if r["status"] != "ready":
             hold(f"contact_not_ready:{r['status']}"); continue
+        tiers = sending.get("send_tiers")
+        if tiers and r["account_tier"] not in tiers:
+            hold(f"tier_not_in_send_plan:{r['account_tier']}"); continue
         email = (r["email"] or "").lower()
         if email in suppressed["email"] or email.split("@")[-1] in suppressed["domain"] \
                 or (r["account_domain"] or "") in suppressed["domain"] or r["company"].lower() in suppressed["company"]:

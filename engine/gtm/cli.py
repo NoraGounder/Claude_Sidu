@@ -102,10 +102,11 @@ def cmd_jev(args) -> int:
     except JevPolicyError as exc:
         print(f"Refused by the AI policy: {exc}")
         return 3
-    print(f"Jev decisions with {jp.model}: {len(jp.items)} accounts, estimated ${jp.est_cost:.4f}")
+    print(f"Jev decisions with {jp.model}: {len(jp.items)} accounts, estimated ${jp.est_cost:.4f}"
+          + (f"; lookalike check against {len(jp.best_clients)} best clients" if jp.best_clients else ""))
     if args.dry_run:
         if jp.items:
-            state, questions, _ = l2_jev.build_request(cfg, jp.items[0])
+            state, questions, _ = l2_jev.build_request(cfg, jp.items[0], jp.best_clients)
             print("First request (state and questions):")
             print(json.dumps({"state": state, "questions": list(questions)}, ensure_ascii=False, indent=1)[:2500])
         print("Dry run: nothing was called or spent.")
@@ -318,6 +319,23 @@ def cmd_stats(args) -> int:
     return 0
 
 
+def cmd_best_clients(args) -> int:
+    from gtm import best_clients
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    path = cfg.private_dir / "best_clients.csv"
+    if not path.exists():
+        print(f"No list yet. Put the best clients in {path} (columns as in best_clients.example.csv).")
+        return 1
+    s = best_clients.import_best_clients(cfg, conn)
+    print(f"Imported {s['clients']} best clients: {s['suppressed']} domains added to the do-not-contact list, "
+          f"{s['crawled']} websites read, {s['in_prospect_list']} were already in the prospect list "
+          "(now excluded).")
+    print("Next: jev --redo (lookalike check, costs cents), then prefilter --rescore (free).")
+    return 0
+
+
 def cmd_learn(args) -> int:
     from gtm import learn
 
@@ -418,6 +436,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sy = sub.add_parser("sync", help="Layer 6: pull replies, bounces, unsubscribes; classify replies")
     sy.set_defaults(func=cmd_sync)
+
+    bc = sub.add_parser("best-clients", help="import private/best_clients.csv: exclude them, crawl, use as lookalikes")
+    bc.set_defaults(func=cmd_best_clients)
 
     le = sub.add_parser("learn", help="conversations started per signal, opening, tier, persona, region (free)")
     le.add_argument("--min-contacted", type=int, default=1, help="hide groups with fewer contacted leads")

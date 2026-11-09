@@ -22,6 +22,9 @@ settings:
   stop_on_auto_reply: false
   send_as_plain_text: true
 
+# Launch plan: only these tiers are uploaded. Add tier_3 once Tier 1-2 results prove the message.
+send_tiers: [tier_1, tier_2]
+
 # A second contact at the same company waits until the first one's sequence is over.
 stagger_days_same_account: 21
 

@@ -26,6 +26,8 @@ unit_price_usd:
   "millionverifier:check": 0.004
 
 sending:
-  max_emails_per_day: 120
+  # Launch plan (launch-plan.md): Tier 1-2 only, about 115 companies and 200 contacts, so 40 a day is
+  # enough. 4-5 warmed mailboxes at <= 15/day carry that with headroom. Raise only on proven replies.
+  max_emails_per_day: 40
   max_per_mailbox_per_day: 18
   max_contacts_per_account: 2

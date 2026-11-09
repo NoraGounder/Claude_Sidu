@@ -112,7 +112,22 @@ def test_title_matching_is_whole_word(env):
     assert l3_contacts.persona_of(cfg, "Algemeen Directeur") == "owner_led"
 
 
+def _include_tier_3(client_dir):
+    path = client_dir / "scoring.yaml"
+    path.write_text(path.read_text().replace("tier_3: {max_contacts: 0}", "tier_3: {max_contacts: 1}"))
+
+
+def test_tier_3_is_parked_by_the_launch_plan(env):
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    a = _account(conn, "Groothandel BV", "groothandel.example", "tier_2", "51-200")
+    _account(conn, "Groot BV", "groot.example", "tier_3", "201-500")
+    conn.commit()
+    assert [x["id"] for x in l3_contacts.plan(cfg, conn).accounts] == [a]     # no search spend on Tier 3
+
+
 def test_people_then_emails_end_to_end(env):
+    _include_tier_3(env / "clients" / CLIENT)
     cfg = load_client(CLIENT)
     conn = db.connect()
     a = _account(conn, "Groothandel BV", "groothandel.example", "tier_2", "51-200")

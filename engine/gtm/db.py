@@ -83,6 +83,19 @@ CREATE TABLE IF NOT EXISTS jev_decisions (
     decided_at      TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS best_clients (
+    id              INTEGER PRIMARY KEY,
+    client          TEXT NOT NULL,
+    name            TEXT,                   -- local only (data/, gitignored); never sent to Jev
+    domain          TEXT,
+    industry        TEXT,
+    employees       TEXT,
+    why_they_bought TEXT,
+    home_title      TEXT,
+    home_excerpt    TEXT,
+    imported_at     TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS jev_calls (
     id             INTEGER PRIMARY KEY,
     client         TEXT NOT NULL,
@@ -221,6 +234,7 @@ MIGRATIONS = [
     ("l2_scores", "home_excerpt", "TEXT"),
     ("contacts", "verified_at", "TEXT"),
     ("contacts", "gate_checked_at", "TEXT"),
+    ("jev_decisions", "lookalike", "REAL"),
 ]
 
 

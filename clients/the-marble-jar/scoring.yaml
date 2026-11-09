@@ -26,6 +26,9 @@ fit:
   subsidiary_of_large_group: -15
   # TypeSafe Jev 1.14's ICP score (0 poor .. 2 strong), scaled to 0-15 points (gtm/layers/l2_jev.py).
   jev_icp_fit: 15
+  # Jev 1.14's similarity to The Marble Jar's best clients (private/best_clients.csv, imported with
+  # `best-clients`), 0 not .. 2 very similar, scaled to 0-20 points. No effect until the list exists.
+  jev_lookalike: 20
 
 signals:
   # Found on careers pages and in job ads during Layer 2.
@@ -37,15 +40,19 @@ signals:
   headcount_growth: 10        # clear growth signs (several open roles, new site or warehouse)
 
 tiers:
-  # Maximum fit is 105 (90 + Jev ICP fit 15), and a Dutch company in range with a working site scores 75-90 on fit
+  # Maximum fit is 125 (90 + Jev ICP fit 15 + Jev lookalike 20), and a Dutch company in range with a working site scores 75-90 on fit
   # alone. So Tier 1 and 2 need real signals; fit-only accounts are Tier 3 (cheapest handling).
   tier_1: {fit_min: 60, signal_min: 50}
   tier_2: {fit_min: 60, signal_min: 25}
   tier_3: {fit_min: 50}
+  # Very similar to a best client (Jev lookalike >= 1.5 of 2) is at least Tier 2, signal or not.
+  tier_2_lookalike: {lookalike_min: 1.5, fit_min: 60}
   # Anything below tier_3 is dropped before we pay for contacts.
 
 enrichment_policy:
   # Layer 3. FullEnrich is itself a waterfall over 20+ providers, so there is no second provider.
   tier_1: {max_contacts: 2}
   tier_2: {max_contacts: 2}
-  tier_3: {max_contacts: 1}
+  # Launch plan: Tier 3 is parked (0 = not searched, nothing spent) until Tier 1-2 replies show a
+  # message that works. Set back to 1 to include it.
+  tier_3: {max_contacts: 0}

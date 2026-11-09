@@ -34,7 +34,8 @@ def load_jev(conn, account_id: int) -> dict | None:
     if not row:
         return None
     return {"model_id": row["model_id"], "not_a_buyer": row["not_a_buyer"], "icp_fit": row["icp_fit"],
-            "icp_confidence": row["icp_confidence"], "titles": json.loads(row["titles_json"])}
+            "icp_confidence": row["icp_confidence"], "titles": json.loads(row["titles_json"]),
+            "lookalike": row["lookalike"] if "lookalike" in row.keys() else None}
 
 
 def jev_evidence(cfg: ClientConfig, site: SiteCrawl | None, jev: dict | None) -> list[Evidence]:
@@ -78,6 +79,9 @@ def fit_score(cfg: ClientConfig, account: dict, site: SiteCrawl | None, evidence
     if jev and jev.get("icp_fit") is not None and rules.get("jev_icp_fit"):
         # Jev's ICP score is 0 (poor) .. 2 (strong); scale to the configured weight.
         parts["jev_icp_fit"] = round(rules["jev_icp_fit"] * jev["icp_fit"] / 2)
+    if jev and jev.get("lookalike") is not None and rules.get("jev_lookalike"):
+        # Similarity to the client's best customers, 0 (not) .. 2 (very similar).
+        parts["jev_lookalike"] = round(rules["jev_lookalike"] * jev["lookalike"] / 2)
     return max(0, sum(parts.values())), parts
 
 
@@ -99,12 +103,17 @@ def signal_score(cfg: ClientConfig, site: SiteCrawl | None, evidence: list[Evide
     return min(100, sum(parts.values())), parts
 
 
-def tier_for(cfg: ClientConfig, fit: int, signal: int) -> str:
+def tier_for(cfg: ClientConfig, fit: int, signal: int, lookalike: float | None = None) -> str:
     t = cfg.scoring["tiers"]
     if fit >= t["tier_1"]["fit_min"] and signal >= t["tier_1"]["signal_min"]:
         return "tier_1"
     fit_only = t.get("tier_2_fit_only", {}).get("fit_min")
     if (fit >= t["tier_2"]["fit_min"] and signal >= t["tier_2"]["signal_min"]) or (fit_only and fit >= fit_only):
+        return "tier_2"
+    # A company that closely resembles the client's best customers is worth a contact even
+    # without a buying signal today.
+    look = t.get("tier_2_lookalike") or {}
+    if lookalike is not None and look and lookalike >= look["lookalike_min"] and fit >= look["fit_min"]:
         return "tier_2"
     if fit >= t["tier_3"]["fit_min"]:
         return "tier_3"
@@ -123,7 +132,7 @@ def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None,
         flags.append(f"unreachable:{site.home.error or site.home.status}")
     if any(e.signal == "subsidiary_of_large_group" for e in evidence):
         flags.append("subsidiary")
-    tier, reason = tier_for(cfg, fit, signal), None
+    tier, reason = tier_for(cfg, fit, signal, (jev or {}).get("lookalike")), None
     if tier == "rejected_l2":
         reason = f"fit {fit} below tier 3"
     if jev:

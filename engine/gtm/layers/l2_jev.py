@@ -5,6 +5,7 @@ Per account, one request with typed questions about company-level facts (never p
   not_a_buyer  noul   associations, media, public bodies, IT firms, consultancies, staffing
   icp_fit      score  poor / possible / strong fit for an operations-automation offer
   title_N      noul   is job title N manual administrative work?
+  lookalike    score  how similar to the client's best customers (only when best_clients.csv is imported)
 Answers are stored in jev_decisions; every request is logged in jev_calls (model ID reported by
 the API, tokens, cost, latency). Then the accounts are re-scored from the crawl cache.
 """
@@ -13,9 +14,9 @@ from __future__ import annotations
 
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from gtm import budget, brain, db
+from gtm import best_clients, budget, brain, db
 from gtm.config import ClientConfig
 from gtm.layers import l2_prefilter
 from gtm.sources.jev import JevClient, JevResult, JevUnavailable, check_policy, scrub
@@ -32,6 +33,7 @@ class JevPlan:
     items: list[dict]
     est_cost: float
     model: str
+    best_clients: list[dict] = field(default_factory=list)
 
 
 def price_key(cfg: ClientConfig) -> str:
@@ -50,10 +52,11 @@ def plan(cfg: ClientConfig, conn, limit: int | None = None, redo: bool = False) 
     if limit:
         items = items[:limit]
     est = budget.estimate(cfg, price_key(cfg), len(items)) if items else 0.0
-    return JevPlan(items, est, cfg.ai["model"])
+    return JevPlan(items, est, cfg.ai["model"], best_clients.jev_profiles(cfg, conn))
 
 
-def build_request(cfg: ClientConfig, item: dict) -> tuple[dict, dict, dict[str, str]]:
+def build_request(cfg: ClientConfig, item: dict,
+                  best: list[dict] | None = None) -> tuple[dict, dict, dict[str, str]]:
     titles = item["job_titles"][: cfg.ai.get("max_titles_per_request", 15)]
     state = {
         "company": item["name"],
@@ -84,6 +87,14 @@ def build_request(cfg: ClientConfig, item: dict) -> tuple[dict, dict, dict[str, 
             "criteria": ["Poor fit", "Possible fit", "Strong fit"],
         },
     }
+    if best:
+        state["sellers_best_customers"] = best
+        questions["lookalike"] = {
+            "type": "score",
+            "instructions": ("How similar is this company to the seller's best customers "
+                             "(sellers_best_customers): what it does, its size, and how it operates?"),
+            "criteria": ["Not similar", "Somewhat similar", "Very similar"],
+        }
     title_keys: dict[str, str] = {}
     for n, title in enumerate(titles):
         key = f"title_{n}"
@@ -115,10 +126,11 @@ def _save_decision(conn, account_id: int, result: JevResult, title_keys: dict[st
     titles = {title: float(a[key]["noul"]) for key, title in title_keys.items()}
     conn.execute(
         "INSERT OR REPLACE INTO jev_decisions(account_id, model_id, not_a_buyer, icp_fit, icp_confidence,"
-        " titles_json, raw_answers, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+        " titles_json, raw_answers, decided_at, lookalike) VALUES (?,?,?,?,?,?,?,?,?)",
         (account_id, result.model_id, float(a["not_a_buyer"]["noul"]), float(a["icp_fit"]["score"]),
          a["icp_fit"].get("confidence"), json.dumps(titles, ensure_ascii=False),
-         json.dumps(a, ensure_ascii=False), db.now_iso()))
+         json.dumps(a, ensure_ascii=False), db.now_iso(),
+         float(a["lookalike"]["score"]) if "lookalike" in a else None))
 
 
 def run(cfg: ClientConfig, conn, jp: JevPlan, client: JevClient | None = None, workers: int | None = None) -> dict:
@@ -134,7 +146,7 @@ def run(cfg: ClientConfig, conn, jp: JevPlan, client: JevClient | None = None, w
     failure: Exception | None = None
 
     def ask(item):
-        state, questions, keys = build_request(cfg, item)
+        state, questions, keys = build_request(cfg, item, jp.best_clients)
         return item, keys, jev.decide(state, questions)
 
     with ThreadPoolExecutor(max_workers=workers or cfg.ai.get("workers", 4)) as pool:

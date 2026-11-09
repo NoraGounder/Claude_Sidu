@@ -39,7 +39,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 | 0 | Offer, ICP, qualification rules, budgets, GTM brain (context for every Jev decision) | config files | `clients/<client>/`, `gtm/brain.py` | built |
 | 1 | Discover target accounts | Harvest API (Apify) | `gtm/layers/l1_discover.py` | built |
 | 2 | Cheap pre-filter: crawl site and careers pages, deterministic rules, Jev 1.14 decisions (non-buyers, ICP fit, admin job titles), score and tier | requests + BeautifulSoup, Crawl4AI browser for blocked and JavaScript pages, TypeSafe Jev 1.14 | `gtm/layers/l2_prefilter.py`, `l2_jev.py` | built |
-| 3 | Find decision-makers (FullEnrich people search), rank them with Jev 1.14 (titles only), find work emails for the chosen ones (max 2 per Tier 1–2 account, 1 for Tier 3) | FullEnrich, TypeSafe Jev 1.14 | `gtm/layers/l3_contacts.py` | built |
+| 3 | Find decision-makers (FullEnrich people search), rank them with Jev 1.14 (titles only), find work emails for the chosen ones (max 2 per Tier 1–2 account; Tier 3 parked by the launch plan) | FullEnrich, TypeSafe Jev 1.14 | `gtm/layers/l3_contacts.py` | built |
 | 4 | Send gate: suppression, role/free-mail addresses, domain match, contact country, email status, catch-all cap, freshness, sender consent, GDPR source | Python rules (`gate.yaml`); MillionVerifier only to re-check stale emails | `gtm/layers/l4_gate.py` | built |
 | 5 | Drafts from human-written templates and crawled facts only; Jev 1.14 picks the angle and fact-checks the opening; Quailworks reviews in Google Sheets | Python templates, TypeSafe Jev 1.14, CSV round-trip | `gtm/layers/l5_copy.py` | built |
 | 6 | Upload approved, gate-ready leads (one campaign per region, checked mailboxes, one contact per company); start only with `--i-confirm` after approval; sync replies, bounces and unsubscribes (Jev 1.14 classifies masked replies) | Smartlead + SmartSenders mailboxes, TypeSafe Jev 1.14 | `gtm/layers/l6_send.py` | built (run locally: key goes in the URL) |
@@ -51,6 +51,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 cd engine && pip install -e ".[dev]"
 python -m gtm --client the-marble-jar discover --dry-run          # shows queries and cost estimate
 python -m gtm --client the-marble-jar discover --segment logistics_nl --max-items 50
+python -m gtm --client the-marble-jar best-clients              # import private/best_clients.csv: exclude, crawl, lookalikes
 python -m gtm --client the-marble-jar stats
 python -m gtm --client the-marble-jar export --status qualified_l1
 python -m gtm --client the-marble-jar prefilter --limit 20     # Layer 2 trial (free)
@@ -82,6 +83,10 @@ secret. See `.env.example`.
 - `clients/<client>/ai.yaml`: AI policy (Jev 1.14 only, no fallback) and decision thresholds
 - `clients/<client>/brain.yaml`: GTM brain (offer, personas and pains, pillars, objections, competitors,
   voice, signals). Each entry is confirmed, hypothesis or ask_mithun; only the first two reach Jev
+- `clients/<client>/private/best_clients.csv`: the client's best customers (gitignored). Never emailed;
+  Jev 1.14 scores prospects for similarity to them (`jev_lookalike` in scoring.yaml)
+- `clients/the-marble-jar/launch-plan.md`: phases, volume (Tier 1–2, 40 a day) and monthly cost;
+  `call-agenda.md`: the 30-minute call with Mithun
 - `clients/<client>/gate.yaml`: Layer 4 send-gate rules and the GDPR notice text
 - `clients/<client>/private/exclusions.csv`: real do-not-contact list (gitignored)
 - `engine/gtm/`: the engine; `engine/tests/`: tests with synthetic data only

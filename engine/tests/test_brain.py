@@ -5,9 +5,9 @@ import json
 import pytest
 from test_l6_send import CLIENT, StubJev, StubSmartlead, _approved, make_env
 
-from gtm import brain, db, learn
+from gtm import best_clients, brain, db, learn
 from gtm.config import load_client
-from gtm.layers import l2_jev, l6_send
+from gtm.layers import l2_jev, l2_prefilter, l6_send
 from gtm.sources.jev import JevClient
 from gtm.sources.smartlead import SmartleadClient
 
@@ -59,3 +59,56 @@ def test_learn_counts_conversations_per_signal(env):
     assert report["tier"]["tier_1"] == {"contacted": 1, "replied": 1, "conversations": 1, "unsubscribed": 0,
                                         "bounced": 0}
     assert any("admin_job_ad: 1 contacted" in line for line in learn.format_report(report))
+
+
+# ---------- best clients as lookalikes ----------
+
+class StubFetcher:
+    def get(self, url):
+        from gtm.crawl import Page
+        return Page(url=url, status=200, title="Fresh produce wholesale",
+                    text="We import and distribute fruit and vegetables to 400 retailers across the Benelux.")
+
+
+def _write_best_clients(client_dir):
+    (client_dir / "private" / "best_clients.csv").write_text(
+        "name,domain,industry,employees,why_they_bought\n"
+        "Verse Groothandel BV,versegroothandel.example,wholesale,120,Orders were retyped from email\n")
+
+
+def test_best_clients_are_excluded_and_profiled_without_names(env):
+    _write_best_clients(env)
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    s = best_clients.import_best_clients(cfg, conn, fetcher=StubFetcher())
+    assert s == {"clients": 1, "crawled": 1, "suppressed": 1, "in_prospect_list": 0}
+    assert "versegroothandel.example" in db.suppressed_values(conn, CLIENT, "domain")
+    assert "verse groothandel bv" in db.suppressed_values(conn, CLIENT, "company")
+    profiles = best_clients.jev_profiles(cfg, conn)
+    assert profiles[0]["why_they_bought"] and "Benelux" in profiles[0]["what_they_do"]
+    assert "Verse Groothandel" not in json.dumps(profiles) and "versegroothandel" not in json.dumps(profiles)
+
+
+def test_lookalike_question_score_and_tier(env):
+    _write_best_clients(env)
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    best_clients.import_best_clients(cfg, conn, fetcher=StubFetcher())
+    item = {"name": "Groothandel BV", "industry": "Wholesale", "country": "NL", "employee_range": "51-200",
+            "home_title": "Home", "home_excerpt": "We distribute parts", "job_titles": []}
+    state, questions, _ = l2_jev.build_request(cfg, item, best_clients.jev_profiles(cfg, conn))
+    assert state["sellers_best_customers"] and questions["lookalike"]["type"] == "score"
+    _, no_best, _ = l2_jev.build_request(cfg, item)
+    assert "lookalike" not in no_best
+    # Very similar to a best client: Tier 2 without a buying signal; not similar: Tier 3
+    assert l2_prefilter.tier_for(cfg, fit=70, signal=0, lookalike=2.0) == "tier_2"
+    assert l2_prefilter.tier_for(cfg, fit=70, signal=0, lookalike=0.0) == "tier_3"
+
+
+def test_push_holds_parked_tiers(env):
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    acc = _approved(conn, "Klein BV", "NL", "Cas", "cas@klein.example")
+    conn.execute("UPDATE accounts SET status='tier_3' WHERE id=?", (acc,))
+    conn.commit()
+    assert l6_send.plan_push(cfg, conn).held == {"tier_not_in_send_plan:tier_3": 1}
