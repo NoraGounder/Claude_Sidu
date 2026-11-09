@@ -197,3 +197,27 @@ def test_fullenrich_waits_and_retries_on_rate_limit(monkeypatch):
     fe = FullEnrichClient(api_key="k", session=Limited())
     res = fe.search_people("groothandel.example", ["COO"])
     assert waits == [62.0, 62.0] and res.total >= 0
+
+
+def test_slow_enrichment_is_collected_later_not_bought_twice(env):
+    from gtm.sources.fullenrich import EnrichmentPending
+
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    _account(conn, "Groothandel BV", "groothandel.example", "tier_2", "51-200")
+    conn.commit()
+    stub = StubFE()
+    fe = FullEnrichClient(session=stub)
+    l3_contacts.find_people(cfg, conn, l3_contacts.plan(cfg, conn), fe=fe,
+                            jev=JevClient(cfg.ai, session=StubJev()))
+    real_wait = fe.wait_enrichment
+    fe.wait_enrichment = lambda eid: (_ for _ in ()).throw(EnrichmentPending(eid, "still IN_PROGRESS"))
+    first = l3_contacts.find_emails(cfg, conn, fe=fe)
+    assert first["pending"] == 2 and first["found"] == 0
+    assert conn.execute("SELECT status, notes FROM runs WHERE layer='L3-email'").fetchone()[:] == ("pending", "enr-1")
+    starts = sum(1 for url, _ in stub.posts if url.endswith("/contact/enrich/bulk"))
+    fe.wait_enrichment = real_wait
+    second = l3_contacts.find_emails(cfg, conn, fe=fe)
+    assert second["found"] == 1 and second["requested"] == 0
+    assert sum(1 for url, _ in stub.posts if url.endswith("/contact/enrich/bulk")) == starts   # no new purchase
+    assert conn.execute("SELECT status FROM runs WHERE layer='L3-email'").fetchone()[0] == "succeeded"

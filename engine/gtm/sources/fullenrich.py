@@ -25,6 +25,14 @@ class FullEnrichError(RuntimeError):
     pass
 
 
+class EnrichmentPending(FullEnrichError):
+    """FullEnrich is still working on a batch: collect it later with wait_enrichment(enrichment_id)."""
+
+    def __init__(self, enrichment_id: str, message: str):
+        super().__init__(message)
+        self.enrichment_id = enrichment_id
+
+
 @dataclass
 class SearchResult:
     people: list[dict]
@@ -101,5 +109,5 @@ class FullEnrichClient:
             if status in {"CANCELED", "CREDITS_INSUFFICIENT", "RATE_LIMIT", "UNKNOWN"}:
                 raise FullEnrichError(f"Enrichment {enrichment_id} ended with status {status}.")
             if time.monotonic() > deadline:
-                raise FullEnrichError(f"Enrichment {enrichment_id} still {status} after {wait_secs}s.")
+                raise EnrichmentPending(enrichment_id, f"Enrichment {enrichment_id} still {status} after {wait_secs}s.")
             time.sleep(poll_secs)

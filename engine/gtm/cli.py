@@ -156,7 +156,9 @@ def cmd_contacts(args) -> int:
         if not args.skip_emails:
             e = l3_contacts.find_emails(cfg, conn, limit=args.limit)
             print(f"Work emails: {e['requested']} requested, {e['found']} found, {e['catch_all']} catch-all, "
-                  f"{e['not_found']} not found. Cost ${e['cost_usd']:.2f}.")
+                  f"{e['not_found']} not found. Cost ${e['cost_usd']:.2f}."
+                  + (f" {e['pending']} still being processed by FullEnrich: run the same command again later "
+                     "(nothing is bought twice)." if e.get("pending") else ""))
     except (JevUnavailable, JevPolicyError) as exc:
         print(f"Stopped by Jev: {exc}. No other model was used; run again to continue.")
         return 4

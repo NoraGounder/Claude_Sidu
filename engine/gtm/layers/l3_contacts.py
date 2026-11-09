@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from gtm import brain, budget, db
 from gtm.config import ClientConfig
 from gtm.normalize import has_keyword, pick
-from gtm.sources.fullenrich import FullEnrichClient
+from gtm.sources.fullenrich import EnrichmentPending, FullEnrichClient
 from gtm.sources.jev import JevClient, JevResult, JevUnavailable, check_policy, scrub
 
 VENDOR = "fullenrich"
@@ -206,18 +206,60 @@ def find_people(cfg: ClientConfig, conn, cp: ContactPlan, fe: FullEnrichClient |
     return totals
 
 
+def _apply_emails(cfg: ClientConfig, conn, result: dict, totals: dict) -> float:
+    credits = float((result.get("cost") or {}).get("credits") or 0)
+    totals["credits"] += credits
+    for item in result.get("data", []):
+        cid = int((item.get("custom") or {}).get("contact_id", 0))
+        best = (item.get("contact_info") or {}).get("most_probable_work_email") or {}
+        email, status = best.get("email"), (best.get("status") or "").upper()
+        if email and status in ACCEPT_EMAIL:
+            new_status, key = "email_found", "found"
+        elif email and status in CATCH_ALL:
+            new_status, key = "email_found", "catch_all"
+        else:
+            new_status, key, email = "no_email", "not_found", None
+        totals[key] += 1
+        ts = db.now_iso()
+        conn.execute("UPDATE contacts SET status=?, email=?, email_status=?, email_source=?, updated_at=?,"
+                     " verified_at=? WHERE id=? AND client=?",
+                     (new_status, email, status or None, "FullEnrich" if email else None,
+                      ts, ts if email else None, cid, cfg.slug))
+    conn.commit()
+    return credits
+
+
 def find_emails(cfg: ClientConfig, conn, fe: FullEnrichClient | None = None, limit: int | None = None) -> dict:
-    """Step 5: work emails for selected contacts only, in batches of up to 100."""
+    """Step 5: work emails for selected contacts only, in batches of up to 100.
+
+    A batch FullEnrich has not finished within the wait is recorded as a `pending` run (its
+    enrichment id in `notes`) and collected on the next call, so a batch is never paid for twice."""
+    totals = {"requested": 0, "found": 0, "catch_all": 0, "not_found": 0, "credits": 0.0, "pending": 0}
+    credit_usd = cfg.limits.unit_price_usd["fullenrich:credit"]
+    pending_runs = conn.execute("SELECT * FROM runs WHERE client=? AND layer='L3-email' AND status='pending'"
+                                " ORDER BY id", (cfg.slug,)).fetchall()
+    waiting: set[int] = set()
+    if pending_runs:
+        fe = fe or FullEnrichClient()
+    for run in pending_runs:
+        contact_ids = json.loads(run["params_json"] or "{}").get("contacts", [])
+        try:
+            result = fe.wait_enrichment(run["notes"])
+        except EnrichmentPending:
+            waiting.update(contact_ids)
+            totals["pending"] += len(contact_ids)
+            continue
+        credits = _apply_emails(cfg, conn, result, totals)
+        db.finish_run(conn, run["id"], "succeeded", len(contact_ids), round(credits * credit_usd, 4), run["notes"])
     rows = conn.execute(
         "SELECT c.*, a.domain, a.name AS company FROM contacts c JOIN accounts a ON a.id=c.account_id"
         " WHERE c.client=? AND c.status='selected' ORDER BY c.id", (cfg.slug,)).fetchall()
-    rows = [dict(r) for r in rows][: limit or None]
-    totals = {"requested": len(rows), "found": 0, "catch_all": 0, "not_found": 0, "credits": 0.0}
+    rows = [dict(r) for r in rows if r["id"] not in waiting][: limit or None]
+    totals["requested"] = len(rows)
     if not rows:
-        return totals | {"cost_usd": 0.0}
+        return totals | {"cost_usd": round(totals["credits"] * credit_usd, 4)}
     budget.check(conn, cfg, VENDOR, budget.estimate(cfg, EMAIL_KEY, len(rows)))
     fe = fe or FullEnrichClient()
-    credit_usd = cfg.limits.unit_price_usd["fullenrich:credit"]
     for start in range(0, len(rows), 100):
         batch = rows[start:start + 100]
         est = budget.estimate(cfg, EMAIL_KEY, len(batch))
@@ -227,31 +269,18 @@ def find_emails(cfg: ClientConfig, conn, fe: FullEnrichClient | None = None, lim
                     "company_name": r["company"], "linkedin_url": r["linkedin_url"],
                     "enrich_fields": ["contact.work_emails"], "custom": {"contact_id": str(r["id"])}}
                    for r in batch]
+        enrichment_id = None
         try:
             enrichment_id = fe.start_enrichment(f"{cfg.slug} L3 {db.now_iso()[:16]}", payload)
             result = fe.wait_enrichment(enrichment_id)
+        except EnrichmentPending as exc:
+            db.finish_run(conn, run_id, "pending", 0, None, exc.enrichment_id)
+            totals["pending"] += len(batch)
+            continue
         except Exception as exc:
             db.finish_run(conn, run_id, "failed", 0, None, scrub(str(exc))[:500])
             raise
-        credits = float((result.get("cost") or {}).get("credits") or 0)
-        totals["credits"] += credits
-        for item in result.get("data", []):
-            cid = int((item.get("custom") or {}).get("contact_id", 0))
-            best = (item.get("contact_info") or {}).get("most_probable_work_email") or {}
-            email, status = best.get("email"), (best.get("status") or "").upper()
-            if email and status in ACCEPT_EMAIL:
-                new_status, key = "email_found", "found"
-            elif email and status in CATCH_ALL:
-                new_status, key = "email_found", "catch_all"
-            else:
-                new_status, key, email = "no_email", "not_found", None
-            totals[key] += 1
-            ts = db.now_iso()
-            conn.execute("UPDATE contacts SET status=?, email=?, email_status=?, email_source=?, updated_at=?,"
-                         " verified_at=? WHERE id=? AND client=?",
-                         (new_status, email, status or None, "FullEnrich" if email else None,
-                          ts, ts if email else None, cid, cfg.slug))
-        conn.commit()
+        credits = _apply_emails(cfg, conn, result, totals)
         db.finish_run(conn, run_id, "succeeded", len(batch), round(credits * credit_usd, 4), enrichment_id)
     totals["cost_usd"] = round(totals["credits"] * credit_usd, 4)
     return totals
