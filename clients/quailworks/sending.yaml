@@ -4,12 +4,13 @@
 
 campaign_prefix: "QW"
 
-# US only for now (decisions.md Q8). Central time keeps sends inside working hours from coast to coast.
+# US and UK (decisions.md Q8). US Central time keeps sends inside working hours from coast to coast.
 regions:
   us: {countries: [US], timezone: America/Chicago}
+  uk: {countries: [GB], timezone: Europe/London}
 
 schedule:
-  days_of_the_week: [2, 3, 4]      # Tuesday-Thursday
+  days_of_the_week: [1, 2, 3, 4]   # Monday-Thursday: four sending days for capacity (decisions.md Q19)
   start_hour: "09:00"
   end_hour: "16:30"
   min_time_btw_emails: 8           # minutes between sends per mailbox

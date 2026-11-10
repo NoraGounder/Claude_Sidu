@@ -18,6 +18,7 @@ fit:
     machinery: 15
   country:
     US: 15
+    GB: 15
   website_reachable: 5
   dutch_language_site: 0
   # A division of a large group usually buys services at group level.
@@ -33,7 +34,8 @@ signals:
   trade_show: 15          # exhibits at trade shows: pipeline depends on events
   sales_stack: 10         # a CRM or sales tool named in a job ad: already invests in outbound
   channel_sales: 10       # find-a-rep, distributor or request-a-quote selling
-  headcount_growth: 10    # several open roles or clear growth language
+  supplier_certification: 10   # AS9100, IATF 16949, NADCAP, ITAR: proof they sell into aerospace or automotive
+  headcount_growth: 10    # several open roles, growth language, new facility or new machines
 
 signal_bonuses:
   multiple_sales_ads: {signal: sales_job_ad, min_labels: 2}
@@ -80,7 +82,17 @@ detect:
     - {label: "JEC World", pattern: 'jec\s+world'}
     - {label: "RAPID + TCT", pattern: 'rapid\s*\+\s*tct'}
     - {label: "Formnext", pattern: '\bformnext\b'}
+    - {label: "Autosport International", pattern: 'autosport\s+international'}
+    - {label: "Advanced Engineering", pattern: 'advanced\s+engineering\s+(show|20\d\d)'}
+    - {label: "MACH", pattern: '\bMACH\s+20\d\d\b'}
+    - {label: "Space-Comm Expo", pattern: 'space[\s-]comm\s+expo'}
+    - {label: "Engineering Design Show", pattern: 'engineering\s+design\s+show'}
     - {label: "visit us at our booth", pattern: 'visit\s+us\s+at\s+(our\s+)?(booth|stand)|booth\s*#\s*\d+'}
+  supplier_certification:
+    - {label: "AS9100", pattern: '\bAS\s?9100\w*'}
+    - {label: "IATF 16949", pattern: '\bIATF\s?16949\b'}
+    - {label: "NADCAP", pattern: '\bnadcap\b'}
+    - {label: "ITAR registered", pattern: '\bITAR[\s-]+(registered|compliant|certified)'}
   channel_sales:
     - {label: "find a rep", pattern: 'find\s+(a|your)\s+(local\s+)?(sales\s+)?(rep|representative|distributor)\b'}
     - {label: "distributor network", pattern: 'become\s+a\s+distributor|distributor\s+locator|our\s+distributors'}
@@ -88,6 +100,7 @@ detect:
   headcount_growth:
     - {label: "growing team", pattern: "we're\\s+hiring|we\\s+are\\s+hiring|join\\s+our\\s+growing\\s+team|fast[\\s-]growing|rapidly\\s+growing"}
     - {label: "new facility", pattern: 'new\s+(facility|headquarters|production\s+facility|manufacturing\s+facility)'}
+    - {label: "new capacity", pattern: 'new\s+(5|five)[\s-]axis|expanded\s+(our\s+)?(capacity|facility|production)|additional\s+capacity'}
   subsidiary_of_large_group:
     # Keywords in any case, group name capitalised (1-3 words), e.g. "a division of Acme Industrial Group".
     - {label: "part of (EN)", pattern: '(?i:(part|member|subsidiary)\s+of\s+(the\s+)?)[A-Z][\w&\-]+(\s+[A-Z][\w&\-]+){0,2}\s+(?i:group)'}
@@ -100,7 +113,7 @@ case_sensitive_signals: [subsidiary_of_large_group]
 tiers:
   # A US company in range with a working site scores 70-100 on fit alone, so Tier 1 and 2 need a signal.
   tier_1: {fit_min: 60, signal_min: 35}    # hiring for sales roles
-  tier_2: {fit_min: 60, signal_min: 20}    # e.g. a trade show plus rep selling, or a sales tool plus growth
+  tier_2: {fit_min: 60, signal_min: 20}    # e.g. a certified supplier at a trade show, or a sales tool plus growth
   tier_3: {fit_min: 50}
   tier_2_lookalike: {lookalike_min: 1.5, fit_min: 60}
   # Anything below tier_3 is dropped before we pay for contacts.

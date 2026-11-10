@@ -6,7 +6,7 @@
 # are shared with The Marble Jar, whose own caps are unchanged; the guard counts each client separately.
 
 month_budget_usd:
-  apify: 15          # paid Apify plan (Starter); ~3,700 full-mode companies a month
+  apify: 15          # paid Apify plan (Starter); first run 2,700 companies = $10.80
   leadmagic: 0       # not used
   fullenrich: 40     # ~730 credits: people search plus work emails for ~150 Tier 1-2 accounts
   millionverifier: 2
@@ -24,8 +24,9 @@ unit_price_usd:
   "millionverifier:check": 0.004
 
 sending:
-  # Fresh brand mailboxes after 2-3 weeks of warm-up (decisions.md Q18-Q19): start at 5 a day each.
-  # Raise to 40 / 10 after a clean first week (bounces under 2%, no spam complaints).
-  max_emails_per_day: 20
+  # 6 fresh brand mailboxes after 2-3 weeks of warm-up (decisions.md Q18-Q19). Ramp agreed in the plan:
+  # week 1: 5 a day each (30); week 2: 10 (60); week 3 on: 15 (90), each step only if bounces stay under
+  # 2% and there are no spam complaints. These values are week 1; Claude Code raises them per the ramp.
+  max_emails_per_day: 30
   max_per_mailbox_per_day: 5
   max_contacts_per_account: 2

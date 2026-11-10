@@ -9,7 +9,7 @@ offices: [Gowarczów (PL)]   # Quailworks sp. z o.o., public company register (K
 operating_model: own_outbound   # Quailworks runs its own outbound; the founder takes the meetings
 
 language:
-  default: en        # US market only for now (decisions.md Q8)
+  default: en        # US and UK (decisions.md Q8)
   by_country: {}
   fallback: en
 

@@ -6,7 +6,7 @@
 # presume nothing, the GDPR notice at the end of email 1. Placeholders in {curly_braces}.
 # A hook is only used when its fact exists; otherwise the next one in `hook_priority` applies.
 
-hook_priority: [sales_job_ad, trade_show, growth, sales_stack, generic]
+hook_priority: [sales_job_ad, trade_show, certification, growth, sales_stack, generic]
 greetings:
   en: ["Hi", "Hello"]
 signoffs:
@@ -17,7 +17,11 @@ named_facts:
   stack: {signal: sales_stack, labels: [HubSpot, Salesforce, Pipedrive, Zoho CRM, Apollo, ZoomInfo, Salesloft, Outreach]}
   trade_show: {signal: trade_show, labels: [IMTS, FABTECH, ProMat, MODEX, Automate, PACK EXPO, Hannover Messe, SEMICON,
                                             The Assembly Show, Paris Air Show, Farnborough, MRO Americas, Space Symposium,
-                                            AeroDef, SAE WCX, The Battery Show, CAMX, JEC World, RAPID + TCT, Formnext]}
+                                            AeroDef, SAE WCX, The Battery Show, CAMX, JEC World, RAPID + TCT, Formnext,
+                                            Autosport International, Advanced Engineering, MACH, Space-Comm Expo,
+                                            Engineering Design Show]}
+  # ITAR is a registration, not a certification, so it scores but is not quoted.
+  certification: {signal: supplier_certification, labels: [AS9100, IATF 16949, NADCAP]}
 
 # English role words that make a vacancy title quotable ("account executive", "sales engineer").
 title_role_words: 'representative|\brep\b|executive|manager|engineer|specialist|associate|developer|director'
@@ -44,6 +48,12 @@ hooks:
     subject:
       en: "{trade_show} and {company}"
     en: "I saw {trade_show} mentioned on the {company} website. Outside of shows like that, how do first conversations with new customers usually start?"
+  certification:
+    needs: certification
+    description: Open with the aerospace or automotive quality certification on their website
+    subject:
+      en: "{certification} at {company}"
+    en: "I saw the {certification} certification on the {company} website. When an engineering team starts a new program, how do they usually find you: RFQs, trade shows, or someone reaching out?"
   growth:
     needs: open_roles
     description: Open with how many roles they are hiring for (growth)
@@ -70,7 +80,7 @@ steps:
 
       {hook}
 
-      I run Quailworks, a GTM engineering firm. Before that I spent over a decade as a design engineer on aerospace and automotive programs, the person suppliers were trying to reach.
+      I run Quailworks, a GTM engineering firm. Before that I spent over a decade as a design engineer, from launch-vehicle turbopumps to hypercar suspension: the person suppliers were trying to reach.
 
       We build signal-based outbound for companies that sell to engineering teams: {process}, and booking the first call. You own all of it.
 

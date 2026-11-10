@@ -16,7 +16,7 @@ market_profile:
   - {status: confirmed, note: "quailworks.co", text: "It was an engineering firm before it was a GTM firm: specs before automations, versioned and tested systems with monitoring, the client owns everything, senior engineers on a small roster."}
   - {status: confirmed, note: "quailworks.co", text: "Engagements: a fixed-fee GTM audit, a 4-6 week build sprint, or an embedded engineer on a monthly retainer."}
   - {status: confirmed, note: "founder's CV, 2026-11-10", text: "The founder spent over a decade as a mechanical design engineer on aerospace and high-performance automotive programs, choosing and managing suppliers."}
-  - {status: decided, note: "decisions.md Q1, Q9", text: "Outbound leads with signal-based outbound for US companies that sell to hardware engineering teams in aerospace, space, automotive and advanced manufacturing."}
+  - {status: decided, note: "decisions.md Q1, Q9", text: "Outbound leads with signal-based outbound for US and UK companies that sell to hardware engineering teams in aerospace, space, automotive and advanced manufacturing."}
 
 offer:
   - {status: decided, note: "decisions.md Q1", text: "Signal-based outbound built as a system: finds accounts with a reason to buy, writes to the right person from facts on their own website, books first calls; runs in the client's own tools and they own it."}

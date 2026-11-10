@@ -6,7 +6,7 @@ Written 10 November 2026 at the end of the session that built the lead engine fo
 ## Status (10 November 2026, later the same day)
 
 Done: `clients/quailworks/` exists and its decisions are recorded in `clients/quailworks/decisions.md`,
-decided from quailworks.co (the live site) and the founder's background: US companies with 11-500
+decided from quailworks.co (the live site) and the founder's background: US and UK companies with 11-500
 employees that sell to hardware engineering teams in aerospace, space, automotive and advanced
 manufacturing; lead offer: signal-based outbound, with the site's working session as the next step.
 The engine's The Marble Jar-specific prompts, signal rules and copy logic are now per-client settings

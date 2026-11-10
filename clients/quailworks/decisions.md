@@ -4,6 +4,11 @@ Quailworks is its own client here. Operating rule (CLAUDE.md rule 8): Quailworks
 website, public data and its own results, records each decision with what would change it, and moves
 on. No questionnaires. Results (replies, meetings, won deals) change decisions.
 
+**Objective (the user, 2026-11-10): the most booked sales calls per dollar.** Every decision below is
+judged on that. Tool costs are small (about $0.25 per company for data), so the levers that matter are
+who we write to, what the email says, how many people we can reach per week, and how fast replies
+are answered.
+
 Sources: **quailworks.co** (the live site, read 2026-11-10; the user confirmed it is the current site,
 not quailworks.xyz, which is this repository's older `index.html`); the founder's CV (shared by the
 user 2026-11-10, kept out of this public repository); the Polish company register (KRS 0001108506,
@@ -21,8 +26,10 @@ market, a first engagement under $3,000); the lessons of The Marble Jar build.
   engineer on aerospace and high-performance automotive programs, choosing and managing suppliers: the
   person engineering sellers are trying to reach (CV); (2) "we were an engineering firm before we were a
   GTM firm": specs before automations, production standards (quailworks.co); (3) "you own everything",
-  built inside the client's own tools (quailworks.co). Employer and program names stay out of cold
-  email and out of this repository.
+  built inside the client's own tools (quailworks.co). Email 1 makes (1) concrete without naming
+  anyone: "from launch-vehicle turbopumps to hypercar suspension" (both in the CV). Employer names stay
+  out of cold email and out of this repository: naming them could read as an endorsement and may touch
+  NDAs; prospects who look the founder up see them on LinkedIn anyway.
 - **Q3. No claims we cannot back.** No results, meeting counts, response rates, guarantees, prices, or
   build times (the site's "typical build 2-4 weeks" stays on the site). Quailworks has one client, The
   Marble Jar, launching late November 2026, and no results yet. Change if: real results exist (then
@@ -43,11 +50,14 @@ market, a first engagement under $3,000); the lessons of The Marble Jar build.
 
 ## Targeting
 
-- **Q8. Market: the United States first, then the UK and Ireland.** The US is the largest market and was
-  the user's choice; B2B cold email is lawful there with an opt-out and a postal address (CAN-SPAM). The
-  UK is next: the founder studied and worked there, and PECR allows business email with an opt-out.
-  Poland and Germany require prior consent even for business email, so they are out.
-  Change if: US results are poor after 200 contacts.
+- **Q8. Market: the United States and the United Kingdom, from the start.** The US is the largest
+  market (the user's choice) and allows B2B cold email with an opt-out and a postal address (CAN-SPAM).
+  The UK is where the founder's background carries most weight (studied and worked on UK aerospace,
+  automotive and motorsport programs), it is one hour from the founder (US Central is seven), and PECR
+  allows business email to limited companies with an opt-out. Running both from day one shows within
+  weeks which market books calls cheaper. Ireland later; Poland and Germany require prior consent even
+  for business email, so they are out. Change if: one market books calls at under half the other's
+  cost after 150 contacts each (then move the volume there).
 - **Q9. Who: companies that sell to hardware engineering teams in aerospace, space, automotive and
   advanced manufacturing.** Phase 1: aerospace and space suppliers (LinkedIn 52, 1), automotive parts
   suppliers (1042), and software for manufacturing and engineering teams (4, search word
@@ -68,8 +78,10 @@ market, a first engagement under $3,000); the lessons of The Marble Jar build.
 - **Q12. Why now (signals):** hiring for sales roles that find new business (SDR, BDR, inside sales,
   business development, account executive, sales engineer) is the strongest signal: it is the work the
   system takes over (The Marble Jar lesson: hiring for the work you replace beats fit). Then: exhibiting
-  at trade shows (aerospace, automotive and manufacturing shows), a CRM or sales tool named in a job ad,
-  rep or distributor-driven sales, and growth. Weights in `scoring.yaml`.
+  at trade shows (US and UK aerospace, automotive, motorsport and manufacturing shows), a supplier
+  certification (AS9100, IATF 16949, NADCAP, ITAR: proof they sell into aerospace or automotive
+  engineering teams, and an opening of its own), a CRM or sales tool named in a job ad, rep or
+  distributor-driven sales, and growth or new capacity. Weights in `scoring.yaml`.
   Change if: `learn` shows another signal converts better.
 - **Q13. No lookalikes yet.** The Marble Jar (a Dutch automation studio) is not like these targets, so it
   is excluded but not used as a lookalike. Our own won deals become the list (`best-clients`).
@@ -94,39 +106,68 @@ market, a first engagement under $3,000); the lessons of The Marble Jar build.
 
 ## Sending and budget
 
-- **Q18. Sending domains:** two brand variants of the company name, picked in this order from what is
-  available: getquailworks.com, quailworkshq.com, tryquailworks.com. Never quailworks.co itself (it
-  carries the company's own Google Workspace mail and DMARC), never quailworks.xyz, and never The Marble
-  Jar's domains. Two mailboxes per domain in the founder's real name: fresh SmartSenders mailboxes
-  (about $4.50 a month each) on these brand domains, warmed up for 2-3 weeks. Pre-warmed mailboxes only
-  come on unrelated domain names, which do not carry the Quailworks brand (the user, 2026-11-10), so
-  they are not used. The warm-up runs in parallel with discovery, scoring, contacts and drafts, so the
-  first sends wait only on the mailboxes. Own Smartlead campaigns prefixed `QW` in the existing
-  Smartlead account.
-- **Q19. Volume:** Tier 1-2 only. After warm-up, 5 a day per mailbox (20 a day), rising to 10 each
-  (40 a day) after a clean first week (bounces under 2%, no spam complaints); warm-up stays on.
-  Tuesday to Thursday on US Central time. Scale only what `learn` shows works.
+- **Q18. Sending domains: three brand variants** of the company name: getquailworks.com,
+  quailworkshq.com and tryquailworks.com (or the next available brand variant). Never quailworks.co
+  itself (it carries the company's own Google Workspace mail and DMARC), never quailworks.xyz, and never
+  The Marble Jar's domains. Two mailboxes per domain (six) in the founder's real name: fresh SmartSenders
+  mailboxes (about $4.50 a month each), warmed up for 2-3 weeks. Pre-warmed mailboxes only come on
+  unrelated domain names, which do not carry the Quailworks brand (the user, 2026-11-10). Why six and
+  not four: sending capacity, not data, limits how many calls we book, and a mailbox costs less than one
+  enriched company a week. The warm-up runs in parallel with discovery, scoring, contacts and drafts.
+  Own Smartlead campaigns prefixed `QW` in the existing Smartlead account.
+- **Q19. Volume and ramp:** Tier 1-2 only, Monday to Thursday, in each market's working hours. Week 1
+  after warm-up: 5 a day per mailbox (30 a day); week 2: 10 (60); week 3 on: 15 (90), each step only if
+  bounces stay under 2% and there are no spam complaints; warm-up stays on. At 90 a day that is about
+  90 new people a week across the 4-step sequence, so the first ~300 Tier 1-2 contacts are reached in
+  about 4 weeks instead of 10. Scale only what `learn` shows works.
 - **Q20. Budgets** (`limits.yaml`, raised on the user's say-so of 2026-11-10). Apify's free $5 credit is
   shared with The Marble Jar and was used up in November, so the user moves the account to a paid plan
-  (Starter) and Quailworks may spend $15 a month on discovery (the first run, 1,500 companies, is about
-  $6). FullEnrich credits are shared and the user tops them up: Quailworks may spend $40 a month (about
+  (Starter) and Quailworks may spend $15 a month on discovery (the first run, 2,700 US and UK companies,
+  is about $10.80). FullEnrich credits are shared and the user tops them up: Quailworks may spend $40 a month (about
   730 credits, roughly 150 Tier 1-2 accounts). Jev 1.14 $3, MillionVerifier $2. The Marble Jar's caps
   are unchanged.
 - **Q21. CRM:** Quailworks' own free HubSpot portal, only once meetings exist, through its own token
   (`client.yaml` crm.hubspot_token_env = HUBSPOT_TOKEN_QUAILWORKS), so deals never land in a client's CRM.
 
+## Converting replies into calls
+
+- **Q22. Speed to lead.** Interested replies are answered within one working hour in the prospect's
+  market: Smartlead forwards replies to the founder's inbox, and the first answer is ready in
+  `templates/replies.yaml` with the booking link. Every reply also goes through `sync` and `handoff`
+  (briefs, outcomes). Why: a reply answered within the hour books far more often than one answered the
+  next day, and it costs nothing.
+- **Q23. Booking link.** A free Google Calendar booking page on the founder's quailworks.co Workspace
+  account (Business Starter allows one), 30 minutes, in `private/sender.yaml`.
+- **Q24. LinkedIn, by hand, as a second touch.** The day after email 1, the founder sends a plain
+  connection request to Tier 1 contacts only (about 5 a day, 10 minutes). No automation tool: the
+  founder's single profile is the asset, and engineers check it. The headline must say Quailworks
+  (former design engineer, now GTM engineering), or the email and the profile disagree.
+- **Q25. Warm list first.** The founder writes personally to 20-30 people from past programs who now
+  sell into engineering teams (suppliers' sales and business-development people). Free, highest
+  conversion, outside the engine (no personal data from it enters the database).
+- **Q26. Website match.** quailworks.co says "GTM engineering for revenue teams" and shows no
+  engineering sellers, so a prospect who clicks through sees a generic agency. Proposed: one section
+  for companies that sell to engineering teams, plus the founder's background. Prepared for the user's
+  OK before it goes live (public change).
+- **Q27. Scale and stop rules, in booked calls per dollar.** Weekly `learn`. After 100 contacts in a
+  segment or market: under 1 positive reply, change the opening or drop the segment; 3% or more
+  positive replies, give it the volume. Tier 3 is enriched only when Tier 1-2 is used up and the
+  message works. Apify can go back to the free plan in months without discovery.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):
 
-1. **Two brand sending domains and four fresh SmartSenders mailboxes** in the founder's name, with
+1. **Three brand sending domains and six fresh SmartSenders mailboxes** in the founder's name, with
    warm-up switched on the same day (Q18).
 2. **A paid Apify plan** (Starter) and **a FullEnrich top-up** (Q20).
+3. **The LinkedIn headline and the booking page** (Q23, Q24), and **the warm list** (Q25).
+4. **OK on the website section** (Q26).
 
 At launch, one message:
 
-3. **Confirm the founder sends in their own name**, and fill `private/sender.yaml` (name, title,
+5. **Confirm the founder sends in their own name**, and fill `private/sender.yaml` (name, title,
    booking link). One line.
-4. **"Go"** to start sending (CLAUDE.md rule 3), after looking at the first approved drafts.
+6. **"Go"** to start sending (CLAUDE.md rule 3), after looking at the first approved drafts.
 
 Everything else is decided above.

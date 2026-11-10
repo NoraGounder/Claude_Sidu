@@ -48,12 +48,14 @@ def env(tmp_path, monkeypatch):
 def test_quailworks_config_loads_and_follows_the_jev_policy(env):
     cfg = load_client(QW)
     check_policy(cfg.ai)
-    assert cfg.icp.allowed_countries == ["US"]
+    assert cfg.icp.allowed_countries == ["US", "GB"]
     assert "themarblejar.io" in cfg.icp.exclusions.domains
     plans = l1_discover.plan(cfg, None, None)
     assert [p.segment.name for p in plans] == ["aerospace_suppliers_us", "automotive_suppliers_us", "eng_software_us",
-                                               "automation_us", "engineering_services_us"]
-    assert round(sum(p.est_cost for p in plans), 2) == 6.00          # inside the $15 Apify cap
+                                               "automation_us", "engineering_services_us", "aerospace_suppliers_uk",
+                                               "automotive_suppliers_uk", "motorsport_engineering_uk", "eng_software_uk"]
+    assert round(sum(p.est_cost for p in plans), 2) == 10.80         # inside the $15 Apify cap
+    assert plans[7].actor_input["locations"] == ["United Kingdom"] and plans[7].actor_input["searchQuery"] == "motorsport"
     assert plans[0].actor_input["industryIds"] == ["52", "1"]
     assert plans[4].actor_input["searchQuery"] == "aerospace"
     software = plans[2].actor_input
@@ -85,7 +87,7 @@ def test_marble_jar_prompts_and_rules_are_unchanged(env):
 
 HOME = """<html lang="en"><head><title>Acme Robotics</title></head><body>
 <p>We build robotic welding cells for manufacturers across the Midwest. Our cells integrate with
-Salesforce and every major PLC brand. Visit us at IMTS 2026, booth #1234. Request a quote today.</p>
+Salesforce and every major PLC brand. AS9100D certified. Visit us at IMTS 2026, booth #1234. Request a quote today.</p>
 <a href="/careers">Careers</a></body></html>"""
 CAREERS = """<html lang="en"><body><h1>Open positions</h1>
 <a href="/careers/jobs/sales-development-representative">Sales Development Representative</a>
@@ -114,11 +116,13 @@ def test_quailworks_signals_scoring_and_tier(env):
     l2_prefilter.run(cfg, conn, workers=1, fetcher_factory=lambda: FakeFetcher(SITE))
     s = conn.execute("SELECT fit, signal, tier, breakdown FROM l2_scores WHERE account_id=?", (acc,)).fetchone()
     # fit: in range 30 + sweet spot 10 + aerospace suppliers 25 + US 15 + site 5 = 85
-    # signals: sales job ad 35 + trade show 15 + sales tool in the job ad 10 + request a quote 10 = 70
-    assert (s["fit"], s["signal"], s["tier"]) == (85, 70, "tier_1")
+    # signals: sales job ad 35 + trade show 15 + sales tool in the job ad 10 + request a quote 10
+    #          + AS9100 certification 10 = 80
+    assert (s["fit"], s["signal"], s["tier"]) == (85, 80, "tier_1")
     ev = {(r["signal"], r["label"]) for r in conn.execute("SELECT signal, label FROM evidence WHERE account_id=?", (acc,))}
     assert ("sales_job_ad", "sales development representative") in ev
     assert ("trade_show", "IMTS") in ev and ("channel_sales", "request a quote") in ev
+    assert ("trade_show", "visit us at our booth") in ev and ("supplier_certification", "AS9100") in ev
     assert ("sales_stack", "HubSpot") in ev                 # named in the job ad
     assert ("sales_stack", "Salesforce") not in ev          # homepage product text does not count
 

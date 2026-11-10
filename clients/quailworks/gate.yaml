@@ -9,7 +9,7 @@ catch_all:                     # the mail server accepts any address, so deliver
 
 freshness_days: 45             # older verifications are re-checked with MillionVerifier before sending
 
-contact_countries: [US]        # contact's own location, when known (decisions.md Q8)
+contact_countries: [US, GB]    # contact's own location, when known (decisions.md Q8)
 
 role_prefixes: [info, sales, contact, office, admin, hello, support, finance, hr, jobs, careers, service,
                 noreply, no-reply, orders, order, mail, team, marketing, press, media, webmaster, quotes,
@@ -17,11 +17,12 @@ role_prefixes: [info, sales, contact, office, admin, hello, support, finance, hr
 
 free_mail_domains: [gmail.com, googlemail.com, hotmail.com, outlook.com, live.com, msn.com, yahoo.com,
                     icloud.com, me.com, aol.com, protonmail.com, proton.me, comcast.net, att.net,
-                    verizon.net, sbcglobal.net]
+                    verizon.net, sbcglobal.net, btinternet.com, sky.com, virginmedia.com, hotmail.co.uk,
+                    yahoo.co.uk]
 
 require_sender_consent: true   # client.yaml sender.consent_to_send_in_name must be "granted"
 
-# GDPR Art. 14 (Quailworks is established in the EU, decisions.md Q16) and US CAN-SPAM: the source of
-# the data, an easy opt-out and the sender's postal address, from the Polish company register.
+# GDPR Art. 14 (Quailworks is established in the EU, decisions.md Q16), US CAN-SPAM and UK PECR: the
+# source of the data, an easy opt-out and the sender's postal address, from the Polish company register.
 gdpr_notice:
   en: "I found your business contact details via LinkedIn and FullEnrich. Prefer not to hear from me? Just reply 'stop'. Quailworks sp. z o.o., ul. Mikołaja Reja 34, 26-225 Gowarczów, Poland."

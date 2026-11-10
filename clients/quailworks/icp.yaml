@@ -6,7 +6,7 @@ version: 1
 
 # Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md Q8-Q10).
 buyer_profile: >-
-  US companies with 11-500 employees that sell business-to-business products or services to hardware
+  US and UK companies with 11-500 employees that sell business-to-business products or services to hardware
   engineering teams in aerospace, space, automotive and advanced manufacturing: component and
   precision-parts suppliers, and software, test or engineering tools for those teams. Their buyers are
   design, test and supplier-quality engineers who are hard to reach, so new business depends on trade
@@ -48,7 +48,7 @@ industry_groups:
     label: Industrial machinery
     ids: [135, 55, 928]      # Industrial Machinery; Machinery; Metalworking Machinery Manufacturing
 
-# One search per segment. 1,500 full-mode companies = $6.00 on the paid Apify plan (decisions.md Q20).
+# One search per segment. 2,700 full-mode companies = $10.80 on the paid Apify plan (decisions.md Q20).
 # Discovery is cheap, so it is broad; sending stays narrow (Tier 1-2 only, sending.yaml).
 # search_query narrows a broad industry; confirm on the first live run (the raw response is stored).
 segments:
@@ -57,12 +57,19 @@ segments:
   - {name: eng_software_us,         enabled: true,  industry_group: eng_software,         locations: [United States], max_items: 300, search_query: manufacturing}
   - {name: automation_us,           enabled: true,  industry_group: automation,           locations: [United States], max_items: 300}
   - {name: engineering_services_us, enabled: true,  industry_group: engineering_services, locations: [United States], max_items: 300, search_query: aerospace}
+  # United Kingdom from the start (decisions.md Q8): the founder's own engineering market.
+  - {name: aerospace_suppliers_uk,  enabled: true,  industry_group: aerospace_suppliers,  locations: [United Kingdom], max_items: 300}
+  - {name: automotive_suppliers_uk, enabled: true,  industry_group: automotive_suppliers, locations: [United Kingdom], max_items: 300}
+  - {name: motorsport_engineering_uk, enabled: true, industry_group: engineering_services, locations: [United Kingdom], max_items: 300, search_query: motorsport}
+  - {name: eng_software_uk,         enabled: true,  industry_group: eng_software,         locations: [United Kingdom], max_items: 300, search_query: manufacturing}
   # Phase 2: only after the first segments show a working message (launch-plan.md).
   - {name: precision_parts_us,      enabled: false, industry_group: precision_parts,      locations: [United States], max_items: 300}
   - {name: instruments_us,          enabled: false, industry_group: instruments,          locations: [United States], max_items: 300}
   - {name: machinery_us,            enabled: false, industry_group: machinery,            locations: [United States], max_items: 300}
 
-allowed_countries: [US]   # CAN-SPAM: opt-out and postal address in every first email (gate.yaml)
+# US CAN-SPAM and UK PECR: opt-out and postal address in every first email (gate.yaml). PECR allows
+# business email to corporate subscribers (limited companies); the 11+ employee floor keeps sole traders out.
+allowed_countries: [US, GB]
 
 exclusions:
   # Company names containing any of these are dropped in Layer 1 (case-insensitive substring).
@@ -103,6 +110,8 @@ personas:
     - Director of Business Development
     - Business Development Director
     - Business Development Manager   # often the senior seller at aerospace and automotive suppliers (Q11)
+    - Commercial Director            # the usual UK title for the head of sales
+    - Head of Commercial
     - Head of Growth
     - Head of Revenue Operations
   marketing_leader:
