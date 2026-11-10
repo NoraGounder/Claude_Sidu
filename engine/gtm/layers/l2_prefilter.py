@@ -122,8 +122,14 @@ def signal_score(cfg: ClientConfig, site: SiteCrawl | None, evidence: list[Evide
     return min(100, sum(parts.values())), parts
 
 
-def tier_for(cfg: ClientConfig, fit: int, signal: int, lookalike: float | None = None) -> str:
+def tier_for(cfg: ClientConfig, fit: int, signal: int, lookalike: float | None = None,
+             jev_icp: float | None = None) -> str:
     t = cfg.scoring["tiers"]
+    # Optional (tiers.min_jev_icp): once Jev 1.14 has rated a company below this ICP score (0 poor .. 2
+    # strong), it cannot be Tier 1-2, whatever its signals. Not set = The Marble Jar's behaviour.
+    min_icp = t.get("min_jev_icp")
+    if min_icp is not None and jev_icp is not None and jev_icp < min_icp:
+        return "tier_3" if fit >= t["tier_3"]["fit_min"] else "rejected_l2"
     if fit >= t["tier_1"]["fit_min"] and signal >= t["tier_1"]["signal_min"]:
         return "tier_1"
     fit_only = t.get("tier_2_fit_only", {}).get("fit_min")
@@ -151,7 +157,7 @@ def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None,
         flags.append(f"unreachable:{site.home.error or site.home.status}")
     if any(e.signal == "subsidiary_of_large_group" for e in evidence):
         flags.append("subsidiary")
-    tier, reason = tier_for(cfg, fit, signal, (jev or {}).get("lookalike")), None
+    tier, reason = tier_for(cfg, fit, signal, (jev or {}).get("lookalike"), (jev or {}).get("icp_fit")), None
     if tier == "rejected_l2":
         reason = f"fit {fit} below tier 3"
     if jev:

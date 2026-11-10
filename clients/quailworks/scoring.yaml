@@ -122,6 +122,9 @@ tiers:
   tier_2: {fit_min: 60, signal_min: 20}    # e.g. a certified supplier at a trade show, or a sales tool plus growth
   tier_3: {fit_min: 50}
   tier_2_lookalike: {lookalike_min: 1.5, fit_min: 60}
+  # Jev 1.14 must rate the company at least a possible fit (1 of 2) for Tier 1-2: signals alone do not
+  # make a poor-fit company worth enriching and emailing (decisions.md Q9, highest return per dollar).
+  min_jev_icp: 1.0
   # Anything below tier_3 is dropped before we pay for contacts.
 
 enrichment_policy:

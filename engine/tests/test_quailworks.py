@@ -274,3 +274,11 @@ def test_excluded_titles_stop_at_word_ends(env):
     qw = load_client(QW).icp.personas["exclude_titles"]
     assert l3_contacts.title_excluded("International Sales Director", qw) is None
     assert l3_contacts.title_excluded("Sales Development Representative", qw) == "Representative"
+
+
+def test_poor_jev_icp_fit_caps_quailworks_at_tier_3_but_not_the_marble_jar(env):
+    qw, tmj = load_client(QW), load_client(TMJ)
+    assert l2_prefilter.tier_for(qw, 85, 70, None, 0.4) == "tier_3"      # poor fit: no contacts bought
+    assert l2_prefilter.tier_for(qw, 85, 70, None, 1.2) == "tier_1"
+    assert l2_prefilter.tier_for(qw, 85, 70, None, None) == "tier_1"     # not decided by Jev yet
+    assert l2_prefilter.tier_for(tmj, 85, 70, None, 0.4) == "tier_1"     # The Marble Jar unchanged
