@@ -76,7 +76,7 @@ class JevClient:
         self.http.headers.update({
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://quailworks.xyz",
+            "HTTP-Referer": "https://quailworks.co",
             "X-Title": "Quailworks lead engine",
         })
 

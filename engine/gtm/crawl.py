@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 
 from gtm.config import data_dir
 
-USER_AGENT = "QuailworksBot/0.1 (+https://quailworks.xyz; company research)"
+USER_AGENT = "QuailworksBot/0.1 (+https://quailworks.co; company research)"
 MAX_BYTES = 1_500_000
 TIMEOUT = 12
 
