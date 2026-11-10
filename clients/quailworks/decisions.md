@@ -164,6 +164,17 @@ Marble Jar build.
   positive replies, give it the volume. Tier 3 is enriched only when Tier 1-2 is used up and the
   message works. Apify can go back to the free plan in months without discovery.
 
+- **Q28. Data source test: Apollo next month, against Harvest.** Harvest (Apify) stays the company
+  source for the current Apify Starter cycle (paid, ends 9 December 2026). In the next cycle, one Apollo
+  seat for one month (about $49-59) runs the same segments, measured on three things: share of companies
+  reaching Tier 1-2, good-fit companies Harvest missed, and bounce rate on 50 Apollo emails against
+  FullEnrich. Why: Harvest's LinkedIn keyword search matches company names (the first live test needed
+  hand-tuned phrases), while Apollo filters on description keywords, funding, technologies and job
+  postings, which are our signals. FullEnrich stays the email source either way. Decide before the Apify
+  renewal: if Apollo wins clearly, it becomes a second Layer 1 source and Apify can drop back to the free
+  plan; if not, cancel the seat. BlitzAPI (flat from $99 a month) only pays off at about ten times our
+  volume; GetLeads.io has no API for the engine.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):
