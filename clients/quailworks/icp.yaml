@@ -109,5 +109,5 @@ personas:
     - President
     - Managing Director
     - General Manager
-  # Substring match: "Internship", not "Intern" (which would also drop "International Sales Director").
-  exclude_titles: [Internship, Student, Trainee, Assistant, Coordinator, Representative, Product Owner]
+  # An entry matches at a word end but not inside a longer word ("Intern" keeps "International Sales Director").
+  exclude_titles: [Intern, Internship, Student, Trainee, Traineeship, Assistant, Coordinator, Representative, Product Owner]

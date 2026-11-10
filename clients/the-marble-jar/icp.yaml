@@ -124,4 +124,7 @@ personas:
     - Managing Director
     - Directeur-eigenaar
     - CEO
-  exclude_titles: [Intern, Stagiair, Assistant, Assistent, Student, Trainee]
+  # An entry matches at a word end, also inside Dutch compounds (managementassistent), but not inside a
+  # longer word: "Intern" no longer drops "International ..." titles (2026-11-10), so the longer forms
+  # (Internship, Stagiaire, Traineeship) are listed separately.
+  exclude_titles: [Intern, Internship, Stagiair, Stagiaire, Assistant, Assistent, Student, Trainee, Traineeship]

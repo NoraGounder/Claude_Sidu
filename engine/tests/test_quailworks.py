@@ -249,3 +249,19 @@ def test_hubspot_token_is_per_client(monkeypatch):
     monkeypatch.delenv("HUBSPOT_TOKEN_QUAILWORKS", raising=False)
     with pytest.raises(HubSpotError, match="HUBSPOT_TOKEN_QUAILWORKS"):
         HubSpotClient(token_env="HUBSPOT_TOKEN_QUAILWORKS")      # never falls back to another client's portal
+
+
+# ---------- title exclusions (both clients) ----------
+
+def test_excluded_titles_stop_at_word_ends(env):
+    tmj = load_client(TMJ).icp.personas["exclude_titles"]
+    for title in ("Finance Intern", "Intern Operations", "Internship Supply Chain", "Stagiair Finance",
+                  "Stagiaire Logistiek", "Managementassistent", "Werkstudent Finance", "Trainee Operations",
+                  "Traineeship Finance", "Assistant Controller"):
+        assert l3_contacts.title_excluded(title, tmj), title
+    for title in ("International Operations Manager", "Internationaal Supply Chain Manager",
+                  "Interne Logistiek Manager", "Operations Director"):
+        assert l3_contacts.title_excluded(title, tmj) is None, title
+    qw = load_client(QW).icp.personas["exclude_titles"]
+    assert l3_contacts.title_excluded("International Sales Director", qw) is None
+    assert l3_contacts.title_excluded("Sales Development Representative", qw) == "Representative"

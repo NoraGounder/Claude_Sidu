@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from gtm import brain, budget, db
 from gtm.config import ClientConfig
-from gtm.normalize import has_keyword, pick
+from gtm.normalize import pick
 from gtm.sources.fullenrich import EnrichmentPending, FullEnrichClient
 from gtm.sources.jev import JevClient, JevResult, JevUnavailable, check_policy, scrub
 
@@ -47,6 +47,17 @@ def policy(cfg: ClientConfig, tier: str) -> dict:
 def _title_match(needle: str, title: str) -> bool:
     """Whole-word match, so 'COO' does not match 'Coordinator' and 'CEO' needs the word itself."""
     return re.search(r"(?<![\w-])" + re.escape(needle.lower()) + r"(?![\w-])", title.lower()) is not None
+
+
+def title_excluded(title: str, keywords: list[str]) -> str | None:
+    """The exclude_titles entry a job title contains, or None. An entry may sit at the end of a Dutch
+    compound ("managementassistent", "werkstudent") but must not run on into a longer word, so
+    "Intern" drops "Finance Intern" and keeps "International Sales Director"."""
+    low = (title or "").lower()
+    for kw in keywords:
+        if re.search(re.escape(kw.lower()) + r"(?![^\W\d_])", low):
+            return kw
+    return None
 
 
 def persona_of(cfg: ClientConfig, title: str) -> str | None:
@@ -99,7 +110,7 @@ def screen(cfg: ClientConfig, account: dict, people: list[dict]) -> list[dict]:
         p = _person_fields(raw)
         if not p["title"] or not (p["first_name"] and p["last_name"]):
             continue
-        if p["person_id"] in seen or has_keyword(p["title"], excluded):
+        if p["person_id"] in seen or title_excluded(p["title"], excluded):
             continue
         persona = persona_of(cfg, p["title"])
         if persona is None:
