@@ -103,7 +103,8 @@ exclusions:
     - association
     - foundation
   # Quailworks itself and its client (decisions.md Q14). Real do-not-contact list: private/exclusions.csv
-  domains: [quailworks.co, quailworks.xyz, themarblejar.io]
+  # teamviewer.com: LinkedIn's "Upskill" page points to its large parent (2026-11-10 run).
+  domains: [quailworks.co, quailworks.xyz, themarblejar.io, teamviewer.com]
 
 # Layer 3: who we contact, in priority order. Max 2 per account (scoring.yaml enrichment_policy).
 personas:

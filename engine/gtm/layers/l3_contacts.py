@@ -98,10 +98,21 @@ def _person_fields(p: dict) -> dict:
     }
 
 
+def sendable_countries(cfg: ClientConfig) -> set[str] | None:
+    """Layer 4's contact countries, when the client opts in (scoring.yaml enrichment_policy
+    only_sendable_countries): then people the send gate would hold back are never selected or paid for."""
+    if not cfg.scoring.get("enrichment_policy", {}).get("only_sendable_countries"):
+        return None
+    from gtm.layers.l4_gate import load_rules
+    return {c.upper() for c in load_rules(cfg).get("contact_countries", [])}
+
+
 def screen(cfg: ClientConfig, account: dict, people: list[dict]) -> list[dict]:
-    """Deterministic checks: right persona, not junior, owner titles only at owner-led sizes."""
+    """Deterministic checks: right persona, not junior, owner titles only at owner-led sizes, and
+    (opt-in) based in a country the send gate allows."""
     kept, seen = [], set()
     excluded = cfg.icp.personas.get("exclude_titles", [])
+    allowed = sendable_countries(cfg)
     size_mid = None
     nums = [int(n) for n in re.findall(r"\d+", account.get("employee_range") or "")]
     if nums:
@@ -111,6 +122,9 @@ def screen(cfg: ClientConfig, account: dict, people: list[dict]) -> list[dict]:
         if not p["title"] or not (p["first_name"] and p["last_name"]):
             continue
         if p["person_id"] in seen or title_excluded(p["title"], excluded):
+            continue
+        country = str(p.get("country") or "").upper()
+        if allowed is not None and len(country) == 2 and country not in allowed:
             continue
         persona = persona_of(cfg, p["title"])
         if persona is None:

@@ -282,3 +282,17 @@ def test_poor_jev_icp_fit_caps_quailworks_at_tier_3_but_not_the_marble_jar(env):
     assert l2_prefilter.tier_for(qw, 85, 70, None, 1.2) == "tier_1"
     assert l2_prefilter.tier_for(qw, 85, 70, None, None) == "tier_1"     # not decided by Jev yet
     assert l2_prefilter.tier_for(tmj, 85, 70, None, 0.4) == "tier_1"     # The Marble Jar unchanged
+
+
+def test_quailworks_skips_people_the_send_gate_would_hold_back(env):
+    qw, tmj = load_client(QW), load_client(TMJ)
+
+    def person(pid, title, country):
+        return {"id": pid, "first_name": "A", "last_name": "B", "employment": {"current": {"title": title}},
+                "location": {"country_code": country}}
+    people = [person("1", "VP Sales", "US"), person("2", "Business Development Director", "PL"),
+              person("3", "Head of Sales", "GB"), person("4", "Sales Director", None)]
+    acc = {"employee_range": "51-200"}
+    kept = [p["person_id"] for p in l3_contacts.screen(qw, acc, people)]
+    assert kept == ["1", "3", "4"]                     # Poland dropped; unknown country kept for the gate
+    assert l3_contacts.sendable_countries(tmj) is None  # The Marble Jar unchanged (not opted in)
