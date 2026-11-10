@@ -101,4 +101,5 @@ secret. See `.env.example`.
 - `clients/<client>/gate.yaml`: Layer 4 send-gate rules and the GDPR notice text
 - `clients/<client>/private/exclusions.csv`: real do-not-contact list (gitignored)
 - `engine/gtm/`: the engine; `engine/tests/`: tests with synthetic data only
+- `docs/quailworks-handoff.md`: starting point for running the engine for Quailworks itself
 - `.claude/skills/`: one skill per runnable layer
