@@ -356,7 +356,7 @@ def cmd_handoff(args) -> int:
     t = l7_handoff.handoff(cfg, conn)
     print(f"Handoff: {t['briefs']} meeting briefs written (data/briefs/), {t['later']} 'not now' kept for later, "
           f"{t['closed']} other replies closed. Answer each brief's reply from the Smartlead inbox within "
-          "4 working hours, then send Mithun the brief with the calendar invite.")
+          f"4 working hours, then send {l7_handoff.sender_name(cfg)} the brief with the calendar invite.")
     return 0
 
 
@@ -400,7 +400,9 @@ def cmd_crm(args) -> int:
         print("Dry run: nothing written. Add --live once CRM writes are approved.")
         return 0
     try:
-        t = l7_handoff.sync_crm(cfg, conn, plan, HubSpotClient())
+        # Each client mirrors into its own HubSpot portal: client.yaml crm.hubspot_token_env names the variable.
+        token_env = (cfg.client.get("crm") or {}).get("hubspot_token_env", "HUBSPOT_TOKEN")
+        t = l7_handoff.sync_crm(cfg, conn, plan, HubSpotClient(token_env=token_env))
     except HubSpotError as exc:
         print(f"Stopped: {exc}")
         return 5

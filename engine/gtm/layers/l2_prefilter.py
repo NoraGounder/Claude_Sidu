@@ -16,7 +16,20 @@ from gtm.config import ClientConfig
 from gtm.crawl import Page, SiteCrawl, crawl_site, default_fetcher
 from gtm.layers.l1_discover import band_midpoint
 from gtm.normalize import has_keyword, size_range
-from gtm.signals import Evidence, extract, is_dutch
+from gtm.signals import Evidence, extract, is_dutch, rules_for
+
+# Default extra points for several distinct labels of one signal (The Marble Jar's scoring.yaml).
+DEFAULT_SIGNAL_BONUSES = {"multiple_admin_ads": {"signal": "admin_job_ad", "min_labels": 2}}
+
+
+def job_signal(cfg: ClientConfig) -> str:
+    """The evidence signal that Jev 1.14's job-title answers count towards (ai.yaml job_titles.signal)."""
+    return (cfg.ai.get("job_titles") or {}).get("signal", "admin_job_ad")
+
+
+def job_threshold(cfg: ClientConfig) -> float:
+    t = cfg.ai["thresholds"]
+    return t["job_title"] if "job_title" in t else t["admin_role"]
 
 
 @dataclass
@@ -41,10 +54,10 @@ def load_jev(conn, account_id: int) -> dict | None:
 def jev_evidence(cfg: ClientConfig, site: SiteCrawl | None, jev: dict | None) -> list[Evidence]:
     if not jev:
         return []
-    threshold = cfg.ai["thresholds"]["admin_role"]
+    threshold, signal = job_threshold(cfg), job_signal(cfg)
     url = (site.careers.url if site and site.careers and site.careers.ok else
            site.home.url if site else "")
-    return [Evidence("admin_job_ad", f"job title: {title}", url, f"{title} (Jev 1.14, p={p:.2f})")
+    return [Evidence(signal, f"job title: {title}", url, f"{title} (Jev 1.14, p={p:.2f})")
             for title, p in jev["titles"].items() if p >= threshold]
 
 
@@ -86,20 +99,26 @@ def fit_score(cfg: ClientConfig, account: dict, site: SiteCrawl | None, evidence
 
 
 def signal_score(cfg: ClientConfig, site: SiteCrawl | None, evidence: list[Evidence]) -> tuple[int, dict]:
+    """Points for every weighted signal (scoring.yaml `signals`) that has evidence. Two special cases:
+    `headcount_growth` also counts when the careers page lists 5 or more roles, and `signal_bonuses`
+    add points when one signal has several distinct labels (e.g. two different admin vacancies)."""
     w = cfg.scoring["signals"]
-    present = {e.signal for e in evidence}
+    bonuses = cfg.scoring.get("signal_bonuses", DEFAULT_SIGNAL_BONUSES)
+    labels: dict[str, set[str]] = {}
+    for e in evidence:
+        labels.setdefault(e.signal, set()).add(e.label)
     parts: dict[str, int] = {}
-    admin_labels = {e.label for e in evidence if e.signal == "admin_job_ad"}
-    if admin_labels:
-        parts["admin_job_ad"] = w["admin_job_ad"]
-    if len(admin_labels) >= 2:
-        parts["multiple_admin_ads"] = w["multiple_admin_ads"]
-    if "manual_process_language" in present:
-        parts["manual_process_language"] = w["manual_process_language"]
-    if "erp_mention" in present:
-        parts["erp_mention"] = w["erp_mention"]
-    if "headcount_growth" in present or (site and len(site.job_titles) >= 5):
-        parts["headcount_growth"] = w["headcount_growth"]
+    for key, weight in w.items():
+        if key in bonuses:
+            continue
+        if key == "headcount_growth":
+            if key in labels or (site and len(site.job_titles) >= 5):
+                parts[key] = weight
+        elif key in labels:
+            parts[key] = weight
+    for key, rule in bonuses.items():
+        if key in w and len(labels.get(rule["signal"], ())) >= rule.get("min_labels", 2):
+            parts[key] = w[key]
     return min(100, sum(parts.values())), parts
 
 
@@ -122,7 +141,7 @@ def tier_for(cfg: ClientConfig, fit: int, signal: int, lookalike: float | None =
 
 def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None,
                   jev: dict | None = None) -> tuple[Score, list[Evidence]]:
-    evidence = (extract(site) if site else []) + jev_evidence(cfg, site, jev)
+    evidence = (extract(site, rules_for(cfg.scoring)) if site else []) + jev_evidence(cfg, site, jev)
     fit, fit_parts = fit_score(cfg, account, site, evidence, jev)
     signal, sig_parts = signal_score(cfg, site, evidence)
     flags = []

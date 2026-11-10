@@ -1,0 +1,105 @@
+# Layer 5 copy for Quailworks' own outbound. Written by people, filled only with facts we can show the
+# source for (engine/gtm/layers/l5_copy.py). Offer and claims follow decisions.md (2026-11-10): no
+# results, guarantees, timelines or prices; no client names.
+#
+# Rules: plain text, no links in email 1, short, no exclamation marks, openings are questions that
+# presume nothing, the GDPR notice at the end of email 1. Placeholders in {curly_braces}.
+# A hook is only used when its fact exists; otherwise the next one in `hook_priority` applies.
+
+hook_priority: [sales_job_ad, trade_show, growth, sales_stack, generic]
+greetings:
+  en: ["Hi", "Hello"]
+signoffs:
+  en: ["Best,", "Thanks,"]
+
+# Facts quoted from evidence labels (scoring.yaml `detect`), with the source URL kept for review.
+named_facts:
+  stack: {signal: sales_stack, labels: [HubSpot, Salesforce, Pipedrive, Zoho CRM, Apollo, ZoomInfo, Salesloft, Outreach]}
+  trade_show: {signal: trade_show, labels: [IMTS, FABTECH, ProMat, MODEX, Automate, PACK EXPO, Hannover Messe, SEMICON, The Assembly Show]}
+
+# English role words that make a vacancy title quotable ("account executive", "sales engineer").
+title_role_words: 'representative|\brep\b|executive|manager|engineer|specialist|associate|developer|director'
+company_suffixes: [inc, incorporated, llc, l.l.c., ltd, corp, corporation]
+# Never in an automatically approved draft (decisions.md Q3, Q4).
+banned_phrases: [guarantee, marble jar, case study, per month, in days]
+
+# One example process, so Jev 1.14 is not asked to choose one.
+process:
+  outbound:
+    description: Finding companies with a reason to buy and writing to the right person
+    en: "spotting companies with a reason to buy now, writing to the right person"
+
+hooks:
+  sales_job_ad:
+    needs: job_title
+    description: Open with the sales or business development role they are hiring for
+    subject:
+      en: "your {job_title} opening"
+    en: "I saw the {job_title} opening at {company}. Where will that person's first conversations come from: a list you already have, or one they build from scratch?"
+  trade_show:
+    needs: trade_show
+    description: Open with the trade show their website mentions
+    subject:
+      en: "{trade_show} and {company}"
+    en: "I saw {trade_show} mentioned on the {company} website. Outside of shows like that, how do first conversations with new customers usually start?"
+  growth:
+    needs: open_roles
+    description: Open with how many roles they are hiring for (growth)
+    subject:
+      en: "{open_roles} open roles at {company}"
+    en: "I saw {company} has {open_roles} open roles. Is finding new customers keeping pace with that, or is it the harder part to grow?"
+  sales_stack:
+    needs: stack
+    description: Open with the CRM or sales tool named in their job ads
+    subject:
+      en: "{stack} at {company}"
+    en: "I saw a job ad at {company} that mentions {stack}. How do new accounts get into {stack} today: added by hand, or already automated?"
+  generic:
+    needs: null
+    description: Open with how they find new customers today
+    subject:
+      en: "new customers at {company}"
+    en: "How does {company} find new customers today: trade shows, distributors and referrals, or a team that reaches out?"
+
+steps:
+  - day: 0
+    en: |
+      {greeting} {first_name},
+
+      {hook}
+
+      I run Quailworks. We build and run outbound systems for companies that sell to manufacturers and industrial teams: {process}, and booking the first call. You own the system when we're done.
+
+      Would a 30-minute call be worth it, to see whether it fits {company}?
+
+      {signoff}
+      {sender_first_name}
+
+      {gdpr_notice}
+  - day: 3
+    en: |
+      {greeting} {first_name},
+
+      A bit more on how it works: the system watches for reasons to reach out, such as a company hiring sales staff, exhibiting at a show or growing. It then finds the right person and writes from facts on that company's own website, with the source for each one.
+
+      This email came out of the same kind of system.
+
+      Would something like that help {company}?
+
+      {sender_first_name}
+  - day: 7
+    en: |
+      {greeting} {first_name},
+
+      If a call is too much right now: I can send you 10 companies in your market that show one of these signals today, each with its source, so you can judge the quality yourself.
+
+      Want me to put that list together?
+
+      {sender_first_name}
+  - day: 14
+    en: |
+      {greeting} {first_name},
+
+      I don't want to keep emailing you. Shall I leave it here, or would a conversation in a few months suit you better?
+
+      {sender_first_name}

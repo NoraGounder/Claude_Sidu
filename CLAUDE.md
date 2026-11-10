@@ -35,6 +35,10 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
    results, records the decision in `clients/<client>/decisions.md` with what would change it, and moves on.
    Contact the client only for what we legally or physically cannot do for them (a signature, a calendar).
    Bundle those into one message at launch. Never send the client questionnaires.
+9. **Quailworks as its own client (2026-11-10):** `clients/quailworks/`. Never reuse The Marble Jar's
+   accounts, contacts or replies for it (DPA article 8.4, GDPR purpose limitation): it runs its own
+   discovery, sends from its own domains in its own Smartlead campaigns (`QW`), and mirrors into its own
+   HubSpot portal (`HUBSPOT_TOKEN_QUAILWORKS`). Offer, ICP and copy follow `clients/quailworks/decisions.md`.
 
 ## The pipeline
 
@@ -102,4 +106,21 @@ secret. See `.env.example`.
 - `clients/<client>/private/exclusions.csv`: real do-not-contact list (gitignored)
 - `engine/gtm/`: the engine; `engine/tests/`: tests with synthetic data only
 - `docs/quailworks-handoff.md`: starting point for running the engine for Quailworks itself
+- `clients/quailworks/`: Quailworks' own outbound (US companies that sell to manufacturers); every
+  command takes `--client quailworks`; `launch-plan.md` has the run order
+
+### Client-specific behaviour lives in config (defaults = The Marble Jar's)
+
+The engine has no client logic of its own. A client changes it with these optional keys; without
+them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks.py` checks this):
+
+- `scoring.yaml`: `detect` (evidence rules per signal, replacing the default Dutch admin rules),
+  `job_page_signals`, `case_sensitive_signals`, `signal_bonuses` (e.g. two sales vacancies at once)
+- `ai.yaml`: `not_a_buyer` and `job_titles` (Layer 2 Jev questions; `job_titles.signal` names the
+  evidence signal), `thresholds.job_title`, `contact_question` (Layer 3)
+- `templates/sequence.yaml`: `hooks.<hook>.needs` / `.description`, `process.<name>.description`
+  (one process means no Jev question), `named_facts`, `title_role_words`, `company_suffixes`,
+  `banned_phrases`
+- `templates/replies.yaml`: `call_prep` (the meeting brief's call questions)
+- `client.yaml`: `crm.hubspot_token_env` (each client's own HubSpot portal)
 - `.claude/skills/`: one skill per runnable layer

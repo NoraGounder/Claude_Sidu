@@ -1,0 +1,51 @@
+# AI policy for this client's pipeline. Enforced in code (engine/gtm/sources/jev.py): a run
+# refuses to start if these settings break the rules below. Same policy as every client:
+# - Only TypeSafe Jev 1.14 makes AI decisions (qualification, ICP scoring, classification).
+# - Never OpenRouter Auto Router, Jev Router, the Jev Latest alias, or any GPT/Claude/Gemini/other
+#   model through OpenRouter. No fallback: if Jev is unavailable, stop and report the error.
+# - Crawling, deterministic checks and data processing stay in Python.
+# - Every request logs the model ID Jev reports, token usage and cost (table jev_calls).
+# - The API key is never printed or written anywhere.
+
+provider: openrouter
+endpoint: https://openrouter.ai/api/alpha/decisions
+model: typesafe/jev-1.14
+api_key_env: OPENROUTER_API_KEY
+fallback: none
+
+thresholds:
+  not_a_buyer: 0.80      # drop the account
+  job_title: 0.70        # count a job title as a sales role that finds new business (sales_job_ad)
+  unsupported_claim: 0.50   # Layer 5: flag a draft when an unsupported claim is more likely than not
+max_titles_per_request: 15
+workers: 4
+
+# Layer 2: who is clearly not a buyer of an outbound system (decisions.md Q9, Q15).
+# Unlike The Marble Jar's default, software and engineering companies ARE buyers here.
+not_a_buyer:
+  instructions: >-
+    Is this organisation clearly NOT a company that could buy an outbound system that finds new
+    customers for it? Not a buyer: lead-generation, marketing, sales and appointment-setting agencies
+    (they sell the same service as the seller, see seller_context), staffing and recruiting firms,
+    trade associations, unions, foundations and non-profits, media and publishers, schools,
+    universities and training bodies, and government bodies. Software, engineering, automation and
+    industrial companies that sell to other businesses are possible buyers.
+  "true": Not a possible buyer (one of the listed types)
+  "false": A company that sells to other businesses and could buy
+
+# Layer 2: which open job titles count as the work the system takes over (decisions.md Q12).
+job_titles:
+  signal: sales_job_ad
+  question: >-
+    Is the job title "{title}" a sales role whose job is to find or open new business: sales or
+    business development representative (SDR, BDR), inside sales, lead generation, outbound
+    prospecting, account executive, business development manager or sales engineer? Customer support,
+    account management of existing customers, marketing content, engineering, operations, finance
+    and company leadership roles are not.
+  "true": A role that finds or opens new business
+  "false": Any other kind of role
+
+# Layer 3: which job titles decide on buying the offer (decisions.md Q11).
+contact_question: >-
+  Would a person with the job title "{title}" at this company decide on, or strongly influence,
+  buying an outbound system that finds new customers and books first meetings for the sales team?

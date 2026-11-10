@@ -1,0 +1,36 @@
+# Layer 7: first answers Quailworks sends from the Smartlead inbox, in the founder's name, within a few
+# working hours of an interested reply. Written by people; filled only with known values. Same rules as
+# decisions.md: no results, guarantees, timelines or prices promised in writing.
+# {times} is the booking link when private/sender.yaml has one, otherwise two proposed slots.
+
+interested: |
+  Thanks {first_name}, good to hear.
+
+  {times}
+
+  To make the 30 minutes useful: which two or three kinds of companies would you most like more first meetings with?
+
+  {sender_first_name}
+
+question: |
+  Thanks {first_name}, fair question.
+
+  The honest answer depends on your market and your stack, so the quickest way is a short call where we
+  look at your market together. {times}
+
+  {sender_first_name}
+
+referral: |
+  Thanks {first_name}, that helps. Would you mind introducing me, or is it fine if I mention your
+  name when I reach out?
+
+  {sender_first_name}
+
+times_with_link: "Would one of these times work? {booking_link}"
+times_without_link: "Would Tuesday or Thursday next week work for 30 minutes? Send me a time that suits you (US Central)."
+
+# Lines for the meeting brief's "For the call" section ({sender} = the sender's first name).
+call_prep:
+  - "Ask how new customers find them today, which channel brings the best ones, and who takes first calls."
+  - "Ask what a qualified first meeting is worth to them, and which accounts they want most."
+  - "Afterwards {sender} records one word: qualified, not a fit, or follow up."

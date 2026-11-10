@@ -1,0 +1,31 @@
+# Layer 6: Smartlead sending settings (engine/gtm/layers/l6_send.py).
+# Mailbox limits come from limits.yaml (sending: max_per_mailbox_per_day, max_emails_per_day).
+# Own campaigns in the existing Smartlead account; Quailworks' own sending domains only (decisions.md Q18).
+
+campaign_prefix: "QW"
+
+# US only for now (decisions.md Q8). Central time keeps sends inside working hours from coast to coast.
+regions:
+  us: {countries: [US], timezone: America/Chicago}
+
+schedule:
+  days_of_the_week: [2, 3, 4]      # Tuesday-Thursday
+  start_hour: "09:00"
+  end_hour: "16:30"
+  min_time_btw_emails: 8           # minutes between sends per mailbox
+
+settings:
+  track_open: false                # pixels hurt deliverability and are unreliable
+  track_click: false
+  stop_on_reply: true
+  stop_on_auto_reply: false
+  send_as_plain_text: true
+
+# Launch: only these tiers are uploaded. Add tier_3 once Tier 1-2 results prove the message.
+send_tiers: [tier_1, tier_2]
+
+# A second contact at the same company waits until the first one's sequence is over.
+stagger_days_same_account: 21
+
+# Mailboxes must have warm-up on before they are linked to a campaign.
+require_warmup: true

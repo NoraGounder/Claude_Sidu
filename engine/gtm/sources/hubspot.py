@@ -26,10 +26,10 @@ class HubSpotError(RuntimeError):
 
 class HubSpotClient:
     def __init__(self, token: str | None = None, session: requests.Session | None = None,
-                 retries: int = 3, backoff_secs: float = 2.0):
-        token = token or os.environ.get("HUBSPOT_TOKEN")
+                 retries: int = 3, backoff_secs: float = 2.0, token_env: str = "HUBSPOT_TOKEN"):
+        token = token or os.environ.get(token_env)
         if not token:
-            raise HubSpotError("HUBSPOT_TOKEN is not set (a HubSpot private app token with CRM object "
+            raise HubSpotError(f"{token_env} is not set (a HubSpot private app token with CRM object "
                                "read and write scopes; in a cloud session save it as a network secret).")
         self.http = session or requests.Session()
         self.http.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})

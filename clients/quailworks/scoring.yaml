@@ -1,0 +1,98 @@
+# Layer 0 rules, applied in Layer 2. Two separate scores (0-100), then a tier (decisions.md Q9-Q12).
+# Calibrate on the first 20 scored accounts: Quailworks reads them itself (it is the client) and
+# moves weights so the companies it would most like to meet land in Tier 1.
+
+fit:
+  employees:
+    in_range: 30          # 11-200
+    sweet_spot: [20, 150]
+    sweet_spot_bonus: 10
+  industry_group:
+    automation: 25
+    industrial_software: 25
+    engineering_services: 20
+    instruments: 20
+    machinery: 15
+  country:
+    US: 15
+  website_reachable: 5
+  dutch_language_site: 0
+  # A division of a large group usually buys services at group level.
+  subsidiary_of_large_group: -15
+  # TypeSafe Jev 1.14's ICP score (0 poor .. 2 strong), scaled to 0-15 points.
+  jev_icp_fit: 15
+  # Similarity to Quailworks' own won clients (private/best_clients.csv). No effect until it exists (Q13).
+  jev_lookalike: 20
+
+signals:
+  sales_job_ad: 35        # hiring SDR / BDR / inside sales / business development / AE: the work we take over
+  multiple_sales_ads: 15  # two or more such roles open at once
+  trade_show: 15          # exhibits at trade shows: pipeline depends on events
+  sales_stack: 10         # a CRM or sales tool named in a job ad: already invests in outbound
+  channel_sales: 10       # find-a-rep, distributor or request-a-quote selling
+  headcount_growth: 10    # several open roles or clear growth language
+
+signal_bonuses:
+  multiple_sales_ads: {signal: sales_job_ad, min_labels: 2}
+
+# Evidence rules for this client (they replace the engine's default Dutch admin rules).
+# Patterns are case-insensitive unless the signal is listed in case_sensitive_signals.
+detect:
+  sales_job_ad:
+    # No bare "SDR": in electronics it also means software-defined radio. Jev 1.14 classifies short titles.
+    - {label: "sales development representative", pattern: 'sales\s+development\s+rep\w*'}
+    - {label: "business development representative", pattern: 'business\s+development\s+rep\w*'}
+    - {label: "inside sales", pattern: 'inside\s+sales'}
+    - {label: "business development manager", pattern: 'business\s+development\s+(manager|executive|associate|specialist)'}
+    - {label: "account executive", pattern: 'account\s+executive'}
+    - {label: "sales engineer", pattern: 'sales\s+engineer'}
+    - {label: "lead generation", pattern: 'lead\s+generation\s+(specialist|manager|representative|rep)'}
+  sales_stack:
+    - {label: "HubSpot", pattern: '\bhubspot\b'}
+    - {label: "Salesforce", pattern: '\bsalesforce\b'}
+    - {label: "Pipedrive", pattern: '\bpipedrive\b'}
+    - {label: "Zoho CRM", pattern: 'zoho\s+crm'}
+    - {label: "Apollo", pattern: '\bapollo\.io\b'}
+    - {label: "ZoomInfo", pattern: '\bzoominfo\b'}
+    - {label: "Salesloft", pattern: '\bsalesloft\b'}
+    - {label: "Outreach", pattern: 'outreach\.io'}
+  trade_show:
+    - {label: "IMTS", pattern: '\bIMTS\b'}
+    - {label: "FABTECH", pattern: '\bfabtech\b'}
+    - {label: "ProMat", pattern: '\bpromat\b'}
+    - {label: "MODEX", pattern: '\bmodex\b'}
+    - {label: "Automate", pattern: '\bautomate\s+20\d\d\b'}
+    - {label: "PACK EXPO", pattern: '\bpack\s?expo\b'}
+    - {label: "Hannover Messe", pattern: 'hannover\s+messe'}
+    - {label: "SEMICON", pattern: '\bsemicon\s+(west|east|taiwan|europa|china|japan|korea)\b'}
+    - {label: "The Assembly Show", pattern: 'the\s+assembly\s+show'}
+    - {label: "visit us at our booth", pattern: 'visit\s+us\s+at\s+(our\s+)?(booth|stand)|booth\s*#\s*\d+'}
+  channel_sales:
+    - {label: "find a rep", pattern: 'find\s+(a|your)\s+(local\s+)?(sales\s+)?(rep|representative|distributor)\b'}
+    - {label: "distributor network", pattern: 'become\s+a\s+distributor|distributor\s+locator|our\s+distributors'}
+    - {label: "request a quote", pattern: 'request\s+a\s+quote|request\s+for\s+quot\w*'}
+  headcount_growth:
+    - {label: "growing team", pattern: "we're\\s+hiring|we\\s+are\\s+hiring|join\\s+our\\s+growing\\s+team|fast[\\s-]growing|rapidly\\s+growing"}
+    - {label: "new facility", pattern: 'new\s+(facility|headquarters|production\s+facility|manufacturing\s+facility)'}
+  subsidiary_of_large_group:
+    # Keywords in any case, group name capitalised (1-3 words), e.g. "a division of Acme Industrial Group".
+    - {label: "part of (EN)", pattern: '(?i:(part|member|subsidiary)\s+of\s+(the\s+)?)[A-Z][\w&\-]+(\s+[A-Z][\w&\-]+){0,2}\s+(?i:group)'}
+    - {label: "division of", pattern: '(?i:\ba\s+(division|subsidiary)\s+of\s+)[A-Z][\w&\-]+'}
+
+# Job-ad words describe products on a homepage, so these count only on careers or vacancy pages.
+job_page_signals: [sales_job_ad, sales_stack]
+case_sensitive_signals: [subsidiary_of_large_group]
+
+tiers:
+  # A US company in range with a working site scores 70-90 on fit alone, so Tier 1 and 2 need a signal.
+  tier_1: {fit_min: 60, signal_min: 35}    # hiring for sales roles
+  tier_2: {fit_min: 60, signal_min: 20}    # e.g. a trade show plus rep selling, or a sales tool plus growth
+  tier_3: {fit_min: 50}
+  tier_2_lookalike: {lookalike_min: 1.5, fit_min: 60}
+  # Anything below tier_3 is dropped before we pay for contacts.
+
+enrichment_policy:
+  # Layer 3. FullEnrich is itself a waterfall over 20+ providers, so there is no second provider.
+  tier_1: {max_contacts: 2}
+  tier_2: {max_contacts: 2}
+  tier_3: {max_contacts: 0}   # parked until Tier 1-2 replies show a message that works

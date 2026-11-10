@@ -1,0 +1,81 @@
+# Quailworks GTM brain: how Quailworks itself goes to market (structure as for The Marble Jar,
+# after Pancake's "GTM brain"). The engine sends the compact part of this file to TypeSafe Jev 1.14
+# with every qualification, contact and angle decision (gtm/brain.py).
+#
+# Status per entry:
+#   confirmed    stated on quailworks.xyz or by the user (date in the note)
+#   decided      Quailworks' own decision (decisions.md), used like confirmed until results say otherwise
+#   hypothesis   working assumption; Jev may use it, the copy must not state it as fact
+# `jev: false` keeps a note for people only. No personal data: the repository is public.
+
+version: 1
+
+market_profile:
+  - {status: confirmed, note: "quailworks.xyz", text: "Quailworks is an AI automation agency (est. 2025) that designs and deploys automation systems: outbound automation, workflow automation (Make, Zapier, custom APIs) and custom AI agents."}
+  - {status: confirmed, note: "quailworks.xyz", text: "Approach: diagnose, design, build, hand off. The client owns the system completely; Quailworks builds on the client's existing stack (Clay, HubSpot, Make, Notion, Slack)."}
+  - {status: confirmed, note: "quailworks.xyz", text: "Positioning: built by operators, engineering-grade thinking with the rigour of industrial processes; project-based or retained."}
+  - {status: confirmed, jev: false, note: "user, 2026-11-10", text: "The founder has an industrial and manufacturing engineering background. The US is the target market."}
+  - {status: decided, note: "decisions.md Q1, Q9", text: "Outbound leads with a done-for-you outbound system for US companies that sell to manufacturers and industrial teams."}
+
+offer:
+  - {status: decided, note: "decisions.md Q1", text: "Quailworks builds and runs a system that finds companies showing a reason to buy, writes to the right person from facts on their own website, and books first calls; the client's team takes the calls and keeps the system."}
+  - {status: decided, jev: false, note: "decisions.md Q3", text: "No results, meeting counts, guarantees, timelines or prices in outreach."}
+  - {status: decided, jev: false, note: "decisions.md Q5", text: "Next step: a 30-minute call, or a list of 10 companies in their market showing a signal now, with sources."}
+
+personas:
+  sales_leader:
+    titles_from: icp.yaml personas.sales_leader
+    pains:
+      - {status: hypothesis, text: "First meetings come from a few channels (trade shows, distributors, referrals), so pipeline is lumpy."}
+      - {status: hypothesis, text: "Sales and business development staff spend much of their week building lists and researching accounts."}
+      - {status: hypothesis, text: "Generic sequences to bought lists get ignored by engineers and plant buyers."}
+  marketing_leader:
+    titles_from: icp.yaml personas.marketing_leader
+    pains:
+      - {status: hypothesis, text: "Events and inbound leads are not enough to hit the pipeline target."}
+  owner_led:
+    titles_from: icp.yaml personas.owner_led
+    pains:
+      - {status: hypothesis, text: "The founder still finds most new customers personally."}
+      - {status: hypothesis, text: "A first sales hire is a big, slow bet at this size."}
+
+message_pillars:
+  - {status: decided, note: "decisions.md Q12", text: "Write to the right companies when they show a reason to buy: hiring sales staff, exhibiting at a show, growing."}
+  - {status: decided, note: "handoff copy rules", text: "Personalise only with facts from the company's own website, each with a source."}
+  - {status: confirmed, note: "quailworks.xyz", text: "You own the system: built on your stack, documented and handed over."}
+  - {status: decided, note: "decisions.md Q4", text: "The email itself came out of the same kind of system."}
+
+objections:   # for replies and call prep, never in a first email
+  - {status: hypothesis, objection: "We already have SDRs.", answer_direction: "The system feeds them researched accounts with a reason to call; it does not replace them."}
+  - {status: hypothesis, objection: "Cold email doesn't work for our buyers.", answer_direction: "Ask what was sent; signal-based, fact-based emails to a short list differ from list blasting."}
+  - {status: hypothesis, objection: "We tried an agency and got junk meetings.", answer_direction: "Agree the qualified-meeting definition first; the client owns every account and domain."}
+  - {status: hypothesis, objection: "No budget right now.", answer_direction: "Compare with the cost and ramp time of one sales hire; offer the 10-company list instead."}
+  - {status: hypothesis, objection: "Is this compliant?", answer_direction: "Source, opt-out and postal address in every first email; suppression honoured; data deleted on schedule."}
+
+competitors:  # what the buyer would otherwise do; companies of these types are not prospects
+  - {status: hypothesis, text: "Hire an SDR or BDR, or rely on trade shows, distributors and referrals."}
+  - {status: hypothesis, text: "Lead-generation and appointment-setting agencies."}
+  - {status: hypothesis, text: "Do-it-yourself tools (Apollo, Clay, sequencers) run by the founder or an assistant."}
+  - {status: decided, jev: false, note: "decisions.md", text: "Learn competitors from replies and meeting outcomes, not from questions."}
+
+voice:
+  - {status: decided, note: "decisions.md Q7", text: "Plain text, short, one question, no exclamation marks, no hype, no links in the first email."}
+  - {status: decided, note: "decisions.md Q7", text: "Engineer-to-engineer tone, in the founder's own name, in English."}
+
+signals:      # why write now; points in scoring.yaml, rules in scoring.yaml `detect`
+  - {status: decided, key: sales_job_ad, why_now: "Hiring for sales roles that find new business is the work the system takes over."}
+  - {status: hypothesis, key: multiple_sales_ads, why_now: "Several sales roles open at once: pipeline is a priority now."}
+  - {status: hypothesis, key: trade_show, why_now: "Exhibiting at trade shows: pipeline depends on a few events a year."}
+  - {status: hypothesis, key: sales_stack, why_now: "Names a CRM or sales tool in a job ad: already invests in outbound."}
+  - {status: hypothesis, key: channel_sales, why_now: "Sells through reps, distributors or quote requests: few direct first conversations."}
+  - {status: hypothesis, key: headcount_growth, why_now: "Growth needs more new customers than referrals bring."}
+
+stack:
+  - {status: decided, note: "scoring.yaml detect.sales_stack", text: "HubSpot, Salesforce, Pipedrive, Zoho CRM, Apollo, ZoomInfo, Salesloft, Outreach."}
+
+hiring:
+  - {status: decided, note: "ai.yaml job_titles", text: "Sales roles that find or open new business: SDR, BDR, inside sales, lead generation, account executive, business development manager, sales engineer."}
+
+not_used:
+  influencers_and_experts: "Not used: no social or content channel in this pipeline yet."
+  keyword_portfolio: "Not used: no SEO or ads. Search words live in icp.yaml."

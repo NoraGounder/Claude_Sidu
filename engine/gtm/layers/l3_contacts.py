@@ -111,9 +111,14 @@ def screen(cfg: ClientConfig, account: dict, people: list[dict]) -> list[dict]:
     return kept
 
 
+CONTACT_QUESTION = ('Would a person with the job title "{title}" at this company decide on, or '
+                    "strongly influence, buying automation of operations and finance admin processes?")
+
+
 def relevance_request(account: dict, candidates: list[dict], offer: str = "",
-                      seller: dict | None = None) -> tuple[dict, dict]:
-    """Jev request with job titles only (no names: data minimisation)."""
+                      seller: dict | None = None, question: str | None = None) -> tuple[dict, dict]:
+    """Jev request with job titles only (no names: data minimisation). `question` comes from
+    ai.yaml `contact_question` ({title} is replaced); the default is The Marble Jar's."""
     state = {"company": account["name"], "industry": account.get("industry"),
              "employees": account.get("employee_range"),
              "offer": offer or "Automating manual operations and finance admin (invoices, orders, data entry)"}
@@ -123,8 +128,7 @@ def relevance_request(account: dict, candidates: list[dict], offer: str = "",
     for n, c in enumerate(candidates):
         questions[f"c{n}"] = {
             "type": "noul",
-            "instructions": (f'Would a person with the job title "{c["title"]}" at this company decide on, or '
-                             "strongly influence, buying automation of operations and finance admin processes?"),
+            "instructions": (question or CONTACT_QUESTION).replace("{title}", c["title"]),
             "criteria": {"true": "Decision-maker or strong influencer", "false": "Not involved in such a decision"},
         }
     return state, questions
@@ -180,7 +184,8 @@ def find_people(cfg: ClientConfig, conn, cp: ContactPlan, fe: FullEnrichClient |
                          " VALUES (?,?,?,?)", (acc["id"], db.now_iso(), len(candidates), res.credits))
             if candidates:
                 state, questions = relevance_request(acc, candidates, cfg.icp.offer_summary,
-                                                     brain.jev_context(cfg, "contact"))
+                                                     brain.jev_context(cfg, "contact"),
+                                                     cfg.ai.get("contact_question"))
                 try:
                     result = jev.decide(state, questions)
                 except JevUnavailable as exc:

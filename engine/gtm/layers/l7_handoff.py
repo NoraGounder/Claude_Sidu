@@ -4,7 +4,7 @@
    one-page meeting brief in data/briefs/ (local only), with the first answer Quailworks sends from the
    Smartlead inbox (templates/replies.yaml, written by people). "Not now" replies become deals at stage
    `later`. Every other reply is marked handled. Nothing is sent from here.
-2. `outcome`: Quailworks records what happened, including Mithun's one word after a call
+2. `outcome`: Quailworks records what happened, including the sender's one word after a call
    (qualified / not a fit / follow up), and later proposal, won (with value) or lost. A won company
    becomes a best client: excluded from outreach and used as a lookalike (gtm/best_clients.py), so the
    engine learns who buys without asking anyone.
@@ -29,7 +29,7 @@ from gtm.sources.hubspot import CONTACT_TO_COMPANY, DEAL_TO_COMPANY, DEAL_TO_CON
 
 STAGES = ("interested", "later", "booked", "held", "qualified", "follow_up", "not_a_fit", "no_show",
           "proposal", "won", "lost")
-# Mithun's one-word answers after a call
+# The sender's one-word answers after a call (Mithun for The Marble Jar)
 WORDS = {"qualified": "qualified", "not a fit": "not_a_fit", "not_a_fit": "not_a_fit",
          "follow up": "follow_up", "follow_up": "follow_up", "no show": "no_show"}
 MEETING_HELD = {"held", "qualified", "follow_up", "not_a_fit", "proposal", "won", "lost"}
@@ -58,6 +58,16 @@ def suggested_reply(cfg: ClientConfig, category: str, first_name: str) -> str:
                        sender_first_name=sender.get("first_name", "")).strip()
 
 
+CALL_PREP = ["Ask which process costs the most manual work today, who does it, and how often.",
+             "Afterwards {sender} replies with one word: qualified, not a fit, or follow up."]
+
+
+def sender_name(cfg: ClientConfig) -> str:
+    """The real sender's first name (private/sender.yaml), or a neutral word when it is not set yet."""
+    sender, real = load_sender(cfg)
+    return (sender.get("first_name") or "the sender") if real else "the sender"
+
+
 def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")[:40] or "company"
 
@@ -69,11 +79,13 @@ def write_brief(cfg: ClientConfig, conn, contact_id: int, reply: dict) -> Path:
     d = conn.execute("SELECT * FROM drafts WHERE contact_id=?", (contact_id,)).fetchone()
     ev = conn.execute("SELECT DISTINCT signal, label, url FROM evidence WHERE account_id=?", (a["id"],)).fetchall()
     first_email = json.loads(d["steps_json"])[0]["body"] if d else ""
+    who = sender_name(cfg)
+    call_prep = [line.replace("{sender}", who) for line in _templates(cfg).get("call_prep", CALL_PREP)]
     lines = [
         f"# Meeting brief: {a['name']}",
         "",
         (f"Reply received {reply.get('received_at') or ''} ({reply['category']}). "
-         "Quailworks answers within 4 working hours; Mithun only takes the call."),
+         f"Quailworks answers within 4 working hours; {who} only takes the call."),
         "",
         "## The company",
         f"- Website: {a.get('website') or a.get('domain') or 'unknown'}",
@@ -96,11 +108,10 @@ def write_brief(cfg: ClientConfig, conn, contact_id: int, reply: dict) -> Path:
         "", "## What they received (email 1)",
         f"Subject: {d['subject'] if d else ''}", "", first_email.strip(),
         "", "## Their reply", "", (reply.get("text") or "").strip(),
-        "", "## First answer to send (Smartlead inbox, in Mithun's name)", "",
+        "", f"## First answer to send (Smartlead inbox, in {who}'s name)", "",
         suggested_reply(cfg, reply["category"], c.get("first_name") or ""),
         "", "## For the call",
-        "- Ask which process costs the most manual work today, who does it, and how often.",
-        "- Afterwards Mithun replies with one word: qualified, not a fit, or follow up.",
+        *[f"- {line}" for line in call_prep],
     ]
     out_dir = data_dir() / "briefs"
     out_dir.mkdir(parents=True, exist_ok=True)

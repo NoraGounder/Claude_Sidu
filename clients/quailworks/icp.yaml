@@ -1,0 +1,113 @@
+# Layer 0: ideal customer profile. Layer 1 turns segments into searches; Layer 3 uses personas.
+# Industry IDs are LinkedIn industry codes (v2), checked against
+# github.com/HarvestAPI/linkedin-industry-codes-v2 on 2026-11-10.
+
+version: 1
+
+# Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md Q8-Q10).
+buyer_profile: >-
+  US companies with 11-200 employees that sell business-to-business products or services to
+  manufacturers and industrial operators (industrial automation and robotics, software for
+  manufacturing, engineering services, industrial equipment), and that need a steady flow of first
+  meetings with new accounts: sales is founder-led or a small team, often relying on trade shows,
+  distributors and referrals.
+# What we offer, in one line, for Jev's contact-relevance question (decisions.md Q1).
+offer_summary: >-
+  A done-for-you outbound system: finds companies showing a reason to buy, writes to the right person
+  from facts on their own website, and books first meetings; built on the client's stack and handed over.
+
+company:
+  employees_min: 11
+  employees_max: 200
+  # Values passed to the Harvest company-size filter (same spelling as The Marble Jar's live runs).
+  linkedin_company_sizes: ["11-50", "51-200"]
+
+industry_groups:
+  automation:
+    label: Industrial automation and robotics
+    ids: [147, 3247, 3248]   # Automation Machinery Manufacturing; Robot Manufacturing; Robotics Engineering
+  industrial_software:
+    label: Software for manufacturing and industry
+    ids: [4]                 # Software Development, narrowed by the segment's search word
+  engineering_services:
+    label: Engineering services
+    ids: [3242]              # Engineering Services, narrowed by the segment's search word
+  instruments:
+    label: Measuring, control and electrical equipment
+    ids: [983, 2468]         # Measuring and Control Instrument Manufacturing; Electrical Equipment Manufacturing
+  machinery:
+    label: Industrial machinery
+    ids: [135, 55, 928]      # Industrial Machinery; Machinery; Metalworking Machinery Manufacturing
+
+# One search per segment. 900 full-mode companies = $3.60, inside Apify's free $5 a month, which The
+# Marble Jar used up in November 2026: first run on or after 1 December 2026 (decisions.md Q20).
+# search_query narrows a broad industry; confirm on the first live run (the raw response is stored).
+segments:
+  - {name: automation_us,           enabled: true,  industry_group: automation,           locations: [United States], max_items: 300}
+  - {name: industrial_software_us,  enabled: true,  industry_group: industrial_software,  locations: [United States], max_items: 300, search_query: manufacturing}
+  - {name: engineering_services_us, enabled: true,  industry_group: engineering_services, locations: [United States], max_items: 300, search_query: industrial}
+  # Phase 2: only after the first segments show a working message (launch-plan.md).
+  - {name: instruments_us,          enabled: false, industry_group: instruments,          locations: [United States], max_items: 300}
+  - {name: machinery_us,            enabled: false, industry_group: machinery,            locations: [United States], max_items: 300}
+
+allowed_countries: [US]   # CAN-SPAM: opt-out and postal address in every first email (gate.yaml)
+
+exclusions:
+  # Company names containing any of these are dropped in Layer 1 (case-insensitive substring).
+  name_keywords:
+    - lead generation
+    - leadgen
+    - demand generation
+    - appointment setting
+    - sales outsourcing
+    - marketing agency
+    - digital agency
+    - growth agency
+    - staffing
+    - recruiting
+    - recruitment
+    - university
+    - college
+    - school
+    - association
+    - foundation
+  # Quailworks itself and its client (decisions.md Q14). Real do-not-contact list: private/exclusions.csv
+  domains: [quailworks.xyz, quailworks.co, themarblejar.io]
+
+# Layer 3: who we contact, in priority order. Max 2 per account (scoring.yaml enrichment_policy).
+personas:
+  sales_leader:
+    - Chief Revenue Officer
+    - CRO
+    - VP Sales
+    - VP of Sales
+    - Vice President of Sales
+    - Vice President Sales
+    - Head of Sales
+    - Sales Director
+    - Director of Sales
+    - VP Business Development
+    - Head of Business Development
+    - Director of Business Development
+    - Business Development Director
+    - Head of Growth
+    - Head of Revenue Operations
+  marketing_leader:
+    - CMO
+    - Chief Marketing Officer
+    - VP Marketing
+    - VP of Marketing
+    - Head of Marketing
+    - Marketing Director
+    - Director of Marketing
+  owner_led:          # used only for companies under about 150 employees (Layer 3)
+    - CEO
+    - Chief Executive Officer
+    - Founder
+    - Co-Founder
+    - Owner
+    - President
+    - Managing Director
+    - General Manager
+  # Substring match: "Internship", not "Intern" (which would also drop "International Sales Director").
+  exclude_titles: [Internship, Student, Trainee, Assistant, Coordinator, Representative, Product Owner]

@@ -2,9 +2,10 @@
 used for qualification, ICP scoring and classification; there is no fallback model.
 
 Per account, one request with typed questions about company-level facts (never personal data):
-  not_a_buyer  noul   associations, media, public bodies, IT firms, consultancies, staffing
-  icp_fit      score  poor / possible / strong fit for an operations-automation offer
-  title_N      noul   is job title N manual administrative work?
+  not_a_buyer  noul   associations, media, public bodies, ... (ai.yaml `not_a_buyer`; default: The Marble Jar's)
+  icp_fit      score  poor / possible / strong fit for the client's buyer profile (icp.yaml)
+  title_N      noul   is job title N the kind of role the offer replaces? (ai.yaml `job_titles`;
+                      default: manual administrative work)
   lookalike    score  how similar to the client's best customers (only when best_clients.csv is imported)
 Answers are stored in jev_decisions; every request is logged in jev_calls (model ID reported by
 the API, tokens, cost, latency). Then the accounts are re-scored from the crawl cache.
@@ -26,6 +27,29 @@ VENDOR = "openrouter"
 ICP = ("Buyer profile: Dutch or Belgian companies with 50-500 employees in logistics, wholesale and "
        "distribution, installation and technical services, or manufacturing, that run operations and "
        "finance processes (invoices, orders, planning) where manual admin work can be automated.")
+
+# Defaults (The Marble Jar). A client overrides them in ai.yaml: `not_a_buyer` and `job_titles`.
+NOT_A_BUYER = {
+    "instructions": ("Is this organisation clearly NOT a commercial company that could buy process "
+                     "automation? Not a buyer: trade associations, unions, foundations, media and "
+                     "magazines, schools and training bodies, government bodies and port authorities, "
+                     "software or IT companies, consultancies, staffing agencies, and companies that "
+                     "sell the same kind of service as the seller (see seller_context)."),
+    "true": "Not a possible buyer (one of the listed types)",
+    "false": "A commercial operating company that could buy",
+}
+JOB_TITLES = {
+    "question": ('Is the job title "{title}" manual administrative work: invoices, accounts '
+                 "payable or receivable, order entry or processing, data entry, back office, or "
+                 "administrative planning support? Drivers, warehouse staff, engineers, technicians, "
+                 "sales, IT, HR, controllers and managers are not."),
+    "true": "Manual administrative work",
+    "false": "Any other kind of role",
+}
+
+
+def _prompt(cfg: ClientConfig, key: str, default: dict) -> dict:
+    return default | (cfg.ai.get(key) or {})
 
 
 @dataclass
@@ -70,16 +94,12 @@ def build_request(cfg: ClientConfig, item: dict,
     seller = brain.jev_context(cfg, "account")
     if seller:
         state["seller_context"] = seller
+    nab, jt = _prompt(cfg, "not_a_buyer", NOT_A_BUYER), _prompt(cfg, "job_titles", JOB_TITLES)
     questions = {
         "not_a_buyer": {
             "type": "noul",
-            "instructions": ("Is this organisation clearly NOT a commercial company that could buy process "
-                             "automation? Not a buyer: trade associations, unions, foundations, media and "
-                             "magazines, schools and training bodies, government bodies and port authorities, "
-                             "software or IT companies, consultancies, staffing agencies, and companies that "
-                             "sell the same kind of service as the seller (see seller_context)."),
-            "criteria": {"true": "Not a possible buyer (one of the listed types)",
-                         "false": "A commercial operating company that could buy"},
+            "instructions": nab["instructions"],
+            "criteria": {"true": nab["true"], "false": nab["false"]},
         },
         "icp_fit": {
             "type": "score",
@@ -101,11 +121,8 @@ def build_request(cfg: ClientConfig, item: dict,
         title_keys[key] = title
         questions[key] = {
             "type": "noul",
-            "instructions": (f'Is the job title "{title}" manual administrative work: invoices, accounts '
-                             "payable or receivable, order entry or processing, data entry, back office, or "
-                             "administrative planning support? Drivers, warehouse staff, engineers, technicians, "
-                             "sales, IT, HR, controllers and managers are not."),
-            "criteria": {"true": "Manual administrative work", "false": "Any other kind of role"},
+            "instructions": jt["question"].replace("{title}", title),
+            "criteria": {"true": jt["true"], "false": jt["false"]},
         }
     return state, questions, title_keys
 

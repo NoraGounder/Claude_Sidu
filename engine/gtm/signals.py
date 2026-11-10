@@ -50,6 +50,42 @@ RULES: dict[str, list[tuple[str, str]]] = {
 
 DUTCH_WORDS = re.compile(r"\b(de|het|een|en|van|voor|wij|onze|bij|naar|over)\b", re.I)
 
+# Signals that only count on careers or vacancy pages, and signals matched case-sensitively.
+# These are the defaults; a client can define its own rules in scoring.yaml (see `rules_for`).
+JOB_PAGE_SIGNALS = frozenset({"admin_job_ad"})
+CASE_SENSITIVE = frozenset({"subsidiary_of_large_group"})
+
+
+@dataclass(frozen=True)
+class SignalRules:
+    rules: dict[str, list[tuple[str, str]]]
+    job_page_signals: frozenset[str]
+    case_sensitive: frozenset[str]
+
+
+DEFAULT_RULES = SignalRules(RULES, JOB_PAGE_SIGNALS, CASE_SENSITIVE)
+
+
+def rules_for(scoring: dict | None) -> SignalRules:
+    """The client's evidence rules. Without a `detect` section in scoring.yaml, the defaults above apply.
+
+    scoring.yaml:
+      detect:                        # replaces the default rules entirely
+        sales_job_ad:
+          - {label: "SDR", pattern: "sales\\s+development\\s+rep"}
+        subsidiary_of_large_group:
+          - {label: "part of (EN)", pattern: "...", }
+      job_page_signals: [sales_job_ad]          # count only on careers or vacancy pages
+      case_sensitive_signals: [subsidiary_of_large_group]
+    """
+    detect = (scoring or {}).get("detect")
+    if not detect:
+        return DEFAULT_RULES
+    rules = {signal: [(r["label"], r["pattern"]) for r in entries] for signal, entries in detect.items()}
+    return SignalRules(rules,
+                       frozenset(scoring.get("job_page_signals", [])),
+                       frozenset(scoring.get("case_sensitive_signals", [])))
+
 
 @dataclass
 class Evidence:
@@ -64,7 +100,7 @@ def _quote(text: str, match: re.Match, width: int = 90) -> str:
     return ("…" if start else "") + text[start:end].strip() + ("…" if end < len(text) else "")
 
 
-def extract(site: SiteCrawl) -> list[Evidence]:
+def extract(site: SiteCrawl, rules: SignalRules = DEFAULT_RULES) -> list[Evidence]:
     found: list[Evidence] = []
     seen: set[tuple[str, str]] = set()
     job_urls = {p.url for p in site.jobs}
@@ -73,13 +109,13 @@ def extract(site: SiteCrawl) -> list[Evidence]:
         if not page.ok:
             continue
         on_job_page = page.url in job_urls or page.url == careers_url
-        for signal, rules in RULES.items():
-            # Admin roles only count on careers or vacancy pages: on a homepage the words usually
+        for signal, signal_rules in rules.rules.items():
+            # Job-ad signals only count on careers or vacancy pages: on a homepage the words usually
             # describe services offered to customers, not jobs.
-            if signal == "admin_job_ad" and not on_job_page:
+            if signal in rules.job_page_signals and not on_job_page:
                 continue
-            for label, pattern in rules:
-                flags = 0 if signal == "subsidiary_of_large_group" else re.I
+            for label, pattern in signal_rules:
+                flags = 0 if signal in rules.case_sensitive else re.I
                 m = re.search(pattern, page.text, flags)
                 if m and (signal, label) not in seen:
                     seen.add((signal, label))

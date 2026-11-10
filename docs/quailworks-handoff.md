@@ -3,6 +3,16 @@
 Written 10 November 2026 at the end of the session that built the lead engine for The Marble Jar
 (TMJ). Read `CLAUDE.md` first: its hard rules apply to every client, Quailworks included.
 
+## Status (10 November 2026, later the same day)
+
+Done: `clients/quailworks/` exists and its decisions are recorded in `clients/quailworks/decisions.md`
+(US companies with 11-200 employees that sell to manufacturers and industrial operators; lead offer:
+done-for-you outbound). The engine's The Marble Jar-specific prompts, signal rules and copy logic are
+now per-client settings with The Marble Jar's behaviour as the default (CLAUDE.md, "Client-specific
+behaviour lives in config"); 74 tests. Next: the user buys two sending domains and four mailboxes
+(warm-up through November), then the first discovery run on or after 1 December 2026, when Apify's
+free credit resets (`clients/quailworks/launch-plan.md`).
+
 ## What already exists (reuse it, do not rebuild)
 
 The engine in `engine/gtm/` is client-agnostic. Every client is a folder under `clients/<client>/`
@@ -22,7 +32,8 @@ and every command takes `--client <slug>`. A new client = a new folder with thes
 
 Layers: 0 config and brain → 1 discover (Harvest API on Apify) → 2 crawl, rules, Jev 1.14 scoring
 and tiers → 3 FullEnrich people and emails → 4 send gate → 5 drafts, Jev fact check, `approve` →
-6 Smartlead upload, start, sync → 7 handoff briefs, outcomes, learning, HubSpot mirror. 66 tests.
+6 Smartlead upload, start, sync → 7 handoff briefs, outcomes, learning, HubSpot mirror. 66 tests
+(74 with the Quailworks client).
 
 ## Quailworks facts (public registers, checked 9 November 2026)
 

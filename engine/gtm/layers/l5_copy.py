@@ -10,6 +10,16 @@ Layer 4 gate:
  4. Python renders the 4-step sequence; greeting and sign-off vary by contact deterministically.
  5. Jev 1.14 fact-checks email 1 against the facts list; any doubt marks the draft needs_review.
 Quailworks reviews every draft in Google Sheets (CSV export/import) before Layer 6 may send it.
+
+What is client-specific lives in templates/sequence.yaml; without these keys The Marble Jar's
+behaviour applies:
+  hooks.<name>.needs / .description   the fact a hook needs, and how Jev 1.14 sees it
+  process.<name>.description          options for the example process (one option: no Jev question)
+  named_facts                         facts quoted from evidence labels, e.g. erp: {signal, labels}
+  title_role_words                    extra regex words that make a vacancy title quotable
+  company_suffixes                    extra legal suffixes to drop from company names (e.g. inc, llc)
+  banned_phrases                      extra phrases that block automatic approval
+The job-title fact follows the signal in ai.yaml `job_titles.signal` (default admin_job_ad).
 """
 
 from __future__ import annotations
@@ -24,12 +34,37 @@ import yaml
 
 from gtm import brain, db
 from gtm.config import ClientConfig, data_dir
+from gtm.layers.l2_prefilter import job_signal
 from gtm.layers.l4_gate import load_rules
-from gtm.signals import RULES
+from gtm.signals import DEFAULT_RULES, SignalRules, rules_for
 from gtm.sources.jev import JevClient, JevResult, check_policy
 
 LEGAL_SUFFIX = re.compile(r"\s*,?\s*\b(b\.?\s?v\.?|n\.?\s?v\.?|v\.?o\.?f\.?)\s*$", re.I)
 ERP_LABELS = {"Exact", "AFAS", "SAP", "Microsoft Dynamics", "Twinfield", "Unit4"}
+
+# The Marble Jar's defaults; a client's templates/sequence.yaml overrides them (see the module docstring).
+DEFAULT_NAMED_FACTS = {"erp": {"signal": "erp_mention", "labels": sorted(ERP_LABELS)}}
+DEFAULT_HOOKS = {
+    "admin_job_ad": {"needs": "job_title", "description": "Open with the admin job vacancy they are hiring for"},
+    "growth": {"needs": "open_roles", "description": "Open with how many roles they are hiring for (growth)"},
+    "erp_mention": {"needs": "erp", "description": "Open with the ERP system they use"},
+    "generic": {"needs": None, "description": "Open with the general problem of retyping orders and invoices"},
+}
+DEFAULT_PROCESS = {"invoices": "Invoice handling: accounts payable, approvals, booking (finance roles)",
+                   "orders": "Order handling: order intake and entry, planning (operations roles)"}
+
+
+def hook_meta(seq: dict, hook: str) -> dict:
+    own = {k: v for k, v in (seq["hooks"].get(hook) or {}).items() if k in ("needs", "description")}
+    return DEFAULT_HOOKS.get(hook, {"needs": None, "description": hook}) | own
+
+
+def named_facts(seq: dict) -> dict:
+    return seq.get("named_facts", DEFAULT_NAMED_FACTS)
+
+
+def _extra(words: str | None) -> re.Pattern | None:
+    return re.compile(words, re.I) if words else None
 
 
 def load_sequence(cfg: ClientConfig) -> dict:
@@ -45,8 +80,11 @@ def load_sender(cfg: ClientConfig) -> tuple[dict, bool]:
         return yaml.safe_load(fh), real.exists()
 
 
-def clean_company(name: str) -> str:
+def clean_company(name: str, extra_suffixes: list[str] | None = None) -> str:
     out = LEGAL_SUFFIX.sub("", name.strip())
+    if extra_suffixes:
+        alts = "|".join(re.escape(s).replace(r"\.", r"\.?") for s in extra_suffixes)
+        out = re.sub(rf"\s*,?\s*\b({alts})\.?\s*$", "", out, flags=re.I)
     return out or name.strip()
 
 
@@ -72,10 +110,14 @@ def _fix_encoding(text: str) -> str:
     return text
 
 
-def clean_title(title: str) -> str:
+def _names_role(text: str, extra: re.Pattern | None) -> bool:
+    return bool(ROLE_WORD.search(text) or (extra and extra.search(text)))
+
+
+def clean_title(title: str, extra: re.Pattern | None = None) -> str:
     t = re.sub(r"\(.*?\)", "", _fix_encoding(title))   # hours, locations in brackets
     parts = [p for p in re.split(r"\s+[-–|/]\s+|\s{2,}|[,?!:;/]", t) if p.strip()] or [t]
-    t = next((p for p in parts if ROLE_WORD.search(p)), parts[0])   # "Fulltime / Accounts Administrator"
+    t = next((p for p in parts if _names_role(p, extra)), parts[0])   # "Fulltime / Accounts Administrator"
     t = re.sub(r"\s+", " ", t).strip(" ,.-")
     if not any(len(w) > 1 and w.isupper() for w in t.split()):
         t = t[:1].lower() + t[1:]
@@ -83,10 +125,10 @@ def clean_title(title: str) -> str:
     return t
 
 
-def usable_title(title: str) -> bool:
+def usable_title(title: str, extra: re.Pattern | None = None) -> bool:
     """A job title we can quote in a sentence: short, names a role, not an internship, no slogan."""
     return (0 < len(title.split()) <= MAX_TITLE_WORDS and len(title) <= MAX_TITLE_CHARS
-            and bool(ROLE_WORD.search(title)) and not NOT_A_JOB.search(title)
+            and _names_role(title, extra) and not NOT_A_JOB.search(title)
             and (len(title.split()) > 1 or bool(PERSON_NOUN.search(title))))   # "Administratie" is a department
 
 
@@ -95,8 +137,11 @@ def clean_first_name(name: str) -> str:
     return name.title() if name.isupper() or name.islower() else name
 
 
-def facts_for(conn, account: dict) -> dict:
+def facts_for(conn, account: dict, seq: dict | None = None, rules: SignalRules = DEFAULT_RULES,
+              title_signal: str = "admin_job_ad") -> dict:
     """Facts with sources. Only exact titles found on the careers page are used as job titles."""
+    seq = seq or {}
+    extra = _extra(seq.get("title_role_words"))
     facts: dict = {}
     score = conn.execute("SELECT * FROM l2_scores WHERE account_id=?", (account["id"],)).fetchone()
     titles = json.loads(score["job_titles"] or "[]") if score else []
@@ -104,23 +149,39 @@ def facts_for(conn, account: dict) -> dict:
     ev = conn.execute("SELECT signal, label, url, quote FROM evidence WHERE account_id=?", (account["id"],)).fetchall()
 
     jev_titles = [e["label"].removeprefix("job title: ") for e in ev
-                  if e["signal"] == "admin_job_ad" and e["label"].startswith("job title: ")]
+                  if e["signal"] == title_signal and e["label"].startswith("job title: ")]
     rule_titles = [t for t in titles
-                   if any(re.search(p, t, re.I) for _, p in RULES["admin_job_ad"])]
-    exact = next((t for t in jev_titles + rule_titles if t in titles and usable_title(clean_title(t))), None)
+                   if any(re.search(p, t, re.I) for _, p in rules.rules.get(title_signal, []))]
+    exact = next((t for t in jev_titles + rule_titles
+                  if t in titles and usable_title(clean_title(t, extra), extra)), None)
     if exact:
-        facts["job_title"] = {"value": clean_title(exact), "raw": exact, "source": careers}
+        facts["job_title"] = {"value": clean_title(exact, extra), "raw": exact, "source": careers}
     if len(titles) >= 5:
         facts["open_roles"] = {"value": len(titles), "source": careers}
-    erp = next((e for e in ev if e["signal"] == "erp_mention" and e["label"] in ERP_LABELS), None)
-    if erp:
-        facts["erp"] = {"value": erp["label"], "source": erp["url"], "quote": erp["quote"]}
+    for key, spec in named_facts(seq).items():
+        labels = set(spec.get("labels") or [])
+        hit = next((e for e in ev if e["signal"] == spec["signal"] and (not labels or e["label"] in labels)), None)
+        if hit:
+            facts[key] = {"value": hit["label"], "source": hit["url"], "quote": hit["quote"]}
     return facts
 
 
 def supported_hooks(seq: dict, facts: dict) -> list[str]:
-    needs = {"admin_job_ad": "job_title", "growth": "open_roles", "erp_mention": "erp", "generic": None}
-    return [h for h in seq["hook_priority"] if needs[h] is None or needs[h] in facts]
+    hooks = []
+    for h in seq["hook_priority"]:
+        needs = hook_meta(seq, h)["needs"]
+        if needs is None or needs in facts:
+            hooks.append(h)
+    return hooks
+
+
+def fact_values(seq: dict, facts: dict) -> dict:
+    """Template placeholders filled from facts; empty when a fact is missing (hooks guard their use)."""
+    values = {"job_title": facts.get("job_title", {}).get("value", ""),
+              "open_roles": facts.get("open_roles", {}).get("value", "")}
+    for key in named_facts(seq):
+        values[key] = facts.get(key, {}).get("value", "")
+    return values
 
 
 def _pick(options: list[str], contact_id: int, salt: str) -> str:
@@ -130,25 +191,23 @@ def _pick(options: list[str], contact_id: int, salt: str) -> str:
 
 def choose_request(seq: dict, account: dict, contact: dict, hooks: list[str],
                    seller: dict | None = None) -> tuple[dict, dict]:
-    descriptions = {
-        "admin_job_ad": "Open with the admin job vacancy they are hiring for",
-        "growth": "Open with how many roles they are hiring for (growth)",
-        "erp_mention": "Open with the ERP system they use",
-        "generic": "Open with the general problem of retyping orders and invoices",
-    }
+    """Jev 1.14 questions for this contact: the example process (only when there is a choice) and the
+    opening angle (only when more than one hook is supported). Empty when there is nothing to choose."""
     state = {"company": account["name"], "industry": account.get("industry"),
              "contact_job_title": contact.get("title"), "contact_persona": contact.get("persona")}
     if seller:
         state["seller_context"] = seller
-    questions = {"process": {
-        "type": "choice",
-        "instructions": "Which example process will matter most to this person?",
-        "criteria": {"invoices": "Invoice handling: accounts payable, approvals, booking (finance roles)",
-                     "orders": "Order handling: order intake and entry, planning (operations roles)"}}}
+    questions = {}
+    if len(seq["process"]) > 1:
+        questions["process"] = {
+            "type": "choice",
+            "instructions": seq.get("process_question", "Which example process will matter most to this person?"),
+            "criteria": {k: (v or {}).get("description") or DEFAULT_PROCESS.get(k, k)
+                         for k, v in seq["process"].items()}}
     if len(hooks) > 1:
         questions["angle"] = {"type": "choice",
                               "instructions": "Which opening will feel most relevant to this person?",
-                              "criteria": {h: descriptions[h] for h in hooks}}
+                              "criteria": {h: hook_meta(seq, h)["description"] for h in hooks}}
     return state, questions
 
 
@@ -156,10 +215,8 @@ def render(seq: dict, lang: str, hook: str, process: str, facts: dict, contact: 
            sender: dict, gdpr: str) -> tuple[str, list[dict]]:
     values = {
         "first_name": clean_first_name(contact["first_name"]),
-        "company": clean_company(account["name"]),
-        "job_title": facts.get("job_title", {}).get("value", ""),
-        "open_roles": facts.get("open_roles", {}).get("value", ""),
-        "erp": facts.get("erp", {}).get("value", ""),
+        "company": clean_company(account["name"], seq.get("company_suffixes")),
+        **fact_values(seq, facts),
         "sender_first_name": sender.get("first_name", ""),
         "gdpr_notice": gdpr,
     }
@@ -175,13 +232,13 @@ def render(seq: dict, lang: str, hook: str, process: str, facts: dict, contact: 
     return subject, steps
 
 
-def qa_request(facts: dict, account: dict, email: str) -> tuple[dict, dict]:
+def qa_request(facts: dict, account: dict, email: str, seller_name: str = "The Marble Jar") -> tuple[dict, dict]:
     fact_lines = [f"Company name: {account['name']}"] + [f"{k}: {v['value']}" for k, v in facts.items()]
     state = {"facts_about_the_recipient_company": fact_lines, "email": email}
     questions = {"unsupported_claim": {
         "type": "noul",
         "instructions": ("Does the email state anything about the recipient's company that is NOT supported by "
-                         "the facts list? Statements about The Marble Jar's own offer, and general statements "
+                         f"the facts list? Statements about {seller_name}'s own offer, and general statements "
                          "about companies like theirs, do not count."),
         "criteria": {"true": "At least one claim about the company is not supported by the facts",
                      "false": "Every claim about the company is supported by the facts"}}}
@@ -199,6 +256,7 @@ def _log_jev(conn, cfg, account_id, result: JevResult) -> None:
 def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = False, limit: int | None = None) -> dict:
     check_policy(cfg.ai)
     seq, rules = load_sequence(cfg), load_rules(cfg)
+    signal_rules, title_signal = rules_for(cfg.scoring), job_signal(cfg)
     sender, sender_real = load_sender(cfg)
     done = "" if redo else " AND c.id NOT IN (SELECT contact_id FROM drafts WHERE status != 'rejected')"
     rows = [dict(r) for r in conn.execute(
@@ -213,15 +271,18 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
         # Language comes from client.yaml: one default, with optional per-country overrides.
         lang_cfg = cfg.client.get("language", {})
         lang = (lang_cfg.get("by_country") or {}).get(account.get("country") or "", lang_cfg.get("default", "en"))
-        facts = facts_for(conn, account)
+        facts = facts_for(conn, account, seq, signal_rules, title_signal)
         hooks = supported_hooks(seq, facts)
 
         state, questions = choose_request(seq, account, contact, hooks, brain.jev_context(cfg, "angle"))
-        choice = jev.decide(state, questions)          # JevUnavailable stops the run: no fallback
-        _log_jev(conn, cfg, account["id"], choice)
-        process = choice.answers["process"]["choice"]
-        hook = choice.answers["angle"]["choice"] if "angle" in choice.answers else hooks[0]
-        angle_p = (choice.answers.get("angle", {}).get("probabilities") or {}).get(hook)
+        answers: dict = {}
+        if questions:
+            choice = jev.decide(state, questions)      # JevUnavailable stops the run: no fallback
+            _log_jev(conn, cfg, account["id"], choice)
+            answers = choice.answers
+        process = answers["process"]["choice"] if "process" in answers else next(iter(seq["process"]))
+        hook = answers["angle"]["choice"] if "angle" in answers else hooks[0]
+        angle_p = (answers.get("angle", {}).get("probabilities") or {}).get(hook)
 
         threshold = cfg.ai["thresholds"]["unsupported_claim"]
         # Try Jev's pick first; if the fact check flags it, fall back along hook_priority (ending with
@@ -257,17 +318,15 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
 def _fact_check(cfg, conn, jev, seq, lang, hook, subject, facts, contact, account, sender) -> float:
     """Jev 1.14 checks only what claims something about the company: the subject and the opening.
     Data minimisation: no names are sent."""
-    hook_text = seq["hooks"][hook][lang].format(company=clean_company(account["name"]),
-                                                job_title=facts.get("job_title", {}).get("value", ""),
-                                                open_roles=facts.get("open_roles", {}).get("value", ""),
-                                                erp=facts.get("erp", {}).get("value", ""))
+    hook_text = seq["hooks"][hook][lang].format(company=clean_company(account["name"], seq.get("company_suffixes")),
+                                                **fact_values(seq, facts))
     qa_text = f"Subject: {subject}\n{hook_text}"
     for name, placeholder in ((clean_first_name(contact["first_name"]), "[first name]"),
                               (contact.get("last_name") or "", "[last name]"),
                               (sender.get("first_name") or "", "[sender]")):
         if name:
             qa_text = re.sub(rf"\b{re.escape(name)}\b", placeholder, qa_text)
-    qa_state, qa_questions = qa_request(facts, account, qa_text)
+    qa_state, qa_questions = qa_request(facts, account, qa_text, cfg.client.get("display_name", cfg.slug))
     qa = jev.decide(qa_state, qa_questions)
     _log_jev(conn, cfg, account["id"], qa)
     return float(qa.answers["unsupported_claim"]["noul"])
@@ -283,6 +342,7 @@ def auto_approve(cfg: ClientConfig, conn) -> dict:
     the GDPR notice is in email 1, every step is filled in, and no banned claim appears. The rest stay
     for a person (export-drafts)."""
     rules = load_rules(cfg)
+    banned = BANNED + tuple(p.lower() for p in load_sequence(cfg).get("banned_phrases", []))
     threshold = cfg.ai["thresholds"]["unsupported_claim"]
     counts = {"approved": 0, "left_for_review": 0}
     ts = db.now_iso()
@@ -293,7 +353,7 @@ def auto_approve(cfg: ClientConfig, conn) -> dict:
         ok = (d["status"] == "draft" and (d["qa_unsupported_p"] or 0) < threshold
               and rules["gdpr_notice"][d["language"]] in steps[0]["body"]
               and all(s["body"].strip() and "{" not in s["body"] for s in steps)
-              and not any(b in text for b in BANNED))
+              and not any(b in text for b in banned))
         if ok:
             conn.execute("UPDATE drafts SET status='approved', review_note=?, reviewed_at=?, updated_at=? WHERE id=?",
                          ("auto-approved by Quailworks: all checks passed", ts, ts, d["id"]))
