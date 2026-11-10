@@ -3,36 +3,37 @@
 # with every qualification, contact and angle decision (gtm/brain.py).
 #
 # Status per entry:
-#   confirmed    stated on quailworks.xyz or by the user (date in the note)
+#   confirmed    stated on quailworks.co, in the founder's CV, or by the user (date in the note)
 #   decided      Quailworks' own decision (decisions.md), used like confirmed until results say otherwise
 #   hypothesis   working assumption; Jev may use it, the copy must not state it as fact
-# `jev: false` keeps a note for people only. No personal data: the repository is public.
+# `jev: false` keeps a note for people only. No personal data: the repository is public, so the CV's
+# employers, programs and contact details are not repeated here.
 
 version: 1
 
 market_profile:
-  - {status: confirmed, note: "quailworks.xyz", text: "Quailworks is an AI automation agency (est. 2025) that designs and deploys automation systems: outbound automation, workflow automation (Make, Zapier, custom APIs) and custom AI agents."}
-  - {status: confirmed, note: "quailworks.xyz", text: "Approach: diagnose, design, build, hand off. The client owns the system completely; Quailworks builds on the client's existing stack (Clay, HubSpot, Make, Notion, Slack)."}
-  - {status: confirmed, note: "quailworks.xyz", text: "Positioning: built by operators, engineering-grade thinking with the rigour of industrial processes; project-based or retained."}
-  - {status: confirmed, jev: false, note: "user, 2026-11-10", text: "The founder has an industrial and manufacturing engineering background. The US is the target market."}
-  - {status: decided, note: "decisions.md Q1, Q9", text: "Outbound leads with a done-for-you outbound system for US companies that sell to manufacturers and industrial teams."}
+  - {status: confirmed, note: "quailworks.co", text: "Quailworks is a GTM engineering firm: it designs, builds and runs the systems behind go-to-market (signal-based outbound, inbound routing, trusted CRM data), to production standards, inside the client's own stack."}
+  - {status: confirmed, note: "quailworks.co", text: "It was an engineering firm before it was a GTM firm: specs before automations, versioned and tested systems with monitoring, the client owns everything, senior engineers on a small roster."}
+  - {status: confirmed, note: "quailworks.co", text: "Engagements: a fixed-fee GTM audit, a 4-6 week build sprint, or an embedded engineer on a monthly retainer."}
+  - {status: confirmed, note: "founder's CV, 2026-11-10", text: "The founder spent over a decade as a mechanical design engineer on aerospace and high-performance automotive programs, choosing and managing suppliers."}
+  - {status: decided, note: "decisions.md Q1, Q9", text: "Outbound leads with signal-based outbound for US companies that sell to hardware engineering teams in aerospace, space, automotive and advanced manufacturing."}
 
 offer:
-  - {status: decided, note: "decisions.md Q1", text: "Quailworks builds and runs a system that finds companies showing a reason to buy, writes to the right person from facts on their own website, and books first calls; the client's team takes the calls and keeps the system."}
-  - {status: decided, jev: false, note: "decisions.md Q3", text: "No results, meeting counts, guarantees, timelines or prices in outreach."}
-  - {status: decided, jev: false, note: "decisions.md Q5", text: "Next step: a 30-minute call, or a list of 10 companies in their market showing a signal now, with sources."}
+  - {status: decided, note: "decisions.md Q1", text: "Signal-based outbound built as a system: finds accounts with a reason to buy, writes to the right person from facts on their own website, books first calls; runs in the client's own tools and they own it."}
+  - {status: decided, jev: false, note: "decisions.md Q3", text: "No results, meeting counts, guarantees, prices or build times in outreach."}
+  - {status: confirmed, jev: false, note: "quailworks.co", text: "Next step: a 30-minute working session and a written note on the three things we would fix first, whether or not we work together."}
 
 personas:
   sales_leader:
     titles_from: icp.yaml personas.sales_leader
     pains:
-      - {status: hypothesis, text: "First meetings come from a few channels (trade shows, distributors, referrals), so pipeline is lumpy."}
-      - {status: hypothesis, text: "Sales and business development staff spend much of their week building lists and researching accounts."}
-      - {status: hypothesis, text: "Generic sequences to bought lists get ignored by engineers and plant buyers."}
+      - {status: hypothesis, text: "Engineering buyers ignore generic sales emails; first meetings come from trade shows, distributors and referrals, so pipeline is lumpy."}
+      - {status: hypothesis, text: "Business development staff spend much of their week building lists and researching accounts."}
+      - {status: hypothesis, text: "Supplier decisions happen in short windows (a new program, an RFQ, a redesign) that are easy to miss."}
   marketing_leader:
     titles_from: icp.yaml personas.marketing_leader
     pains:
-      - {status: hypothesis, text: "Events and inbound leads are not enough to hit the pipeline target."}
+      - {status: hypothesis, text: "Shows and inbound leads are not enough to hit the pipeline target."}
   owner_led:
     titles_from: icp.yaml personas.owner_led
     pains:
@@ -42,19 +43,20 @@ personas:
 message_pillars:
   - {status: decided, note: "decisions.md Q12", text: "Write to the right companies when they show a reason to buy: hiring sales staff, exhibiting at a show, growing."}
   - {status: decided, note: "handoff copy rules", text: "Personalise only with facts from the company's own website, each with a source."}
-  - {status: confirmed, note: "quailworks.xyz", text: "You own the system: built on your stack, documented and handed over."}
+  - {status: confirmed, note: "quailworks.co", text: "Built like engineering: a written spec first, tested on real data, monitored in production, and the client owns everything."}
+  - {status: confirmed, note: "founder's CV", text: "Written by an engineer who sat on the buyer's side of supplier decisions."}
   - {status: decided, note: "decisions.md Q4", text: "The email itself came out of the same kind of system."}
 
 objections:   # for replies and call prep, never in a first email
-  - {status: hypothesis, objection: "We already have SDRs.", answer_direction: "The system feeds them researched accounts with a reason to call; it does not replace them."}
-  - {status: hypothesis, objection: "Cold email doesn't work for our buyers.", answer_direction: "Ask what was sent; signal-based, fact-based emails to a short list differ from list blasting."}
-  - {status: hypothesis, objection: "We tried an agency and got junk meetings.", answer_direction: "Agree the qualified-meeting definition first; the client owns every account and domain."}
-  - {status: hypothesis, objection: "No budget right now.", answer_direction: "Compare with the cost and ramp time of one sales hire; offer the 10-company list instead."}
-  - {status: hypothesis, objection: "Is this compliant?", answer_direction: "Source, opt-out and postal address in every first email; suppression honoured; data deleted on schedule."}
+  - {status: hypothesis, objection: "We already have business development people.", answer_direction: "The system feeds them researched accounts with a reason to call; it does not replace them."}
+  - {status: hypothesis, objection: "Cold email doesn't work for engineering buyers.", answer_direction: "Ask what was sent; signal-based, fact-based emails to a short list differ from list blasting."}
+  - {status: hypothesis, objection: "We tried an agency and got junk meetings.", answer_direction: "Agree the qualified-meeting definition first; the client owns every account, domain and prompt."}
+  - {status: hypothesis, objection: "No budget right now.", answer_direction: "Start with the fixed-fee audit, or the 10-company list."}
+  - {status: hypothesis, objection: "Is this compliant? We work on export-controlled programs.", answer_direction: "Only public company data; source, opt-out and address in every first email; NDAs and DPAs as standard (quailworks.co)."}
 
 competitors:  # what the buyer would otherwise do; companies of these types are not prospects
-  - {status: hypothesis, text: "Hire an SDR or BDR, or rely on trade shows, distributors and referrals."}
-  - {status: hypothesis, text: "Lead-generation and appointment-setting agencies."}
+  - {status: hypothesis, text: "Hire a BDR or SDR, or rely on trade shows, distributors, reps and referrals."}
+  - {status: hypothesis, text: "Lead-generation and appointment-setting agencies, and generalist GTM engineering agencies."}
   - {status: hypothesis, text: "Do-it-yourself tools (Apollo, Clay, sequencers) run by the founder or an assistant."}
   - {status: decided, jev: false, note: "decisions.md", text: "Learn competitors from replies and meeting outcomes, not from questions."}
 

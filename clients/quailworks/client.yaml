@@ -3,7 +3,7 @@
 
 client: quailworks
 display_name: Quailworks
-website: https://quailworks.xyz
+website: https://quailworks.co    # the live site (quailworks.xyz is the older index.html in this repo)
 offices: [Gowarczów (PL)]   # Quailworks sp. z o.o., public company register (KRS 0001108506)
 
 operating_model: own_outbound   # Quailworks runs its own outbound; the founder takes the meetings
@@ -28,6 +28,7 @@ crm:
 
 # Quailworks decides (decisions.md). Only these need the user, in one message at launch:
 needed_from_client:
-  - Buy two sending domains and four mailboxes (decisions.md Q18)
+  - Buy two brand sending domains and four fresh SmartSenders mailboxes, warm-up on (decisions.md Q18)
+  - Move Apify to a paid plan and top up FullEnrich credits (decisions.md Q20)
   - Confirm the founder sends in their own name, and fill private/sender.yaml
   - The "go" to start sending (CLAUDE.md rule 3)

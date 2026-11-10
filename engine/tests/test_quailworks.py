@@ -51,11 +51,14 @@ def test_quailworks_config_loads_and_follows_the_jev_policy(env):
     assert cfg.icp.allowed_countries == ["US"]
     assert "themarblejar.io" in cfg.icp.exclusions.domains
     plans = l1_discover.plan(cfg, None, None)
-    assert [p.segment.name for p in plans] == ["automation_us", "industrial_software_us", "engineering_services_us"]
-    assert round(sum(p.est_cost for p in plans), 2) == 3.60          # inside Apify's free $5 a month
-    software = plans[1].actor_input
+    assert [p.segment.name for p in plans] == ["aerospace_suppliers_us", "automotive_suppliers_us", "eng_software_us",
+                                               "automation_us", "engineering_services_us"]
+    assert round(sum(p.est_cost for p in plans), 2) == 6.00          # inside the $15 Apify cap
+    assert plans[0].actor_input["industryIds"] == ["52", "1"]
+    assert plans[4].actor_input["searchQuery"] == "aerospace"
+    software = plans[2].actor_input
     assert software["industryIds"] == ["4"] and software["searchQuery"] == "manufacturing"
-    assert software["companySize"] == ["11-50", "51-200"] and software["locations"] == ["United States"]
+    assert software["companySize"] == ["11-50", "51-200", "201-500"] and software["locations"] == ["United States"]
 
 
 def test_marble_jar_prompts_and_rules_are_unchanged(env):
@@ -106,11 +109,11 @@ def _account(conn, client, name, website, segments, rng="51-200", country="US", 
 def test_quailworks_signals_scoring_and_tier(env):
     cfg = load_client(QW)
     conn = db.connect()
-    acc = _account(conn, QW, "Acme Robotics Inc.", "https://acme-robotics.example", ["automation_us"])
+    acc = _account(conn, QW, "Acme Robotics Inc.", "https://acme-robotics.example", ["aerospace_suppliers_us"])
     conn.commit()
     l2_prefilter.run(cfg, conn, workers=1, fetcher_factory=lambda: FakeFetcher(SITE))
     s = conn.execute("SELECT fit, signal, tier, breakdown FROM l2_scores WHERE account_id=?", (acc,)).fetchone()
-    # fit: in range 30 + sweet spot 10 + automation 25 + US 15 + site 5 = 85
+    # fit: in range 30 + sweet spot 10 + aerospace suppliers 25 + US 15 + site 5 = 85
     # signals: sales job ad 35 + trade show 15 + sales tool in the job ad 10 + request a quote 10 = 70
     assert (s["fit"], s["signal"], s["tier"]) == (85, 70, "tier_1")
     ev = {(r["signal"], r["label"]) for r in conn.execute("SELECT signal, label FROM evidence WHERE account_id=?", (acc,))}
@@ -128,7 +131,7 @@ def test_quailworks_jev_questions_and_job_title_evidence(env):
     assert "Software, engineering, automation and industrial companies" in q["not_a_buyer"]["instructions"]
     assert q["not_a_buyer"]["criteria"]["false"] == "A company that sells to other businesses and could buy"
     assert q["title_0"]["instructions"].startswith('Is the job title "Inside Sales Representative" a sales role')
-    assert "manufacturers and industrial operators" in q["icp_fit"]["instructions"]
+    assert "hardware engineering teams in aerospace, space, automotive" in q["icp_fit"]["instructions"]
     ev = l2_prefilter.jev_evidence(cfg, None, {"titles": {"Inside Sales Representative": 0.9, "Welder": 0.1}})
     assert [(e.signal, e.label) for e in ev] == [("sales_job_ad", "job title: Inside Sales Representative")]
 

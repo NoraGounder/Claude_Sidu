@@ -106,7 +106,7 @@ secret. See `.env.example`.
 - `clients/<client>/private/exclusions.csv`: real do-not-contact list (gitignored)
 - `engine/gtm/`: the engine; `engine/tests/`: tests with synthetic data only
 - `docs/quailworks-handoff.md`: starting point for running the engine for Quailworks itself
-- `clients/quailworks/`: Quailworks' own outbound (US companies that sell to manufacturers); every
+- `clients/quailworks/`: Quailworks' own outbound (US companies that sell to hardware engineering teams); every
   command takes `--client quailworks`; `launch-plan.md` has the run order
 
 ### Client-specific behaviour lives in config (defaults = The Marble Jar's)

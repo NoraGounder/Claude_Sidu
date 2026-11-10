@@ -4,14 +4,17 @@
 
 fit:
   employees:
-    in_range: 30          # 11-200
-    sweet_spot: [20, 150]
+    in_range: 30          # 11-500
+    sweet_spot: [30, 300]
     sweet_spot_bonus: 10
   industry_group:
-    automation: 25
-    industrial_software: 25
+    aerospace_suppliers: 25
+    automotive_suppliers: 25
+    eng_software: 25
+    automation: 20
     engineering_services: 20
-    instruments: 20
+    precision_parts: 15
+    instruments: 15
     machinery: 15
   country:
     US: 15
@@ -66,6 +69,17 @@ detect:
     - {label: "Hannover Messe", pattern: 'hannover\s+messe'}
     - {label: "SEMICON", pattern: '\bsemicon\s+(west|east|taiwan|europa|china|japan|korea)\b'}
     - {label: "The Assembly Show", pattern: 'the\s+assembly\s+show'}
+    - {label: "Paris Air Show", pattern: 'paris\s+air\s+show'}
+    - {label: "Farnborough", pattern: 'farnborough\s+(international\s+)?airshow|\bfarnborough\s+20\d\d\b'}
+    - {label: "MRO Americas", pattern: 'mro\s+americas'}
+    - {label: "Space Symposium", pattern: 'space\s+symposium'}
+    - {label: "AeroDef", pattern: '\baerodef\b'}
+    - {label: "SAE WCX", pattern: '\bsae\s+wcx\b|\bwcx\s+20\d\d\b'}
+    - {label: "The Battery Show", pattern: 'the\s+battery\s+show'}
+    - {label: "CAMX", pattern: '\bcamx\b'}
+    - {label: "JEC World", pattern: 'jec\s+world'}
+    - {label: "RAPID + TCT", pattern: 'rapid\s*\+\s*tct'}
+    - {label: "Formnext", pattern: '\bformnext\b'}
     - {label: "visit us at our booth", pattern: 'visit\s+us\s+at\s+(our\s+)?(booth|stand)|booth\s*#\s*\d+'}
   channel_sales:
     - {label: "find a rep", pattern: 'find\s+(a|your)\s+(local\s+)?(sales\s+)?(rep|representative|distributor)\b'}
@@ -84,7 +98,7 @@ job_page_signals: [sales_job_ad, sales_stack]
 case_sensitive_signals: [subsidiary_of_large_group]
 
 tiers:
-  # A US company in range with a working site scores 70-90 on fit alone, so Tier 1 and 2 need a signal.
+  # A US company in range with a working site scores 70-100 on fit alone, so Tier 1 and 2 need a signal.
   tier_1: {fit_min: 60, signal_min: 35}    # hiring for sales roles
   tier_2: {fit_min: 60, signal_min: 20}    # e.g. a trade show plus rep selling, or a sales tool plus growth
   tier_3: {fit_min: 50}

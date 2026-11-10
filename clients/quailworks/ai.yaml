@@ -29,7 +29,8 @@ not_a_buyer:
     (they sell the same service as the seller, see seller_context), staffing and recruiting firms,
     trade associations, unions, foundations and non-profits, media and publishers, schools,
     universities and training bodies, and government bodies. Software, engineering, automation and
-    industrial companies that sell to other businesses are possible buyers.
+    industrial companies that sell to other businesses, including aerospace, space and automotive
+    suppliers, are possible buyers.
   "true": Not a possible buyer (one of the listed types)
   "false": A company that sells to other businesses and could buy
 

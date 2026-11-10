@@ -1,18 +1,16 @@
 # Layer 0: hard caps. The engine refuses any paid run that would push a vendor past its
 # monthly budget. Raise a cap only when the user asks.
 #
-# Shared vendor accounts (decisions.md Q20): the guard counts each client's own spend, so these caps
-# are set so that Quailworks and The Marble Jar together stay inside what the accounts already have.
+# 2026-11-10: the user said not to wait and to buy what is needed (a paid Apify plan, more FullEnrich
+# credits, more mailboxes), so these caps are above the free tiers (decisions.md Q20). Vendor accounts
+# are shared with The Marble Jar, whose own caps are unchanged; the guard counts each client separately.
 
 month_budget_usd:
-  # Apify's free $5 credit is shared. The Marble Jar used $4.80 of it in November 2026 and needs no new
-  # discovery for its launch, so Quailworks' first discovery runs on or after 1 December 2026.
-  apify: 5
+  apify: 15          # paid Apify plan (Starter); ~3,700 full-mode companies a month
   leadmagic: 0       # not used
-  # FullEnrich credits are shared (about 770 left after The Marble Jar's run): about 360 credits here.
-  fullenrich: 20
+  fullenrich: 40     # ~730 credits: people search plus work emails for ~150 Tier 1-2 accounts
   millionverifier: 2
-  openrouter: 2      # TypeSafe Jev 1.14 decisions only (see ai.yaml). Actual cost per request is logged.
+  openrouter: 3      # TypeSafe Jev 1.14 decisions only (see ai.yaml). Actual cost per request is logged.
 
 # Unit prices used for estimates before a run (USD per item), as for The Marble Jar (checked 2026-11-06).
 unit_price_usd:
@@ -26,7 +24,8 @@ unit_price_usd:
   "millionverifier:check": 0.004
 
 sending:
-  # Launch (decisions.md Q19): Tier 1-2 only, 20 a day from 4 mailboxes at <= 10 each.
+  # Fresh brand mailboxes after 2-3 weeks of warm-up (decisions.md Q18-Q19): start at 5 a day each.
+  # Raise to 40 / 10 after a clean first week (bounces under 2%, no spam complaints).
   max_emails_per_day: 20
-  max_per_mailbox_per_day: 10
+  max_per_mailbox_per_day: 5
   max_contacts_per_account: 2

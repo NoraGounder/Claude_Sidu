@@ -6,32 +6,41 @@ version: 1
 
 # Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md Q8-Q10).
 buyer_profile: >-
-  US companies with 11-200 employees that sell business-to-business products or services to
-  manufacturers and industrial operators (industrial automation and robotics, software for
-  manufacturing, engineering services, industrial equipment), and that need a steady flow of first
-  meetings with new accounts: sales is founder-led or a small team, often relying on trade shows,
-  distributors and referrals.
+  US companies with 11-500 employees that sell business-to-business products or services to hardware
+  engineering teams in aerospace, space, automotive and advanced manufacturing: component and
+  precision-parts suppliers, and software, test or engineering tools for those teams. Their buyers are
+  design, test and supplier-quality engineers who are hard to reach, so new business depends on trade
+  shows, distributors, referrals and a small sales or business-development team.
 # What we offer, in one line, for Jev's contact-relevance question (decisions.md Q1).
 offer_summary: >-
-  A done-for-you outbound system: finds companies showing a reason to buy, writes to the right person
-  from facts on their own website, and books first meetings; built on the client's stack and handed over.
+  Signal-based outbound built as a system: finds accounts showing a reason to buy, writes to the right
+  person from facts on their own website, and books first meetings; built in the client's own tools.
 
 company:
   employees_min: 11
-  employees_max: 200
+  employees_max: 500
   # Values passed to the Harvest company-size filter (same spelling as The Marble Jar's live runs).
-  linkedin_company_sizes: ["11-50", "51-200"]
+  linkedin_company_sizes: ["11-50", "51-200", "201-500"]
 
 industry_groups:
+  aerospace_suppliers:
+    label: Aerospace, defense and space suppliers
+    ids: [52, 1]             # Aviation and Aerospace Component Manufacturing; Defense and Space Manufacturing
+  automotive_suppliers:
+    label: Automotive parts suppliers
+    ids: [1042]              # Motor Vehicle Parts Manufacturing
+  eng_software:
+    label: Software for manufacturing and engineering teams
+    ids: [4]                 # Software Development, narrowed by the segment's search word
   automation:
     label: Industrial automation and robotics
     ids: [147, 3247, 3248]   # Automation Machinery Manufacturing; Robot Manufacturing; Robotics Engineering
-  industrial_software:
-    label: Software for manufacturing and industry
-    ids: [4]                 # Software Development, narrowed by the segment's search word
   engineering_services:
     label: Engineering services
     ids: [3242]              # Engineering Services, narrowed by the segment's search word
+  precision_parts:
+    label: Precision parts and fabrication
+    ids: [876, 840]          # Turned Products and Fastener Manufacturing; Fabricated Metal Products
   instruments:
     label: Measuring, control and electrical equipment
     ids: [983, 2468]         # Measuring and Control Instrument Manufacturing; Electrical Equipment Manufacturing
@@ -39,14 +48,17 @@ industry_groups:
     label: Industrial machinery
     ids: [135, 55, 928]      # Industrial Machinery; Machinery; Metalworking Machinery Manufacturing
 
-# One search per segment. 900 full-mode companies = $3.60, inside Apify's free $5 a month, which The
-# Marble Jar used up in November 2026: first run on or after 1 December 2026 (decisions.md Q20).
+# One search per segment. 1,500 full-mode companies = $6.00 on the paid Apify plan (decisions.md Q20).
+# Discovery is cheap, so it is broad; sending stays narrow (Tier 1-2 only, sending.yaml).
 # search_query narrows a broad industry; confirm on the first live run (the raw response is stored).
 segments:
+  - {name: aerospace_suppliers_us,  enabled: true,  industry_group: aerospace_suppliers,  locations: [United States], max_items: 300}
+  - {name: automotive_suppliers_us, enabled: true,  industry_group: automotive_suppliers, locations: [United States], max_items: 300}
+  - {name: eng_software_us,         enabled: true,  industry_group: eng_software,         locations: [United States], max_items: 300, search_query: manufacturing}
   - {name: automation_us,           enabled: true,  industry_group: automation,           locations: [United States], max_items: 300}
-  - {name: industrial_software_us,  enabled: true,  industry_group: industrial_software,  locations: [United States], max_items: 300, search_query: manufacturing}
-  - {name: engineering_services_us, enabled: true,  industry_group: engineering_services, locations: [United States], max_items: 300, search_query: industrial}
+  - {name: engineering_services_us, enabled: true,  industry_group: engineering_services, locations: [United States], max_items: 300, search_query: aerospace}
   # Phase 2: only after the first segments show a working message (launch-plan.md).
+  - {name: precision_parts_us,      enabled: false, industry_group: precision_parts,      locations: [United States], max_items: 300}
   - {name: instruments_us,          enabled: false, industry_group: instruments,          locations: [United States], max_items: 300}
   - {name: machinery_us,            enabled: false, industry_group: machinery,            locations: [United States], max_items: 300}
 
@@ -72,7 +84,7 @@ exclusions:
     - association
     - foundation
   # Quailworks itself and its client (decisions.md Q14). Real do-not-contact list: private/exclusions.csv
-  domains: [quailworks.xyz, quailworks.co, themarblejar.io]
+  domains: [quailworks.co, quailworks.xyz, themarblejar.io]
 
 # Layer 3: who we contact, in priority order. Max 2 per account (scoring.yaml enrichment_policy).
 personas:
@@ -90,6 +102,7 @@ personas:
     - Head of Business Development
     - Director of Business Development
     - Business Development Director
+    - Business Development Manager   # often the senior seller at aerospace and automotive suppliers (Q11)
     - Head of Growth
     - Head of Revenue Operations
   marketing_leader:

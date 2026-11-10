@@ -5,13 +5,15 @@ Written 10 November 2026 at the end of the session that built the lead engine fo
 
 ## Status (10 November 2026, later the same day)
 
-Done: `clients/quailworks/` exists and its decisions are recorded in `clients/quailworks/decisions.md`
-(US companies with 11-200 employees that sell to manufacturers and industrial operators; lead offer:
-done-for-you outbound). The engine's The Marble Jar-specific prompts, signal rules and copy logic are
-now per-client settings with The Marble Jar's behaviour as the default (CLAUDE.md, "Client-specific
-behaviour lives in config"); 74 tests. Next: the user buys two sending domains and four mailboxes
-(warm-up through November), then the first discovery run on or after 1 December 2026, when Apify's
-free credit resets (`clients/quailworks/launch-plan.md`).
+Done: `clients/quailworks/` exists and its decisions are recorded in `clients/quailworks/decisions.md`,
+decided from quailworks.co (the live site) and the founder's background: US companies with 11-500
+employees that sell to hardware engineering teams in aerospace, space, automotive and advanced
+manufacturing; lead offer: signal-based outbound, with the site's working session as the next step.
+The engine's The Marble Jar-specific prompts, signal rules and copy logic are now per-client settings
+with The Marble Jar's behaviour as the default (CLAUDE.md, "Client-specific behaviour lives in
+config"); 75 tests. Next, in parallel (the user asked not to wait): the user buys two brand sending
+domains and four fresh mailboxes (2-3 weeks of warm-up), a paid Apify plan and FullEnrich credits,
+while discovery, scoring, contacts and drafts run (`clients/quailworks/launch-plan.md`).
 
 ## What already exists (reuse it, do not rebuild)
 
@@ -40,9 +42,10 @@ and tiers → 3 FullEnrich people and emails → 4 send gate → 5 drafts, Jev f
 - Quailworks sp. z o.o., ul. Mikołaja Reja 34, 26-225 Gowarczów, Poland. KRS 0001108506,
   NIP 6582000945, REGON 528769513. Each management board member may represent alone; the
   President of the Management Board is Sidarth Thrumurthy.
-- Website quailworks.xyz (this repo's `index.html`): AI automation agency, est. 2025. Services:
-  outbound automation, workflow automation (Make, Zapier, custom APIs), custom AI agents.
-  Approach: diagnose, design, build, hand off. Project-based or retained.
+- Website: **quailworks.co** is the live site (the user, 10 November 2026): a GTM engineering firm
+  ("Pipeline, engineered."): signal-based outbound, inbound routing, RevOps and CRM data; a fixed-fee
+  audit, build sprints and an embedded team. This repo's `index.html` (quailworks.xyz, "AI automation
+  agency") is an older site and is not used for decisions.
 - Proof so far: one client (The Marble Jar), launching late November 2026. No results yet.
 
 ## Hard boundaries for the Quailworks campaign
@@ -86,7 +89,7 @@ and tiers → 3 FullEnrich people and emails → 4 send gate → 5 drafts, Jev f
 - **FullEnrich:** rate limits (429) are retried; slow bulk batches (up to ~4 hours) are recorded as
   `pending` and collected later, never bought twice.
 - **Do not ask the client; decide** (CLAUDE.md rule 8). For Quailworks the user is the client, so
-  decide from quailworks.xyz and record decisions in `clients/quailworks/decisions.md`.
+  decide from quailworks.co and record decisions in `clients/quailworks/decisions.md`.
 
 ## The Marble Jar status (do not disturb)
 
