@@ -17,7 +17,7 @@ parallel; only Tier 1-2 is emailed.
 **Quailworks runs** (Apify, FullEnrich and OpenRouter keys are injected in the cloud session):
 
 ```bash
-python -m gtm --client quailworks discover --dry-run     # 9 segments, US + UK, 2,700 companies, about $10.80
+python -m gtm --client quailworks discover --dry-run     # 8 searches, US + UK, 2,400 companies, about $9.60
 python -m gtm --client quailworks discover
 python -m gtm --client quailworks prefilter              # crawl and rules (free)
 python -m gtm --client quailworks jev                    # Jev 1.14 decisions, about $0.30
@@ -46,8 +46,8 @@ Drafts stay previews until `private/sender.yaml` exists; the founder sees them b
 
 | Step | Estimate | Basis |
 |---|---|---|
-| Companies found | about 2,700 | 9 searches x 300 |
-| Tier 1-2 | about 300-400 | about 15% reached Tier 1-2 in The Marble Jar's run |
+| Companies found | about 2,400 | 8 searches x 300 |
+| Tier 1-2 | about 300-350 | about 15% reached Tier 1-2 in The Marble Jar's run |
 | Contacts emailed | about 500 | up to 2 per company |
 | Positive replies | about 10-25 | 2-5% of people emailed, signal-based and fact-based |
 | Booked calls | about 7-18 | about 70% of positive replies with a one-hour answer |

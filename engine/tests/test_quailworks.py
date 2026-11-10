@@ -51,16 +51,17 @@ def test_quailworks_config_loads_and_follows_the_jev_policy(env):
     assert cfg.icp.allowed_countries == ["US", "GB"]
     assert "themarblejar.io" in cfg.icp.exclusions.domains
     plans = l1_discover.plan(cfg, None, None)
-    assert [p.segment.name for p in plans] == ["aerospace_suppliers_us", "automotive_suppliers_us", "eng_software_us",
-                                               "automation_us", "engineering_services_us", "aerospace_suppliers_uk",
-                                               "automotive_suppliers_uk", "motorsport_engineering_uk", "eng_software_uk"]
-    assert round(sum(p.est_cost for p in plans), 2) == 10.80         # inside the $15 Apify cap
-    assert plans[7].actor_input["locations"] == ["United Kingdom"] and plans[7].actor_input["searchQuery"] == "motorsport"
-    assert plans[0].actor_input["industryIds"] == ["52", "1"]
-    assert plans[4].actor_input["searchQuery"] == "aerospace"
-    software = plans[2].actor_input
+    assert [p.segment.name for p in plans] == ["industrial_software_mfg_us", "industrial_software_aero_us",
+                                               "industrial_software_ind_us", "robotics_automation_us",
+                                               "test_measurement_us", "aerospace_space_us",
+                                               "industrial_software_uk", "aerospace_space_uk"]
+    assert round(sum(p.est_cost for p in plans), 2) == 9.60          # inside the $15 Apify cap
+    assert plans[5].actor_input["industryIds"] == ["1", "52"]
+    assert plans[1].actor_input["searchQuery"] == "aerospace"
+    assert plans[7].actor_input["locations"] == ["United Kingdom"]
+    software = plans[0].actor_input
     assert software["industryIds"] == ["4"] and software["searchQuery"] == "manufacturing"
-    assert software["companySize"] == ["11-50", "51-200", "201-500"] and software["locations"] == ["United States"]
+    assert software["companySize"] == ["11-50", "51-200", "201-500", "501-1000"] and software["locations"] == ["United States"]
 
 
 def test_marble_jar_prompts_and_rules_are_unchanged(env):
@@ -87,7 +88,7 @@ def test_marble_jar_prompts_and_rules_are_unchanged(env):
 
 HOME = """<html lang="en"><head><title>Acme Robotics</title></head><body>
 <p>We build robotic welding cells for manufacturers across the Midwest. Our cells integrate with
-Salesforce and every major PLC brand. AS9100D certified. Visit us at IMTS 2026, booth #1234. Request a quote today.</p>
+Salesforce and every major PLC brand. AS9100D certified. Backed by Lux Capital. Visit us at IMTS 2026, booth #1234. Request a quote today.</p>
 <a href="/careers">Careers</a></body></html>"""
 CAREERS = """<html lang="en"><body><h1>Open positions</h1>
 <a href="/careers/jobs/sales-development-representative">Sales Development Representative</a>
@@ -111,18 +112,19 @@ def _account(conn, client, name, website, segments, rng="51-200", country="US", 
 def test_quailworks_signals_scoring_and_tier(env):
     cfg = load_client(QW)
     conn = db.connect()
-    acc = _account(conn, QW, "Acme Robotics Inc.", "https://acme-robotics.example", ["aerospace_suppliers_us"])
+    acc = _account(conn, QW, "Acme Robotics Inc.", "https://acme-robotics.example", ["robotics_automation_us"])
     conn.commit()
     l2_prefilter.run(cfg, conn, workers=1, fetcher_factory=lambda: FakeFetcher(SITE))
     s = conn.execute("SELECT fit, signal, tier, breakdown FROM l2_scores WHERE account_id=?", (acc,)).fetchone()
-    # fit: in range 30 + sweet spot 10 + aerospace suppliers 25 + US 15 + site 5 = 85
+    # fit: in range 30 + sweet spot 10 + robotics and automation 25 + US 15 + site 5 = 85
     # signals: sales job ad 35 + trade show 15 + sales tool in the job ad 10 + request a quote 10
-    #          + AS9100 certification 10 = 80
-    assert (s["fit"], s["signal"], s["tier"]) == (85, 80, "tier_1")
+    #          + AS9100 certification 10 + venture-backed 15 = 95
+    assert (s["fit"], s["signal"], s["tier"]) == (85, 95, "tier_1")
     ev = {(r["signal"], r["label"]) for r in conn.execute("SELECT signal, label FROM evidence WHERE account_id=?", (acc,))}
     assert ("sales_job_ad", "sales development representative") in ev
     assert ("trade_show", "IMTS") in ev and ("channel_sales", "request a quote") in ev
     assert ("trade_show", "visit us at our booth") in ev and ("supplier_certification", "AS9100") in ev
+    assert ("venture_backed", "backed by investors") in ev
     assert ("sales_stack", "HubSpot") in ev                 # named in the job ad
     assert ("sales_stack", "Salesforce") not in ev          # homepage product text does not count
 
@@ -135,7 +137,7 @@ def test_quailworks_jev_questions_and_job_title_evidence(env):
     assert "Software, engineering, automation and industrial companies" in q["not_a_buyer"]["instructions"]
     assert q["not_a_buyer"]["criteria"]["false"] == "A company that sells to other businesses and could buy"
     assert q["title_0"]["instructions"].startswith('Is the job title "Inside Sales Representative" a sales role')
-    assert "hardware engineering teams in aerospace, space, automotive" in q["icp_fit"]["instructions"]
+    assert "high-value products" in q["icp_fit"]["instructions"] and "Poor fit: build-to-print" in q["icp_fit"]["instructions"]
     ev = l2_prefilter.jev_evidence(cfg, None, {"titles": {"Inside Sales Representative": 0.9, "Welder": 0.1}})
     assert [(e.signal, e.label) for e in ev] == [("sales_job_ad", "job title: Inside Sales Representative")]
 
@@ -167,7 +169,7 @@ class StubJev:
 
 
 def _qw_contact(conn):
-    acc = _account(conn, QW, "Acme Robotics Inc.", "https://acme-robotics.example", ["automation_us"], status="tier_1")
+    acc = _account(conn, QW, "Acme Robotics Inc.", "https://acme-robotics.example", ["robotics_automation_us"], status="tier_1")
     conn.execute("INSERT INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, careers_url, job_titles,"
                  " scored_at) VALUES (?,?,?,?,?,?,?,?,?)",
                  (acc, 85, 70, "tier_1", 1, 0, "https://acme-robotics.example/careers",
@@ -248,7 +250,7 @@ def test_quailworks_never_sees_marble_jar_rows(env):
     assert l5_copy.draft(qw, conn, jev=JevClient(qw.ai, session=StubJev()))["drafted"] == 0
     # The same company found by Quailworks' own discovery becomes a separate Quailworks row.
     assert db.upsert_account(conn, QW, {"linkedin_url": None, "domain": "voorbeeld.example", "name": "Voorbeeld",
-                                        "source": "test", "status": "qualified_l1"}, "automation_us") == "new"
+                                        "source": "test", "status": "qualified_l1"}, "robotics_automation_us") == "new"
 
 
 def test_hubspot_token_is_per_client(monkeypatch):

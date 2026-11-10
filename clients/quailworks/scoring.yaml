@@ -4,21 +4,21 @@
 
 fit:
   employees:
-    in_range: 30          # 11-500
-    sweet_spot: [30, 300]
+    in_range: 30          # 11-1,000
+    sweet_spot: [50, 500] # big enough to fund a retainer, small enough to decide fast
     sweet_spot_bonus: 10
   industry_group:
-    aerospace_suppliers: 25
-    automotive_suppliers: 25
-    eng_software: 25
-    automation: 20
-    engineering_services: 20
-    precision_parts: 15
-    instruments: 15
-    machinery: 15
+    industrial_software: 25
+    robotics_automation: 25
+    test_measurement: 25
+    aerospace_space: 20   # mixed: venture-backed tech plus build-to-print shops; Jev's ICP fit sorts them
+    automotive_suppliers: 5   # parked: price-sensitive (decisions.md Q9)
+    engineering_services: 5
+    precision_parts: 5
+    machinery: 10
   country:
-    US: 15
-    GB: 15
+    US: 15                # bigger budgets and the bigger market
+    GB: 10
   website_reachable: 5
   dutch_language_site: 0
   # A division of a large group usually buys services at group level.
@@ -35,6 +35,7 @@ signals:
   sales_stack: 10         # a CRM or sales tool named in a job ad: already invests in outbound
   channel_sales: 10       # find-a-rep, distributor or request-a-quote selling
   supplier_certification: 10   # AS9100, IATF 16949, NADCAP, ITAR: proof they sell into aerospace or automotive
+  venture_backed: 15      # named investors or a Series round on the site: budget to spend and a board asking for pipeline
   headcount_growth: 10    # several open roles, growth language, new facility or new machines
 
 signal_bonuses:
@@ -93,6 +94,11 @@ detect:
     - {label: "IATF 16949", pattern: '\bIATF\s?16949\b'}
     - {label: "NADCAP", pattern: '\bnadcap\b'}
     - {label: "ITAR registered", pattern: '\bITAR[\s-]+(registered|compliant|certified)'}
+  venture_backed:
+    # The investor name must be capitalised (case-sensitive part), so "backed by a warranty" does not count.
+    - {label: "backed by investors", pattern: '\bbacked\s+by\s+(leading\s+|top\s+)?(investors|VCs?|(?-i:[A-Z][\w&]+))'}
+    - {label: "Series round", pattern: '\bseries\s+[A-D]\s+(round|funding|financing|investment)\b|\b(raised|raises|closes|closed)\s+(a\s+)?\$\s?\d+(\.\d+)?\s*(M|million|B|billion)\b'}
+    - {label: "seed round", pattern: '\bseed\s+(round|funding|financing)\b'}
   channel_sales:
     - {label: "find a rep", pattern: 'find\s+(a|your)\s+(local\s+)?(sales\s+)?(rep|representative|distributor)\b'}
     - {label: "distributor network", pattern: 'become\s+a\s+distributor|distributor\s+locator|our\s+distributors'}

@@ -4,13 +4,16 @@
 
 version: 1
 
-# Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md Q8-Q10).
+# Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md Q8-Q10). Prospects must have budget, high
+# margins and a large market of their own, so that booked meetings are worth a lot to them (Q9).
 buyer_profile: >-
-  US and UK companies with 11-500 employees that sell business-to-business products or services to hardware
-  engineering teams in aerospace, space, automotive and advanced manufacturing: component and
-  precision-parts suppliers, and software, test or engineering tools for those teams. Their buyers are
-  design, test and supplier-quality engineers who are hard to reach, so new business depends on trade
-  shows, distributors, referrals and a small sales or business-development team.
+  US and UK technology companies with 11-1,000 employees that sell high-value products (typical deals
+  of $25,000 or more) to engineering, manufacturing, aerospace, space or defense organizations:
+  industrial and engineering software, robotics and automation, test, measurement and inspection
+  equipment, and venture-backed aerospace, space and defense technology. Strong fit: software or
+  high-tech hardware margins, recent funding or clear growth, and thousands of possible customer
+  accounts. Poor fit: build-to-print machine shops and fabricators, distributors and parts suppliers
+  that compete on price, and engineering staffing or consulting firms.
 # What we offer, in one line, for Jev's contact-relevance question (decisions.md Q1).
 offer_summary: >-
   Signal-based outbound built as a system: finds accounts showing a reason to buy, writes to the right
@@ -18,53 +21,56 @@ offer_summary: >-
 
 company:
   employees_min: 11
-  employees_max: 500
+  employees_max: 1000
   # Values passed to the Harvest company-size filter (same spelling as The Marble Jar's live runs).
-  linkedin_company_sizes: ["11-50", "51-200", "201-500"]
+  linkedin_company_sizes: ["11-50", "51-200", "201-500", "501-1000"]
 
 industry_groups:
-  aerospace_suppliers:
-    label: Aerospace, defense and space suppliers
-    ids: [52, 1]             # Aviation and Aerospace Component Manufacturing; Defense and Space Manufacturing
+  industrial_software:
+    label: Industrial and engineering software
+    ids: [4]                 # Software Development, narrowed by each segment's search word
+  robotics_automation:
+    label: Robotics and automation technology
+    ids: [147, 3247, 3248]   # Automation Machinery Manufacturing; Robot Manufacturing; Robotics Engineering
+  test_measurement:
+    label: Test, measurement and inspection equipment
+    ids: [983]               # Measuring and Control Instrument Manufacturing
+  aerospace_space:
+    label: Aerospace, space and defense technology
+    ids: [1, 52]             # Defense and Space Manufacturing; Aviation and Aerospace Component Manufacturing
+  # Parked: price-sensitive buyers (decisions.md Q9).
   automotive_suppliers:
     label: Automotive parts suppliers
     ids: [1042]              # Motor Vehicle Parts Manufacturing
-  eng_software:
-    label: Software for manufacturing and engineering teams
-    ids: [4]                 # Software Development, narrowed by the segment's search word
-  automation:
-    label: Industrial automation and robotics
-    ids: [147, 3247, 3248]   # Automation Machinery Manufacturing; Robot Manufacturing; Robotics Engineering
   engineering_services:
     label: Engineering services
-    ids: [3242]              # Engineering Services, narrowed by the segment's search word
+    ids: [3242]              # Engineering Services
   precision_parts:
     label: Precision parts and fabrication
     ids: [876, 840]          # Turned Products and Fastener Manufacturing; Fabricated Metal Products
-  instruments:
-    label: Measuring, control and electrical equipment
-    ids: [983, 2468]         # Measuring and Control Instrument Manufacturing; Electrical Equipment Manufacturing
   machinery:
     label: Industrial machinery
     ids: [135, 55, 928]      # Industrial Machinery; Machinery; Metalworking Machinery Manufacturing
 
-# One search per segment. 2,700 full-mode companies = $10.80 on the paid Apify plan (decisions.md Q20).
-# Discovery is cheap, so it is broad; sending stays narrow (Tier 1-2 only, sending.yaml).
+# One search per segment, 300 companies each per run; the next run continues on the next page (LinkedIn
+# allows 1,000 per search). 2,400 full-mode companies = $9.60 on the paid Apify plan (decisions.md Q20).
 # search_query narrows a broad industry; confirm on the first live run (the raw response is stored).
 segments:
-  - {name: aerospace_suppliers_us,  enabled: true,  industry_group: aerospace_suppliers,  locations: [United States], max_items: 300}
-  - {name: automotive_suppliers_us, enabled: true,  industry_group: automotive_suppliers, locations: [United States], max_items: 300}
-  - {name: eng_software_us,         enabled: true,  industry_group: eng_software,         locations: [United States], max_items: 300, search_query: manufacturing}
-  - {name: automation_us,           enabled: true,  industry_group: automation,           locations: [United States], max_items: 300}
-  - {name: engineering_services_us, enabled: true,  industry_group: engineering_services, locations: [United States], max_items: 300, search_query: aerospace}
-  # United Kingdom from the start (decisions.md Q8): the founder's own engineering market.
-  - {name: aerospace_suppliers_uk,  enabled: true,  industry_group: aerospace_suppliers,  locations: [United Kingdom], max_items: 300}
-  - {name: automotive_suppliers_uk, enabled: true,  industry_group: automotive_suppliers, locations: [United Kingdom], max_items: 300}
-  - {name: motorsport_engineering_uk, enabled: true, industry_group: engineering_services, locations: [United Kingdom], max_items: 300, search_query: motorsport}
-  - {name: eng_software_uk,         enabled: true,  industry_group: eng_software,         locations: [United Kingdom], max_items: 300, search_query: manufacturing}
-  # Phase 2: only after the first segments show a working message (launch-plan.md).
+  # United States: most of the volume (bigger budgets, bigger market; decisions.md Q8)
+  - {name: industrial_software_mfg_us, enabled: true, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: manufacturing}
+  - {name: industrial_software_aero_us, enabled: true, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: aerospace}
+  - {name: industrial_software_ind_us, enabled: true, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: industrial}
+  - {name: robotics_automation_us,  enabled: true,  industry_group: robotics_automation, locations: [United States], max_items: 300}
+  - {name: test_measurement_us,     enabled: true,  industry_group: test_measurement,    locations: [United States], max_items: 300}
+  - {name: aerospace_space_us,      enabled: true,  industry_group: aerospace_space,     locations: [United States], max_items: 300}
+  # United Kingdom: software and aerospace/space technology only
+  - {name: industrial_software_uk,  enabled: true,  industry_group: industrial_software, locations: [United Kingdom], max_items: 300, search_query: manufacturing}
+  - {name: aerospace_space_uk,      enabled: true,  industry_group: aerospace_space,     locations: [United Kingdom], max_items: 300}
+  # Parked (decisions.md Q9): price-sensitive buyers. Re-open only if the core segments run dry.
+  - {name: automotive_suppliers_us, enabled: false, industry_group: automotive_suppliers, locations: [United States], max_items: 300}
+  - {name: engineering_services_us, enabled: false, industry_group: engineering_services, locations: [United States], max_items: 300, search_query: aerospace}
+  - {name: motorsport_engineering_uk, enabled: false, industry_group: engineering_services, locations: [United Kingdom], max_items: 300, search_query: motorsport}
   - {name: precision_parts_us,      enabled: false, industry_group: precision_parts,      locations: [United States], max_items: 300}
-  - {name: instruments_us,          enabled: false, industry_group: instruments,          locations: [United States], max_items: 300}
   - {name: machinery_us,            enabled: false, industry_group: machinery,            locations: [United States], max_items: 300}
 
 # US CAN-SPAM and UK PECR: opt-out and postal address in every first email (gate.yaml). PECR allows
@@ -109,11 +115,15 @@ personas:
     - Head of Business Development
     - Director of Business Development
     - Business Development Director
-    - Business Development Manager   # often the senior seller at aerospace and automotive suppliers (Q11)
+    - Business Development Manager   # often the senior seller at aerospace and space companies (Q11)
     - Commercial Director            # the usual UK title for the head of sales
     - Head of Commercial
+    - VP Growth
     - Head of Growth
+    - VP Revenue Operations
     - Head of Revenue Operations
+    - Director of Revenue Operations
+    - Head of Sales Operations
   marketing_leader:
     - CMO
     - Chief Marketing Officer

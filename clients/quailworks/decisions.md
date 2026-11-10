@@ -13,7 +13,8 @@ Sources: **quailworks.co** (the live site, read 2026-11-10; the user confirmed i
 not quailworks.xyz, which is this repository's older `index.html`); the founder's CV (shared by the
 user 2026-11-10, kept out of this public repository); the Polish company register (KRS 0001108506,
 `docs/quailworks-handoff.md`); the user's answers of 2026-11-10 (1-3 clients so far, the US as the
-market, a first engagement under $3,000); the lessons of The Marble Jar build.
+market, a first engagement under $3,000, later replaced by value pricing, see Q6); the lessons of The
+Marble Jar build.
 
 ## Offer and copy
 
@@ -40,38 +41,46 @@ market, a first engagement under $3,000); the lessons of The Marble Jar build.
   things we would fix first, whether or not we work together (quailworks.co contact section). Email 3
   offers a lighter alternative: 10 companies in their market showing a signal now, each with its source
   (Layers 1-2 only, company-level data, at most 5 a month, under $1 each).
-- **Q6. Price:** never in email. On calls, the path on quailworks.co: a GTM audit at a fixed fee (the
-  first engagement, under $3,000, the user's answer), then a build sprint quoted after the audit, then an
-  embedded team or a handover. Change if: three calls in a row stall on price, or three sign without
-  hesitation (then raise it).
+- **Q6. Price: priced on value, for buyers who are not price-sensitive** (the user, 2026-11-10: target
+  companies with discretionary budget and charge for the service; this replaces the earlier "first
+  engagement under $3,000"). Never in email. On calls, the path on quailworks.co: a **GTM audit at
+  $3,500** (1-2 weeks, fixed fee, credited in full against a build sprint started within 30 days), a
+  **build sprint from $15,000** (fixed scope, quoted after the audit), and an **embedded engineer from
+  $6,000 a month**. The first three clients get 20% off the build sprint in exchange for a named case
+  study. Why: comparable firms charge $3,000-$10,000 a month (docs in the website branch,
+  gtm-agency-benchmark.md), and for a company selling $25,000+ deals one extra won deal pays for the
+  sprint. Change if: three calls in a row stall on price (audit to $2,500), or three sign without
+  hesitation (raise everything by 25%).
 - **Q7. Voice:** short, plain, engineer-to-engineer, in the founder's name, in English (UK spelling on
   the site; US spelling in emails to US buyers). Openings are questions that presume nothing; Jev 1.14's
   fact check falls back to a safer opening automatically.
 
 ## Targeting
 
-- **Q8. Market: the United States and the United Kingdom, from the start.** The US is the largest
-  market (the user's choice) and allows B2B cold email with an opt-out and a postal address (CAN-SPAM).
-  The UK is where the founder's background carries most weight (studied and worked on UK aerospace,
-  automotive and motorsport programs), it is one hour from the founder (US Central is seven), and PECR
-  allows business email to limited companies with an opt-out. Running both from day one shows within
-  weeks which market books calls cheaper. Ireland later; Poland and Germany require prior consent even
-  for business email, so they are out. Change if: one market books calls at under half the other's
-  cost after 150 contacts each (then move the volume there).
-- **Q9. Who: companies that sell to hardware engineering teams in aerospace, space, automotive and
-  advanced manufacturing.** Phase 1: aerospace and space suppliers (LinkedIn 52, 1), automotive parts
-  suppliers (1042), and software for manufacturing and engineering teams (4, search word
-  "manufacturing"). Why: their buyers are design, test and supplier-quality engineers, whom generic
-  sales emails do not reach, and the founder was that buyer for over a decade (CV); quailworks.co's
-  "engineering firm before a GTM firm" positioning fits them. Also searched from the start, because
-  discovery is cheap: automation and robotics (147, 3247, 3248) and engineering services (3242, search
-  word "aerospace"). Phase 2 (off): precision parts (876, 840), instruments and electrical equipment
-  (983, 2468), industrial machinery (135, 55, 928).
-  Change if: one segment produces most conversations (move the budget there).
-- **Q10. Size: 11-500 employees** (LinkedIn bands 11-50, 51-200, 201-500), sweet spot 30-300. Why:
-  quailworks.co sells to revenue teams with a CRM to build in, but a fixed-fee audit under $3,000 is an
-  easy decision up to about 500 people; above that, procurement slows a new firm down.
-  Change if: meetings come mainly from one band.
+- **Q8. Market: the United States for most of the volume, the United Kingdom alongside.** The US has the
+  most target companies and the biggest GTM budgets (6 of 8 searches), and allows B2B cold email with an
+  opt-out and a postal address (CAN-SPAM). The UK, where the founder's background carries most weight
+  and one hour from the founder, gets its two strongest segments only (software and aerospace/space
+  technology); PECR allows business email to limited companies with an opt-out. Ireland later; Poland
+  and Germany require prior consent even for business email, so they are out. Change if: one market
+  books calls at under half the other's cost after 150 contacts each (then move the volume there).
+- **Q9. Who: technology companies that sell high-value products to engineering, manufacturing,
+  aerospace, space and defense organizations, and can afford to pay for growth.** The test (the user,
+  2026-11-10): a big market of their own, discretionary budget, and no price sensitivity. That means
+  high deal values (typically $25,000+), software or high-tech hardware margins, and funding or clear
+  growth: for them one booked meeting is worth thousands. Core segments: industrial and engineering
+  software (LinkedIn 4, three searches: "manufacturing", "aerospace", "industrial"; US and UK),
+  robotics and automation (147, 3247, 3248), test, measurement and inspection equipment (983), and
+  aerospace, space and defense technology (1, 52; US and UK), where Jev 1.14's ICP fit separates
+  venture-backed technology companies from build-to-print shops. The founder fit holds: their buyers
+  are the engineers the founder was for over a decade (CV). **Parked as price-sensitive:** automotive
+  parts suppliers (cost-down pressure from carmakers, tariffs), engineering services and UK motorsport
+  engineering (staffing-like margins, small firms), precision parts and fabrication, machinery.
+  Change if: the core segments run dry, or `learn` shows a parked type booking calls cheaply.
+- **Q10. Size: 11-1,000 employees** (LinkedIn bands 11-50 to 501-1000), sweet spot 50-500. Why: from
+  about 50 people a company has a revenue team and the budget for a retainer; venture-backed companies
+  below that still qualify through the funding signal; quailworks.co's enterprise section (security,
+  NDAs, procurement) supports companies up to 1,000. Change if: meetings come mainly from one band.
 - **Q11. Who we email:** sales and business-development leaders first (in aerospace, the director of
   business development is often the senior seller), then marketing leaders, then the CEO, founder or
   owner at companies up to about 150 people. Never the SDRs or BDRs themselves.
@@ -80,8 +89,9 @@ market, a first engagement under $3,000); the lessons of The Marble Jar build.
   system takes over (The Marble Jar lesson: hiring for the work you replace beats fit). Then: exhibiting
   at trade shows (US and UK aerospace, automotive, motorsport and manufacturing shows), a supplier
   certification (AS9100, IATF 16949, NADCAP, ITAR: proof they sell into aerospace or automotive
-  engineering teams, and an opening of its own), a CRM or sales tool named in a job ad, rep or
-  distributor-driven sales, and growth or new capacity. Weights in `scoring.yaml`.
+  engineering teams, and an opening of its own), **venture backing** (named investors, a Series or seed
+  round on the site: budget to spend and a board asking for pipeline), a CRM or sales tool named in a
+  job ad, rep or distributor-driven sales, and growth or new capacity. Weights in `scoring.yaml`.
   Change if: `learn` shows another signal converts better.
 - **Q13. No lookalikes yet.** The Marble Jar (a Dutch automation studio) is not like these targets, so it
   is excluded but not used as a lookalike. Our own won deals become the list (`best-clients`).
@@ -122,8 +132,8 @@ market, a first engagement under $3,000); the lessons of The Marble Jar build.
   about 4 weeks instead of 10. Scale only what `learn` shows works.
 - **Q20. Budgets** (`limits.yaml`, raised on the user's say-so of 2026-11-10). Apify's free $5 credit is
   shared with The Marble Jar and was used up in November, so the user moves the account to a paid plan
-  (Starter) and Quailworks may spend $15 a month on discovery (the first run, 2,700 US and UK companies,
-  is about $10.80). FullEnrich credits are shared and the user tops them up: Quailworks may spend $40 a month (about
+  (Starter) and Quailworks may spend $15 a month on discovery (the first run, 2,400 US and UK companies,
+  is about $9.60). FullEnrich credits are shared and the user tops them up: Quailworks may spend $40 a month (about
   730 credits, roughly 150 Tier 1-2 accounts). Jev 1.14 $3, MillionVerifier $2. The Marble Jar's caps
   are unchanged.
 - **Q21. CRM:** Quailworks' own free HubSpot portal, only once meetings exist, through its own token
