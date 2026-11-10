@@ -19,6 +19,11 @@ behaviour applies:
   title_role_words                    extra regex words that make a vacancy title quotable
   company_suffixes                    extra legal suffixes to drop from company names (e.g. inc, llc)
   banned_phrases                      extra phrases that block automatic approval
+  quote_titles                        [{label, pattern}]: quote a clean role name found in a confirmed
+                                      open title, never the raw title text
+  job_title_qa / named_facts.<k>.qa   how the fact check sees a fact ("Open job on their careers page")
+  company_name_cut                    separators that end a company name (LinkedIn taglines)
+  angle: priority                     first supported hook in hook_priority instead of Jev's choice
 The job-title fact follows the signal in ai.yaml `job_titles.signal` (default admin_job_ad).
 """
 
@@ -80,7 +85,13 @@ def load_sender(cfg: ClientConfig) -> tuple[dict, bool]:
         return yaml.safe_load(fh), real.exists()
 
 
-def clean_company(name: str, extra_suffixes: list[str] | None = None) -> str:
+def clean_company(name: str, extra_suffixes: list[str] | None = None, cut: list[str] | None = None) -> str:
+    """Company name for a sentence. `cut` (sequence.yaml company_name_cut) drops LinkedIn taglines:
+    "Vimachem - IIoT Pharma 4.0 AI Platform" -> "Vimachem"."""
+    for sep in cut or []:
+        head = name.split(sep)[0].strip()
+        if sep in name and len(head) >= 2:
+            name = head
     out = LEGAL_SUFFIX.sub("", name.strip())
     if extra_suffixes:
         alts = "|".join(re.escape(s).replace(r"\.", r"\.?") for s in extra_suffixes)
@@ -152,10 +163,22 @@ def facts_for(conn, account: dict, seq: dict | None = None, rules: SignalRules =
                   if e["signal"] == title_signal and e["label"].startswith("job title: ")]
     rule_titles = [t for t in titles
                    if any(re.search(p, t, re.I) for _, p in rules.rules.get(title_signal, []))]
-    exact = next((t for t in jev_titles + rule_titles
-                  if t in titles and usable_title(clean_title(t, extra), extra)), None)
-    if exact:
-        facts["job_title"] = {"value": clean_title(exact, extra), "raw": exact, "source": careers}
+    quote = seq.get("quote_titles")
+    if quote:
+        # Quote a clean role name when a confirmed open title contains it. Careers pages often glue the
+        # job description onto the title, so the title text itself is never quoted.
+        for t in jev_titles + rule_titles:
+            hit = next((q for q in quote if re.search(q["pattern"], t, re.I)), None) if t in titles else None
+            if hit:
+                facts["job_title"] = {"value": hit["label"], "raw": t, "source": careers}
+                break
+    else:
+        exact = next((t for t in jev_titles + rule_titles
+                      if t in titles and usable_title(clean_title(t, extra), extra)), None)
+        if exact:
+            facts["job_title"] = {"value": clean_title(exact, extra), "raw": exact, "source": careers}
+    if "job_title" in facts and seq.get("job_title_qa"):
+        facts["job_title"]["qa"] = seq["job_title_qa"]
     if len(titles) >= 5:
         facts["open_roles"] = {"value": len(titles), "source": careers}
     for key, spec in named_facts(seq).items():
@@ -163,6 +186,8 @@ def facts_for(conn, account: dict, seq: dict | None = None, rules: SignalRules =
         hit = next((e for e in ev if e["signal"] == spec["signal"] and (not labels or e["label"] in labels)), None)
         if hit:
             facts[key] = {"value": hit["label"], "source": hit["url"], "quote": hit["quote"]}
+            if spec.get("qa"):
+                facts[key]["qa"] = spec["qa"]       # tells the fact check where this fact was found
     return facts
 
 
@@ -204,7 +229,8 @@ def choose_request(seq: dict, account: dict, contact: dict, hooks: list[str],
             "instructions": seq.get("process_question", "Which example process will matter most to this person?"),
             "criteria": {k: (v or {}).get("description") or DEFAULT_PROCESS.get(k, k)
                          for k, v in seq["process"].items()}}
-    if len(hooks) > 1:
+    # sequence.yaml angle: priority -> the first supported hook in hook_priority, no Jev choice.
+    if len(hooks) > 1 and seq.get("angle") != "priority":
         questions["angle"] = {"type": "choice",
                               "instructions": "Which opening will feel most relevant to this person?",
                               "criteria": {h: hook_meta(seq, h)["description"] for h in hooks}}
@@ -215,7 +241,7 @@ def render(seq: dict, lang: str, hook: str, process: str, facts: dict, contact: 
            sender: dict, gdpr: str) -> tuple[str, list[dict]]:
     values = {
         "first_name": clean_first_name(contact["first_name"]),
-        "company": clean_company(account["name"], seq.get("company_suffixes")),
+        "company": clean_company(account["name"], seq.get("company_suffixes"), seq.get("company_name_cut")),
         **fact_values(seq, facts),
         "sender_first_name": sender.get("first_name", ""),
         "gdpr_notice": gdpr,
@@ -233,7 +259,7 @@ def render(seq: dict, lang: str, hook: str, process: str, facts: dict, contact: 
 
 
 def qa_request(facts: dict, account: dict, email: str, seller_name: str = "The Marble Jar") -> tuple[dict, dict]:
-    fact_lines = [f"Company name: {account['name']}"] + [f"{k}: {v['value']}" for k, v in facts.items()]
+    fact_lines = [f"Company name: {account['name']}"] + [f"{v.get('qa') or k}: {v['value']}" for k, v in facts.items()]
     state = {"facts_about_the_recipient_company": fact_lines, "email": email}
     questions = {"unsupported_claim": {
         "type": "noul",
@@ -318,8 +344,9 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
 def _fact_check(cfg, conn, jev, seq, lang, hook, subject, facts, contact, account, sender) -> float:
     """Jev 1.14 checks only what claims something about the company: the subject and the opening.
     Data minimisation: no names are sent."""
-    hook_text = seq["hooks"][hook][lang].format(company=clean_company(account["name"], seq.get("company_suffixes")),
-                                                **fact_values(seq, facts))
+    hook_text = seq["hooks"][hook][lang].format(
+        company=clean_company(account["name"], seq.get("company_suffixes"), seq.get("company_name_cut")),
+        **fact_values(seq, facts))
     qa_text = f"Subject: {subject}\n{hook_text}"
     for name, placeholder in ((clean_first_name(contact["first_name"]), "[first name]"),
                               (contact.get("last_name") or "", "[last name]"),

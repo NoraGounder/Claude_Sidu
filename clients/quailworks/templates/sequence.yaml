@@ -7,6 +7,26 @@
 # A hook is only used when its fact exists; otherwise the next one in `hook_priority` applies.
 
 hook_priority: [sales_job_ad, trade_show, certification, growth, sales_stack, generic]
+# The most specific supported opening goes first; Jev 1.14's fact check still falls back down this list.
+# (First drafts, 2026-11-10: with Jev choosing, 155 of 185 emails used the generic opening.)
+angle: priority
+
+# Quote a clean role name when a confirmed open job title contains it. Careers pages often glue the job
+# description onto the title, so the raw title is never quoted. First match wins (most specific first).
+quote_titles:
+  - {label: "sales development representative", pattern: 'sales\s+development\s+rep|\bSDR\b'}
+  - {label: "business development representative", pattern: 'business\s+development\s+rep|\bBDR\b'}
+  - {label: "founding account executive", pattern: 'founding\s+account\s+executive'}
+  - {label: "account executive", pattern: 'account\s+executive'}
+  - {label: "sales engineer", pattern: 'sales\s+engineer'}
+  - {label: "business development manager", pattern: 'business\s+development\s+manager'}
+  - {label: "business development director", pattern: 'director,?\s+(of\s+)?business\s+development|business\s+development\s+director|head\s+of\s+business\s+development'}
+  - {label: "sales director", pattern: 'sales\s+director|director,?\s+(of\s+)?sales\b|head\s+of\s+sales'}
+  - {label: "inside sales representative", pattern: 'inside\s+sales'}
+  - {label: "sales manager", pattern: '\bsales\s+manager'}
+job_title_qa: "Open job listed on their careers page"
+# LinkedIn page names often carry a tagline: "Vimachem - IIoT Pharma 4.0 AI Platform" -> "Vimachem".
+company_name_cut: [" | ", " - ", " – ", " — ", ", powered by", ": "]
 greetings:
   en: ["Hi", "Hello"]
 signoffs:
@@ -14,14 +34,14 @@ signoffs:
 
 # Facts quoted from evidence labels (scoring.yaml `detect`), with the source URL kept for review.
 named_facts:
-  stack: {signal: sales_stack, labels: [HubSpot, Salesforce, Pipedrive, Zoho CRM, Apollo, ZoomInfo, Salesloft, Outreach]}
-  trade_show: {signal: trade_show, labels: [IMTS, FABTECH, ProMat, MODEX, Automate, PACK EXPO, Hannover Messe, SEMICON,
+  stack: {signal: sales_stack, qa: "Sales tool named in one of their job ads", labels: [HubSpot, Salesforce, Pipedrive, Zoho CRM, Apollo, ZoomInfo, Salesloft, Outreach]}
+  trade_show: {signal: trade_show, qa: "Trade show named on their website", labels: [IMTS, FABTECH, ProMat, MODEX, Automate, PACK EXPO, Hannover Messe, SEMICON,
                                             The Assembly Show, Paris Air Show, Farnborough, MRO Americas, Space Symposium,
                                             AeroDef, SAE WCX, The Battery Show, CAMX, JEC World, RAPID + TCT, Formnext,
                                             Autosport International, Advanced Engineering, MACH, Space-Comm Expo,
                                             Engineering Design Show]}
   # ITAR is a registration, not a certification, so it scores but is not quoted.
-  certification: {signal: supplier_certification, labels: [AS9100, IATF 16949, NADCAP]}
+  certification: {signal: supplier_certification, qa: "Certification named on their website", labels: [AS9100, IATF 16949, NADCAP]}
 
 # English role words that make a vacancy title quotable ("account executive", "sales engineer").
 title_role_words: 'representative|\brep\b|executive|manager|engineer|specialist|associate|developer|director'
@@ -70,8 +90,9 @@ hooks:
     needs: null
     description: Open with how they find new customers today
     subject:
-      en: "new customers at {company}"
-    en: "How does {company} start conversations with new customers today: trade shows and referrals, or a team that reaches out?"
+      en: "next customers at {company}"
+    # A pure question: the first version listed channels and was flagged as an assumption in 43% of drafts.
+    en: "Quick question: how does {company} find its next customers today?"
 
 steps:
   - day: 0

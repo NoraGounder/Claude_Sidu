@@ -203,9 +203,11 @@ def test_quailworks_draft_from_facts_then_approval(env):
     assert body.splitlines()[0].endswith("Jordan,")
     assert "Quailworks sp. z o.o., ul. Mikołaja Reja 34, 26-225 Gowarczów, Poland." in body
     assert "http" not in body and not any("{" in s["body"] for s in steps)    # no link, no unfilled placeholder
-    # One process, so Jev is asked only for the angle and the fact check; it never sees names or the client.
+    # One process and angle: priority, so Jev only fact-checks; it never sees names or the client.
     asked = [k for b in stub.bodies for k in b["questions"]]
-    assert "process" not in asked and "angle" in asked and "unsupported_claim" in asked
+    assert asked == ["unsupported_claim"]
+    assert "Open job listed on their careers page: sales development representative" in json.dumps(stub.bodies)
+    assert "Sales tool named in one of their job ads: HubSpot" in json.dumps(stub.bodies)
     sent = json.dumps(stub.bodies)
     assert "Jordan" not in sent and "@" not in sent and "Marble" not in sent
     assert "Quailworks's own offer" in sent
@@ -296,3 +298,27 @@ def test_quailworks_skips_people_the_send_gate_would_hold_back(env):
     kept = [p["person_id"] for p in l3_contacts.screen(qw, acc, people)]
     assert kept == ["1", "3", "4"]                     # Poland dropped; unknown country kept for the gate
     assert l3_contacts.sendable_countries(tmj) is None  # The Marble Jar unchanged (not opted in)
+
+
+def test_quailworks_quotes_clean_role_names_and_trims_taglines(env):
+    cfg = load_client(QW)
+    seq = l5_copy.load_sequence(cfg)
+    conn = db.connect()
+    glued = "Account Executive We’re looking for a mid-level generalist to join our team. U.S. - Remote Full-time"
+    for titles, want in ((["Field Service Engineer", glued], "account executive"),
+                         (["销售工程师（Sales engineer"], "sales engineer"),
+                         (["Sr Director, Business Development (Government/Defense)"], "business development director"),
+                         (["Welder"], None)):
+        acc = _account(conn, QW, "Acme", "https://acme.example", ["robotics_automation_us"], status="tier_1")
+        conn.execute("INSERT INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, careers_url, job_titles,"
+                     " scored_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                     (acc, 85, 35, "tier_1", 1, 0, "https://acme.example/careers", json.dumps(titles), "t"))
+        for t in titles:   # Jev 1.14 confirmed every title as a sales role
+            conn.execute("INSERT INTO evidence(account_id, layer, signal, label, url, quote, found_at) VALUES (?,?,?,?,?,?,?)",
+                         (acc, "L2", "sales_job_ad", f"job title: {t}", "https://acme.example/careers", t, "t"))
+        facts = l5_copy.facts_for(conn, {"id": acc}, seq, signals.rules_for(cfg.scoring), "sales_job_ad")
+        assert facts.get("job_title", {}).get("value") == want, titles
+    cut = seq["company_name_cut"]
+    assert l5_copy.clean_company("Vimachem - IIoT Pharma 4.0 AI Platform", seq["company_suffixes"], cut) == "Vimachem"
+    assert l5_copy.clean_company("Infor XA | Manufacturing Software", seq["company_suffixes"], cut) == "Infor XA"
+    assert l5_copy.clean_company("Acme Robotics, Inc.", seq["company_suffixes"], cut) == "Acme Robotics"
