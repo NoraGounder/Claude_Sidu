@@ -57,14 +57,20 @@ industry_groups:
 # search_query narrows a broad industry; confirm on the first live run (the raw response is stored).
 segments:
   # United States: most of the volume (bigger budgets, bigger market; decisions.md Q8)
-  - {name: industrial_software_mfg_us, enabled: true, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: manufacturing}
-  - {name: industrial_software_aero_us, enabled: true, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: aerospace}
-  - {name: industrial_software_ind_us, enabled: true, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: industrial}
+  # One-word search words match company names ("Tulsa Truck Manufacturing" tagged as software), so the
+  # software searches use two-word phrases (first live test, 2026-11-10: 17 of 44 were software).
+  - {name: industrial_software_mfg_us, enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: manufacturing}
+  - {name: mfg_software_us,         enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 300, search_query: manufacturing software}
+  - {name: industrial_software_aero_us, enabled: true, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: aerospace software}
+  - {name: industrial_software_ind_us, enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: industrial software}   # only 4 results
+  - {name: eng_software_us,         enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: engineering software}   # matched "Software Engineering" dev shops
+  - {name: industrial_ai_us,        enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 300, search_query: industrial AI}
+  - {name: iiot_us,                 enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: IIoT}   # 1 result
   - {name: robotics_automation_us,  enabled: true,  industry_group: robotics_automation, locations: [United States], max_items: 300}
   - {name: test_measurement_us,     enabled: true,  industry_group: test_measurement,    locations: [United States], max_items: 300}
   - {name: aerospace_space_us,      enabled: true,  industry_group: aerospace_space,     locations: [United States], max_items: 300}
   # United Kingdom: software and aerospace/space technology only
-  - {name: industrial_software_uk,  enabled: true,  industry_group: industrial_software, locations: [United Kingdom], max_items: 300, search_query: manufacturing}
+  - {name: industrial_software_uk,  enabled: true,  industry_group: industrial_software, locations: [United Kingdom], max_items: 300, search_query: manufacturing software}
   - {name: aerospace_space_uk,      enabled: true,  industry_group: aerospace_space,     locations: [United Kingdom], max_items: 300}
   # Parked (decisions.md Q9): price-sensitive buyers. Re-open only if the core segments run dry.
   - {name: automotive_suppliers_us, enabled: false, industry_group: automotive_suppliers, locations: [United States], max_items: 300}
