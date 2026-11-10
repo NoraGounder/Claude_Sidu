@@ -41,7 +41,7 @@ named_facts:
                                             Autosport International, Advanced Engineering, MACH, Space-Comm Expo,
                                             Engineering Design Show]}
   # ITAR is a registration, not a certification, so it scores but is not quoted.
-  certification: {signal: supplier_certification, qa: "Certification named on their website", labels: [AS9100, IATF 16949, NADCAP]}
+  certification: {signal: supplier_certification, qa: "Certification mentioned on their website", labels: [AS9100, IATF 16949, NADCAP]}
 
 # English role words that make a vacancy title quotable ("account executive", "sales engineer").
 title_role_words: 'representative|\brep\b|executive|manager|engineer|specialist|associate|developer|director'
@@ -72,8 +72,9 @@ hooks:
     needs: certification
     description: Open with the aerospace or automotive quality certification on their website
     subject:
-      en: "{certification} at {company}"
-    en: "I saw the {certification} certification on the {company} website. When an engineering team starts a new program, how do they usually find you: RFQs, trade shows, or someone reaching out?"
+      en: "{certification} and {company}"
+    # True for suppliers that hold the certification and for software sold to them (who only mention it).
+    en: "I saw {certification} mentioned on the {company} website. When a new aerospace or automotive program kicks off, how do the engineers on it usually first hear about {company}?"
   growth:
     needs: open_roles
     description: Open with how many roles they are hiring for (growth)
