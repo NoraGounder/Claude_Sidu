@@ -3,6 +3,9 @@
 
 campaign_prefix: "TMJ"
 
+# Only mailboxes on these domains are linked to The Marble Jar's campaigns (decisions.md D13).
+mailbox_domains: [getmarblejar.com, marblejarhub.com]
+
 # One campaign per sending region, so emails arrive in the recipient's working hours.
 regions:
   nl:    {countries: [NL],     timezone: Europe/Amsterdam}

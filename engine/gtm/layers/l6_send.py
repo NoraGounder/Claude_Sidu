@@ -128,12 +128,22 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
 
 def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict]) -> tuple[list[int], list[str]]:
     cap = cfg.limits.sending.get("max_per_mailbox_per_day", 18)
+    # One Smartlead account serves several clients: a campaign may only use this client's own
+    # sending domains (sending.yaml mailbox_domains). No list means no mailbox, never all of them.
+    domains = {d.lower() for d in sending.get("mailbox_domains") or []}
     ok, problems = [], []
     for a in accounts:
         name = a.get("from_email") or a.get("email") or a.get("id")
+        if str(name).rsplit("@", 1)[-1].lower() not in domains:
+            continue                                   # another client's mailbox: not ours to use
         per_day = a.get("message_per_day") or a.get("max_email_per_day")
-        warm = a.get("warmup_enabled", (a.get("warmup_details") or {}).get("status") == "ACTIVE")
-        if per_day and int(per_day) > cap:
+        warmup = a.get("warmup_details") or {}
+        warm = a.get("warmup_enabled", warmup.get("status") == "ACTIVE")
+        if a.get("is_smtp_success") is False or a.get("is_imap_success") is False:
+            problems.append(f"{name}: SMTP or IMAP connection failed")
+        elif warmup.get("blocked_reason"):
+            problems.append(f"{name}: warm-up blocked ({warmup['blocked_reason']})")
+        elif per_day and int(per_day) > cap:
             problems.append(f"{name}: sends up to {per_day}/day, cap is {cap}")
         elif sending.get("require_warmup", True) and not warm:
             problems.append(f"{name}: warm-up is off")
@@ -151,7 +161,8 @@ def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushP
     sl = sl or SmartleadClient()
     mailbox_ids, problems = check_mailboxes(cfg, sending, sl.email_accounts())
     if not mailbox_ids:
-        raise RuntimeError("No usable mailboxes: " + ("; ".join(problems) or "none found in Smartlead"))
+        raise RuntimeError("No usable mailboxes: " + ("; ".join(problems) or "none on this client's mailbox_domains "
+                                                       "(sending.yaml) in Smartlead"))
     ts = db.now_iso()
     totals = {"pushed": 0, "held": plan.held, "campaigns": {}, "mailbox_problems": problems}
     daily = cfg.limits.sending.get("max_emails_per_day", 120)

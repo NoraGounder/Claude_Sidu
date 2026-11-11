@@ -30,7 +30,9 @@ class StubSmartlead:
         self.mailboxes = mailboxes if mailboxes is not None else [
             {"id": 1, "from_email": "m@tmj-mail.example", "message_per_day": 15, "warmup_enabled": True},
             {"id": 2, "from_email": "x@tmj-mail.example", "message_per_day": 40, "warmup_enabled": True},
-            {"id": 3, "from_email": "y@tmj-mail.example", "message_per_day": 15, "warmup_enabled": False}]
+            {"id": 3, "from_email": "y@tmj-mail.example", "message_per_day": 15, "warmup_enabled": False},
+            # Another client's healthy mailbox in the same Smartlead account: must never be linked
+            {"id": 4, "from_email": "q@other-client.example", "message_per_day": 15, "warmup_enabled": True}]
         self.replies = replies or {}
         self.leads_added = []
 
@@ -83,6 +85,9 @@ def make_env(tmp_path, monkeypatch):
     clients = tmp_path / "clients"
     shutil.copytree(REPO_ROOT / "clients" / CLIENT, clients / CLIENT, ignore=shutil.ignore_patterns("private"))
     legacy_nl(clients / CLIENT)
+    sending = clients / CLIENT / "sending.yaml"
+    sending.write_text(sending.read_text().replace("mailbox_domains: [getmarblejar.com, marblejarhub.com]",
+                                                   "mailbox_domains: [tmj-mail.example]"))
     (clients / CLIENT / "private").mkdir()
     (clients / CLIENT / "private" / "sender.yaml").write_text("first_name: Sam\nfull_name: Sam Example\n")
     monkeypatch.setenv("GTM_CLIENTS_DIR", str(clients))
@@ -163,7 +168,7 @@ def test_push_creates_paused_campaign_with_checked_mailboxes_and_never_starts(en
     paths = [(m, p) for m, p, _, _ in stub.calls]
     assert ("POST", "/campaigns/900/email-accounts") in paths or ("POST", "/campaigns/901/email-accounts") in paths
     link = next(j for m, p, _, j in stub.calls if p.endswith("/email-accounts") and m == "POST")
-    assert link == {"email_account_ids": [1]}
+    assert link == {"email_account_ids": [1]}                    # not 4: another client's domain
     assert not any(p.endswith("/status") for _, p in paths)      # push never starts a campaign
     settings = next(j for m, p, _, j in stub.calls if p.endswith("/settings") and m == "POST")   # PATCH->POST fallback
     assert settings["track_settings"] == {"track_open": False, "track_click": False}
@@ -194,3 +199,21 @@ def test_sync_classifies_masked_replies_and_suppresses_unsubscribes(env):
     assert any(p == "/leads/block-list" for _, p, _, _ in sl_stub.calls)
     # The same reply is not processed twice
     assert l6_send.sync(cfg, conn, sl=sl, jev=JevClient(cfg.ai, session=jev_stub))["replies"] == 0
+
+
+def test_mailbox_check_uses_real_smartlead_fields_and_own_domains(env):
+    cfg = load_client(CLIENT)
+    sending = l6_send.load_sending(cfg)
+    real = [  # the shape Smartlead's GET /email-accounts returns
+        {"id": 10, "from_email": "a@tmj-mail.example", "message_per_day": 15, "is_smtp_success": True,
+         "is_imap_success": True, "warmup_details": {"status": "ACTIVE", "blocked_reason": None}},
+        {"id": 11, "from_email": "b@tmj-mail.example", "message_per_day": 15, "is_smtp_success": False,
+         "is_imap_success": True, "warmup_details": {"status": "ACTIVE"}},
+        {"id": 12, "from_email": "c@tmj-mail.example", "message_per_day": 15, "is_smtp_success": True,
+         "is_imap_success": True, "warmup_details": {"status": "ACTIVE", "blocked_reason": "spam"}},
+        {"id": 13, "from_email": "d@other-client.example", "message_per_day": 15,
+         "warmup_details": {"status": "ACTIVE"}}]
+    ok, problems = l6_send.check_mailboxes(cfg, sending, real)
+    assert ok == [10] and len(problems) == 2
+    sending["mailbox_domains"] = []
+    assert l6_send.check_mailboxes(cfg, sending, real) == ([], [])     # no list: no mailbox at all

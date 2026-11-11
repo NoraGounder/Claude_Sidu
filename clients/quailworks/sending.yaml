@@ -4,6 +4,10 @@
 
 campaign_prefix: "QW"
 
+# Only mailboxes on these domains are linked to Quailworks' campaigns. Empty until Quailworks' own
+# sending domains exist: push refuses to run without them, so no other client's mailbox is used.
+mailbox_domains: []
+
 # US and UK (decisions.md Q8). US Central time keeps sends inside working hours from coast to coast.
 regions:
   us: {countries: [US], timezone: America/Chicago}
