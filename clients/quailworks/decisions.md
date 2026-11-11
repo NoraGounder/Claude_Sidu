@@ -192,7 +192,7 @@ Purchases now, in parallel with the first runs (they need a card):
 
 1. **Done (11 November 2026):** two brand sending domains and six fresh SmartSenders mailboxes in the
    founder's name, warm-up on (Q18).
-2. **A paid Apify plan** (Starter) and **a FullEnrich top-up** (Q20).
+2. **Done:** a paid Apify plan (Starter, 10 November 2026) and a FullEnrich top-up (11 November 2026) (Q20).
 3. **The LinkedIn headline and the booking page** (Q23, Q24), and **the warm list** (Q25).
 4. **OK on the website section** (Q26).
 

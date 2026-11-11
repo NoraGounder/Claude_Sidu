@@ -11,7 +11,7 @@ parallel; only Tier 1-2 is emailed.
   quailworksforward.com on Outlook) with three fresh SmartSenders mailboxes each in the founder's name,
   in the existing Smartlead account, warm-up on from day one (campaigns `QW`). Warm-up takes
   2-3 weeks: first sends about 1-3 December 2026;
-- moves Apify to Starter and tops up FullEnrich;
+- done: Apify on Starter (10 November) and FullEnrich topped up (11 November);
 - changes the LinkedIn headline to Quailworks, makes a Google Calendar booking page, writes to the
   20-30 people on the warm list, and OKs the website section.
 
