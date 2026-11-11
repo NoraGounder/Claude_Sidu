@@ -87,6 +87,15 @@ Run the paid layers from a machine with open internet access, such as the user's
 Claude Code cloud session, each vendor's host must be allowed and its key saved as a network
 secret. See `.env.example`.
 
+## Memory: Notion
+
+When the Notion connector is available, the user's Notion is the engine's memory. At the start of a
+session, read the page "Quailworks GTM Brain" (status, open items, key dates, learnings) and search the
+Notion memories for the client. After every paid run, decision change or result, add a row to that
+page's "Run log" database and update the page. A changed decision also goes into the client's
+`decisions.md` here: the repository stays the source of truth for config. Notion gets only counts,
+costs and lessons. Never put prospect names, contact details, client-private files or keys there.
+
 ## Where things live
 
 - `clients/<client>/client.yaml`: identity, sender, language, the few things needed from the client
