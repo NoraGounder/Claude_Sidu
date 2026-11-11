@@ -647,3 +647,13 @@ button[disabled] { opacity: .6; cursor: progress; }
 .pane-account > *:not(.pane-head) { transition: opacity .3s ease; }
 .pane-account.fading > *:not(.pane-head) { opacity: .12; }
 .field.invalid input, .field.invalid select, .field.invalid textarea { border-color: var(--accent-night); }
+
+/* Our numbers */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.stat { padding: 32px 28px 36px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; }
+.stat dt { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); order: 1; }
+.stat dd { font-family: var(--serif); font-size: clamp(52px, 5.4vw, 84px); line-height: 1; letter-spacing: -0.02em; margin: 26px 0 18px; order: 2; }
+.stat p { color: var(--ink-3); font-size: 15px; line-height: 1.5; order: 3; }
+@media (max-width: 960px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .stats { grid-template-columns: 1fr; } .stat { padding: 26px 20px 28px; } }
+.foot-bottom span:first-child { max-width: 72ch; }
