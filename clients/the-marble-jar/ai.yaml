@@ -21,5 +21,21 @@ thresholds:
   not_a_buyer: 0.80      # drop the account
   admin_role: 0.70       # count a job title as a manual-admin vacancy
   unsupported_claim: 0.50   # Layer 5: flag a draft when an unsupported claim is more likely than not
+  job_evidence: 0.60       # a word match on a careers page is a real open admin vacancy (job_evidence)
 max_titles_per_request: 15
 workers: 4               # parallel requests
+
+# Layer 2: careers pages mention admin words in product descriptions, in other jobs' descriptions and
+# in general text. Jev 1.14 checks every word match before it counts as a hiring signal (audit
+# 2026-11-11: 47 of 124 Tier 1-2 companies rested only on such matches; the Quailworks data showed
+# about 40% were not open roles).
+job_evidence:
+  question: >-
+    This text was found on the company's careers or job page: "{quote}". Does it show that the company
+    itself has an open vacancy right now for administrative work like "{label}": order entry or
+    processing, invoices, accounts payable or receivable, data entry, back office or administrative
+    planning support? Answer no when the words describe the company's products, services or processes,
+    a staff member's story or testimonial, a task inside a clearly different job (drivers, warehouse,
+    sales, IT, management), or a general department name with no vacancy.
+  "true": An open administrative vacancy at this company
+  "false": Not an open administrative vacancy
