@@ -1,8 +1,9 @@
 """Smartlead REST API (https://server.smartlead.ai/api/v1).
 
 The key goes in the URL (?api_key=...), so a cloud proxy cannot add it as a header: run Layer 6
-where SMARTLEAD_API_KEY is set for real (for example a laptop with .env). The key is never logged
-and is scrubbed from every error message. 429 and 5xx responses are retried with backoff.
+where the key is set for real (for example a laptop with .env). The key is never logged and is
+scrubbed from every error message. Each client can name its own variable (sending.yaml api_key_env),
+so a client with its own Smartlead account never falls back to another client's key. 429 and 5xx responses are retried with backoff.
 
 The public docs disagree on POST vs PATCH for /status and /settings; the client tries the
 documented method and falls back to the other on 404/405.
@@ -29,11 +30,11 @@ def scrub(text: str) -> str:
 
 class SmartleadClient:
     def __init__(self, api_key: str | None = None, session: requests.Session | None = None,
-                 retries: int = 3, backoff_secs: float = 2.0):
-        key = api_key or os.environ.get("SMARTLEAD_API_KEY")
+                 retries: int = 3, backoff_secs: float = 2.0, key_env: str = "SMARTLEAD_API_KEY"):
+        key = api_key or os.environ.get(key_env)
         if not key or key == "proxy-injected":
-            raise SmartleadError("SMARTLEAD_API_KEY is not set. Smartlead takes the key in the URL, so run "
-                                 "Layer 6 where the real key is in .env (the cloud proxy cannot add it).")
+            raise SmartleadError(f"{key_env} is not set. Smartlead takes the key in the URL, so run Layer 6 "
+                                 "where the real key is set (the cloud proxy cannot add it).")
         self.key = key
         self.http = session or requests.Session()
         self.retries, self.backoff = retries, backoff_secs

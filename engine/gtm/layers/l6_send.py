@@ -128,8 +128,8 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
 
 def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict]) -> tuple[list[int], list[str]]:
     cap = cfg.limits.sending.get("max_per_mailbox_per_day", 18)
-    # One Smartlead account serves several clients: a campaign may only use this client's own
-    # sending domains (sending.yaml mailbox_domains). No list means no mailbox, never all of them.
+    # A campaign may only use this client's own sending domains (sending.yaml mailbox_domains), also when
+    # one Smartlead account serves several clients. No list means no mailbox, never all of them.
     domains = {d.lower() for d in sending.get("mailbox_domains") or []}
     ok, problems = [], []
     for a in accounts:
@@ -152,13 +152,19 @@ def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict]) -> t
     return ok, problems
 
 
+def smartlead_for(cfg: ClientConfig) -> SmartleadClient:
+    """The client's own Smartlead account: sending.yaml api_key_env names the variable, and there is no
+    fallback to the default SMARTLEAD_API_KEY (another client's account)."""
+    return SmartleadClient(key_env=load_sending(cfg).get("api_key_env", "SMARTLEAD_API_KEY"))
+
+
 def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushPlan | None = None,
          now: datetime | None = None) -> dict:
     sending = load_sending(cfg)
     plan = plan or plan_push(cfg, conn, now)
     if not plan.eligible:
         return {"pushed": 0, "held": plan.held, "campaigns": {}}
-    sl = sl or SmartleadClient()
+    sl = sl or smartlead_for(cfg)
     mailbox_ids, problems = check_mailboxes(cfg, sending, sl.email_accounts())
     if not mailbox_ids:
         raise RuntimeError("No usable mailboxes: " + ("; ".join(problems) or "none on this client's mailbox_domains "
@@ -210,7 +216,7 @@ def start(cfg: ClientConfig, conn, region: str, sl: SmartleadClient | None = Non
     row = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?", (cfg.slug, region)).fetchone()
     if not row:
         raise RuntimeError(f"No campaign for region '{region}'. Run push first.")
-    (sl or SmartleadClient()).set_status(row["smartlead_id"], "ACTIVE")
+    (sl or smartlead_for(cfg)).set_status(row["smartlead_id"], "ACTIVE")
     conn.execute("UPDATE campaigns SET status='ACTIVE' WHERE id=?", (row["id"],))
     conn.commit()
     return row["name"]
@@ -239,7 +245,7 @@ def latest_reply(history: list[dict]) -> tuple[str | None, str | None]:
 
 def sync(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, jev: JevClient | None = None) -> dict:
     check_policy(cfg.ai)
-    sl = sl or SmartleadClient()
+    sl = sl or smartlead_for(cfg)
     jev = jev or JevClient(cfg.ai)
     sender, _ = load_sender(cfg)
     totals = {"replies": 0, "needs_human": 0, "bounced": 0, "unsubscribed": 0, "categories": {}}
