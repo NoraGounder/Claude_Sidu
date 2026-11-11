@@ -5,7 +5,8 @@ accepted_email_status: [DELIVERABLE, HIGH_PROBABILITY]   # FullEnrich verificati
 # A third of the first run's emails were "high probability", not confirmed. Fresh mailboxes cannot
 # afford bounces, so these wait until MillionVerifier has checked them (`gate --recheck`, where the key
 # is set; about $0.004 each). Verified ones become DELIVERABLE, the rest are rejected.
-verify_statuses: [HIGH_PROBABILITY]
+# Since 2026-11-11 also the "deliverable" ones: a second finder disagreed with 2 of 7 of them (Q39).
+verify_statuses: [HIGH_PROBABILITY, DELIVERABLE]
 
 catch_all:                     # the mail server accepts any address, so delivery can't be confirmed
   allowed_tiers: [tier_1, tier_2]

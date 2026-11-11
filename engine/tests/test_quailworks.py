@@ -485,8 +485,8 @@ def test_unconfirmed_emails_wait_for_verification_only_for_quailworks(env):
     cfg = load_client(QW)
     l4_gate.run(cfg, conn, now=now)
     qw = statuses(QW)
-    assert qw["sure"] == ("held", "sender_consent_pending")                 # only the launch consent is missing
-    assert qw["maybe"] == qw["dead"] == ("held", "unverified_email:run gate --recheck")
+    # no finder is trusted alone (decisions.md Q39): every address waits for verification
+    assert qw["sure"] == qw["maybe"] == qw["dead"] == ("held", "unverified_email:run gate --recheck")
 
     class StubMV:
         checked = []
@@ -497,10 +497,11 @@ def test_unconfirmed_emails_wait_for_verification_only_for_quailworks(env):
 
     l4_gate.run(cfg, conn, recheck=True, mv=StubMV(), now=now)
     qw = statuses(QW)
-    assert sorted(StubMV.checked) == ["dead@acme.example", "maybe@acme.example"]   # not the confirmed one
-    assert qw["maybe"] == ("held", "sender_consent_pending") and qw["dead"] == ("rejected_l4", "email_status:INVALID")
+    assert sorted(StubMV.checked) == ["dead@acme.example", "maybe@acme.example", "sure@acme.example"]
+    assert qw["sure"] == qw["maybe"] == ("held", "sender_consent_pending")   # only the launch consent is missing
+    assert qw["dead"] == ("rejected_l4", "email_status:INVALID")
     l4_gate.run(cfg, conn, recheck=True, mv=StubMV(), now=now)
-    assert len(StubMV.checked) == 2                                         # verified once, not again
+    assert len(StubMV.checked) == 3                                         # verified once, not again
 
 
 # ---------- conversion pass (decisions.md Q37) ----------

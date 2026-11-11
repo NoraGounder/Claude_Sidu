@@ -309,7 +309,8 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
     done = "" if redo else " AND c.id NOT IN (SELECT contact_id FROM drafts WHERE status != 'rejected')"
     rows = [dict(r) for r in conn.execute(
         "SELECT c.*, a.name AS company_name FROM contacts c JOIN accounts a ON a.id=c.account_id"
-        " WHERE c.client=? AND (c.status='ready' OR (c.status='held' AND c.status_reason='sender_consent_pending'))"
+        " WHERE c.client=? AND (c.status='ready' OR (c.status='held' AND (c.status_reason='sender_consent_pending'"
+        " OR c.status_reason LIKE 'unverified_email%')))"   # previews may be drafted before verification; push needs 'ready'"
         f"{done} ORDER BY c.id", (cfg.slug,)).fetchall()]
     rows = rows[:limit] if limit else rows
     jev = jev or JevClient(cfg.ai)

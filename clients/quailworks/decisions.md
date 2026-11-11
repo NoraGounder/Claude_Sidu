@@ -303,6 +303,36 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   feeds our own discovery: companies advertising sales roles in our industries (Q36). Apify asks the
   account owner to approve this actor once; asked of the user.
 
+- **Q39. Stack study: find companies by their job postings, with BlitzAPI (2026-11-11, the user asked
+  about Firecrawl's Alexandria, BlitzAPI and Harvest's cost at scale).** What the numbers say:
+  Harvest is not the expensive part ($12.89 of $38 this month); the expensive part is that we find
+  companies first and signals second, so only 5-15% of what we pay for is usable, and FullEnrich
+  takes two thirds of the data spend ($0.055 an email). Tested today through Alexandria (Firecrawl's
+  catalogue of data providers, which carries BlitzAPI): (1) BlitzAPI's "companies hiring" search returns
+  companies with an open sales role posted in the last 30 days, filtered by industry, size and country,
+  with description, size and website. Of 10 robotics and automation results, about half were good fits
+  on sight (Jev 1.14 would sort the rest for a hundredth of a cent each). (2) Its email finder found 10
+  of 10 contacts we already had; 7 matched FullEnrich's address and 3 differed, two of them addresses
+  FullEnrich had rated deliverable. So no finder is trusted alone: `gate.yaml` now holds every address
+  until MillionVerifier has checked it ($0.004 each).
+
+  | Per unit | Today | BlitzAPI through Alexandria | BlitzAPI direct |
+  |---|---|---|---|
+  | Company with a hiring signal | $0.03-0.08 (Harvest $0.004, 5-15% usable) | about $0.002-0.01 | flat fee |
+  | Person found | $0.014 (FullEnrich) | about $0.01 | flat fee |
+  | Work email | $0.055 (FullEnrich) | about $0.002-0.01 | flat fee |
+
+  BlitzAPI direct is $99 a month for 200,000 records, with 1,000 free records and no card (its
+  pricing page, 2026-11-11). Decided: (a) the engine gets a BlitzAPI source for discovery by hiring
+  signal, people and emails, tried first on the 1,000 free records; FullEnrich stays as the fallback
+  for emails BlitzAPI does not find; (b) Alexandria is used inside Claude sessions for trials and
+  one-off data (it caps a call at 10 records, so it is not the engine's backbone); (c) if the trial
+  holds, $99 a month is worth it from the first client, because the scarce thing is companies with a
+  signal, and it covers about ten clients' volume; then Apify goes back to its free plan after 9
+  December, the Apollo test (Q28) and TheirStack are dropped, and the Harvest job search (Q38) is not
+  needed. Kept: Jev 1.14, our own crawler, MillionVerifier, Smartlead, HubSpot free. Change if: the
+  trial shows fewer than a third good fits, or under 60% of emails found.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):
