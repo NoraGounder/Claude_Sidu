@@ -43,15 +43,21 @@ Drafts stay previews until `private/sender.yaml` exists; the founder sees them b
 - **Replies:** forwarded to the founder; interested replies answered within one working hour with the
   booking link (`templates/replies.yaml`); then `sync` and `handoff` for briefs and outcomes.
 
-## Rough funnel (estimates to replace with real numbers after week 2)
+## Funnel: where it stands (2026-11-11) and what is still an estimate
 
-| Step | Estimate | Basis |
+| Step | Number | Basis |
 |---|---|---|
-| Companies found | about 2,400 | 8 searches x 300 |
-| Tier 1-2 | about 300-350 | about 15% reached Tier 1-2 in The Marble Jar's run |
-| Contacts emailed | about 500 | up to 2 per company |
-| Positive replies | about 10-25 | 2-5% of people emailed, signal-based and fact-based |
-| Booked calls | about 7-18 | about 70% of positive replies with a one-hour answer |
+| Companies seen | 2,922 | two discovery runs, $12.77 |
+| Passed the first filters and scored | 2,537 | US and UK, 11-1,000 employees |
+| Tier 1-2 (a confirmed buying signal and a fit) | 185 | hiring signals checked by Jev 1.14 (decisions.md Q34) |
+| Companies with at least one work email | 145 | FullEnrich, $24.98 |
+| Contacts at Tier 1-2 | 225 | 147 confirmed addresses, 78 waiting for `gate --recheck` (Q35) |
+| Positive replies | about 5-11 (estimate) | 2-5% of people emailed |
+| Booked calls | about 3-8 (estimate) | about 70% of positive replies |
+
+Before the first send, on the laptop: `gate --recheck` (verifies the 78 addresses, about $0.35), then
+`draft` for the newly ready contacts. Email 1 now offers the Signal Sample, so each "yes, send the list"
+reply needs a list within two working days (decisions.md Q31).
 
 ## Every week: scale what books calls
 

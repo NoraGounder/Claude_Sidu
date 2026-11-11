@@ -219,6 +219,11 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   2019, 8% of those founded before 2010); size makes little difference. This market is large enough
   for the goal: 11 clients is 0.1% of the good-fit companies. Change if: a paused segment books calls,
   or the core segments stop yielding 10% with a signal.
+  **Found the same day:** LinkedIn lists the most relevant companies first. The first 300 robotics
+  companies gave 14.8% with a confirmed signal, the next 700 gave 5.6%; the last 117 industrial-AI
+  companies gave 3.4%. So fit is plentiful and signals are the scarce part: the next discovery source
+  searches job postings first (Q36), and deeper LinkedIn pages are only worth their $0.004 a company
+  because crawling and Jev cost almost nothing.
 - **Q30. Offer: the 90-day Signal Engine** (`offer.md`). One product instead of three steps (audit,
   sprint, embedded): we build the client's outbound engine in their name, run it for 90 days and hand
   over or continue month to month. Why: recurring revenue needs a retainer as the first purchase, the
@@ -255,7 +260,12 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   318 matches (40%) were not open sales roles in the US or UK (testimonials, lines inside other job
   descriptions, roles abroad). 39 of 115 Tier 1 companies lost their place. Reading the public feeds of
   job boards (Greenhouse, Lever, Ashby; `scoring.yaml` `job_boards`) found exact titles at 145
-  companies and raised 36 companies into Tier 1-2. A confirmed role is now named in the email opening.
+  companies and raised 36 companies into Tier 1-2. A confirmed role is now named in the email opening:
+  97 of 182 drafts open with the company's open sales role (32 of 185 before) and 38 use the generic
+  question (94 before); none was flagged by the fact check. After a second discovery run the same day
+  (809 more companies, $3.86): 185 companies in Tier 1-2, 145 of them with at least one work email, 225
+  contacts (147 confirmed addresses, 78 waiting for verification, Q35). Spent so far in November:
+  Apify $12.77, FullEnrich $24.98, Jev 1.14 $0.27.
 - **Q35. Unconfirmed emails wait.** A third of the first run's addresses were "high probability". They
   are held until MillionVerifier has checked them (`gate.yaml` `verify_statuses`; `gate --recheck` on
   the laptop, where the key is). Fresh mailboxes cannot afford bounces.
