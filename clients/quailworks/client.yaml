@@ -28,7 +28,7 @@ crm:
 
 # Quailworks decides (decisions.md). Only these need the user, in one message at launch:
 needed_from_client:
-  - Buy two brand sending domains and four fresh SmartSenders mailboxes, warm-up on (decisions.md Q18)
+  - DONE 2026-11-11: two brand sending domains and six fresh SmartSenders mailboxes, warm-up on (decisions.md Q18)
   - Move Apify to a paid plan and top up FullEnrich credits (decisions.md Q20)
   - Confirm the founder sends in their own name, and fill private/sender.yaml
   - The "go" to start sending (CLAUDE.md rule 3)

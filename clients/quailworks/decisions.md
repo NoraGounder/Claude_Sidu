@@ -116,8 +116,11 @@ Marble Jar build.
 
 ## Sending and budget
 
-- **Q18. Sending domains: three brand variants** of the company name: getquailworks.com,
-  quailworkshq.com and tryquailworks.com (or the next available brand variant). Never quailworks.co
+- **Q18. Sending domains: brand variants** of the company name. **Bought 2026-11-11:** getquailworks.com
+  (3 Google mailboxes) and quailworksforward.com (3 Outlook mailboxes), both forwarding to quailworks.co.
+  Six mailboxes on two domains instead of three: the same sending capacity, and a mix of Google and
+  Outlook delivers better to buyers on either. At 15 a day per mailbox that is 45 a day per domain.
+  The original plan was getquailworks.com, quailworkshq.com and tryquailworks.com. Never quailworks.co
   itself (it carries the company's own Google Workspace mail and DMARC), never quailworks.xyz, and never
   The Marble Jar's domains. Two mailboxes per domain (six) in the founder's real name: fresh SmartSenders
   mailboxes (about $4.50 a month each), warmed up for 2-3 weeks. Pre-warmed mailboxes only come on
@@ -187,8 +190,8 @@ Marble Jar build.
 
 Purchases now, in parallel with the first runs (they need a card):
 
-1. **Three brand sending domains and six fresh SmartSenders mailboxes** in the founder's name, with
-   warm-up switched on the same day (Q18).
+1. **Done (11 November 2026):** two brand sending domains and six fresh SmartSenders mailboxes in the
+   founder's name, warm-up on (Q18).
 2. **A paid Apify plan** (Starter) and **a FullEnrich top-up** (Q20).
 3. **The LinkedIn headline and the booking page** (Q23, Q24), and **the warm list** (Q25).
 4. **OK on the website section** (Q26).

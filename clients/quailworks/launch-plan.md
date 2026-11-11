@@ -7,8 +7,9 @@ parallel; only Tier 1-2 is emailed.
 ## This week, in parallel
 
 **The user** (decisions.md Q18-Q26):
-- buys three Quailworks brand domains and six fresh SmartSenders mailboxes in the founder's name in
-  the existing Smartlead account, with warm-up on from day one (campaigns `QW`). Warm-up takes
+- done 11 November 2026: two Quailworks brand domains (getquailworks.com on Google,
+  quailworksforward.com on Outlook) with three fresh SmartSenders mailboxes each in the founder's name,
+  in the existing Smartlead account, warm-up on from day one (campaigns `QW`). Warm-up takes
   2-3 weeks: first sends about 1-3 December 2026;
 - moves Apify to Starter and tops up FullEnrich;
 - changes the LinkedIn headline to Quailworks, makes a Google Calendar booking page, writes to the
@@ -66,7 +67,7 @@ Drafts stay previews until `private/sender.yaml` exists; the founder sees them b
 |---|---|---|
 | Smartlead | the existing Pro account (shared with The Marble Jar's campaigns, separate domains and mailboxes) | 0 extra |
 | Mailboxes | 6 fresh SmartSenders mailboxes on 3 brand domains | about 27 |
-| Domains | 3 sending domains (about $13 a year each) | about 3 |
+| Domains | 2 sending domains (about $13 a year each) | about 2 |
 | Apify | Starter (shared with The Marble Jar); back to free in months without discovery | about 19 |
 | FullEnrich | top-up for the shared account; Quailworks capped at $40 | up to 40 |
 | TypeSafe Jev 1.14 | per request | under 3 |

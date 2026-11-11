@@ -333,7 +333,9 @@ def test_one_smartlead_account_keeps_each_sending_domain_with_one_client(env):
     assert l6_send.shared_domains(qw) == [] and l6_send.shared_domains(tmj) == []
     # A domain listed for both clients stops push for either of them before Smartlead is called.
     sending = env / QW / "sending.yaml"
-    sending.write_text(sending.read_text().replace("mailbox_domains: []", "mailbox_domains: [GetMarbleJar.com]"))
+    text = sending.read_text()
+    assert "mailbox_domains: [getquailworks.com, quailworksforward.com]" in text
+    sending.write_text(text.replace("mailbox_domains: [getquailworks.com,", "mailbox_domains: [GetMarbleJar.com, getquailworks.com,"))
     assert l6_send.shared_domains(load_client(QW)) == ["getmarblejar.com"]
     assert l6_send.shared_domains(load_client(TMJ)) == ["getmarblejar.com"]
     with pytest.raises(RuntimeError, match="getmarblejar.com"):

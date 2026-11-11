@@ -5,10 +5,11 @@
 
 campaign_prefix: "QW"
 
-# Only mailboxes on these domains are linked to Quailworks' campaigns. Empty until Quailworks' own
-# sending domains exist: push refuses to run without them, so no other client's mailbox is used.
-# A domain listed here and in another client's sending.yaml stops push for both.
-mailbox_domains: []
+# Only mailboxes on these domains are linked to Quailworks' campaigns, so no other client's mailbox is
+# used. A domain listed here and in another client's sending.yaml stops push for both.
+# Bought 2026-11-11 through SmartSenders, 3 mailboxes each, both forwarding to quailworks.co:
+# getquailworks.com on Google, quailworksforward.com on Outlook.
+mailbox_domains: [getquailworks.com, quailworksforward.com]
 
 # US and UK (decisions.md Q8). US Central time keeps sends inside working hours from coast to coast.
 regions:
