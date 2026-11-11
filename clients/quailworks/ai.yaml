@@ -16,8 +16,10 @@ fallback: none
 thresholds:
   not_a_buyer: 0.80      # drop the account
   job_title: 0.70        # count a job title as a sales role that finds new business (sales_job_ad)
+  job_evidence: 0.60     # a word match on a careers page is an open role in the US or UK (job_evidence)
   unsupported_claim: 0.50   # Layer 5: flag a draft when an unsupported claim is more likely than not
 max_titles_per_request: 15
+max_evidence_per_request: 12
 workers: 4
 
 # Layer 2: who is clearly not a buyer of an outbound system (decisions.md Q9, Q15).
@@ -42,9 +44,24 @@ job_titles:
     business development representative (SDR, BDR), inside sales, lead generation, outbound
     prospecting, account executive, business development manager or sales engineer? Customer support,
     account management of existing customers, marketing content, engineering, operations, finance
-    and company leadership roles are not.
-  "true": A role that finds or opens new business
-  "false": Any other kind of role
+    and company leadership roles are not. When a location follows in brackets, it has to be in the
+    United States or the United Kingdom, or remote: a role clearly based in another country is not.
+  "true": A role that finds or opens new business, in the US or UK
+  "false": Any other kind of role, or a role based in another country
+
+# Layer 2: careers pages mention sales roles in testimonials and inside other jobs' descriptions, and
+# list roles abroad. Jev 1.14 checks every word match before it counts as a hiring signal or is
+# quoted in an email (audit 2026-11-11: about 4 in 14 matches were not open roles).
+job_evidence:
+  question: >-
+    This text was found on the company's careers or job page: "{quote}". Does it show that the company
+    itself has an open position right now for the role "{label}", or a very similar role that finds new business,
+    based in the United States or the United Kingdom, or remote? Answer no when the words are a staff
+    member's own job title or a testimonial, when they appear only inside the description of a
+    different job, when they describe the company's products or customers, or when the position is
+    clearly based in another country.
+  "true": An open position at this company for this kind of role, in the US or UK
+  "false": Not an open position, a different kind of role, or based in another country
 
 # Layer 3: which job titles decide on buying the offer (decisions.md Q11).
 contact_question: >-

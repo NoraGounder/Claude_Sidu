@@ -90,6 +90,13 @@ def is_stale(contact: dict, freshness_days: int, now: datetime) -> bool:
     return (now - when).days > freshness_days
 
 
+def needs_verification(rules: dict, contact: dict) -> bool:
+    """Optional (gate.yaml `verify_statuses`): emails the finder rated below "deliverable" are held until
+    MillionVerifier has checked them (`gate --recheck`). Not set = they are sent as they are."""
+    return ((contact.get("email_status") or "").upper() in {s.upper() for s in rules.get("verify_statuses") or []}
+            and "MillionVerifier" not in (contact.get("email_source") or ""))
+
+
 def run(cfg: ClientConfig, conn, recheck: bool = False, mv: MillionVerifierClient | None = None,
         now: datetime | None = None) -> GateResult:
     rules = load_rules(cfg)
@@ -106,7 +113,8 @@ def run(cfg: ClientConfig, conn, recheck: bool = False, mv: MillionVerifierClien
         (cfg.slug,)).fetchall()]
 
     if recheck:
-        stale = [r for r in rows if is_stale(r, rules["freshness_days"], now) and r.get("email")]
+        stale = [r for r in rows if r.get("email")
+                 and (is_stale(r, rules["freshness_days"], now) or needs_verification(rules, r))]
         if stale:
             budget.check(conn, cfg, VENDOR, budget.estimate(cfg, PRICE_KEY, len(stale)))
             mv = mv or MillionVerifierClient()
@@ -117,8 +125,9 @@ def run(cfg: ClientConfig, conn, recheck: bool = False, mv: MillionVerifierClien
                     res = mv.verify(r["email"])
                     status = {"ok": "DELIVERABLE", "catch_all": "CATCH_ALL"}.get(res["result"], res["result"].upper())
                     r["email_status"], r["verified_at"] = status, now.isoformat()
-                    conn.execute("UPDATE contacts SET email_status=?, verified_at=?, email_source=email_source || "
-                                 "' + MillionVerifier' WHERE id=?", (status, r["verified_at"], r["id"]))
+                    r["email_source"] = (r.get("email_source") or "") + " + MillionVerifier"
+                    conn.execute("UPDATE contacts SET email_status=?, verified_at=?, email_source=? WHERE id=?",
+                                 (status, r["verified_at"], r["email_source"], r["id"]))
             except MillionVerifierError as exc:
                 db.finish_run(conn, run_id, "failed", 0, None, str(exc)[:300])
                 raise
@@ -132,6 +141,8 @@ def run(cfg: ClientConfig, conn, recheck: bool = False, mv: MillionVerifierClien
             decided.append((r, "rejected_l4", reason))
         elif is_stale(r, rules["freshness_days"], now):
             decided.append((r, "held", "stale_email:re-check with MillionVerifier"))
+        elif needs_verification(rules, r):
+            decided.append((r, "held", "unverified_email:run gate --recheck"))
         elif (r.get("email_status") or "").upper() not in accepted and r["tier"] not in rules["catch_all"]["allowed_tiers"]:
             decided.append((r, "held", f"catch_all_not_allowed_for_{r['tier']}"))
         else:

@@ -7,6 +7,8 @@ Per account, one request with typed questions about company-level facts (never p
   title_N      noul   is job title N the kind of role the offer replaces? (ai.yaml `job_titles`;
                       default: manual administrative work)
   lookalike    score  how similar to the client's best customers (only when best_clients.csv is imported)
+  evidence_N   noul   optional (ai.yaml `job_evidence`): is word match N on the careers page really an
+                      open role? Stored per match in jev_decisions.checks_json
 Answers are stored in jev_decisions; every request is logged in jev_calls (model ID reported by
 the API, tokens, cost, latency). Then the accounts are re-scored from the crawl cache.
 """
@@ -75,6 +77,15 @@ def plan(cfg: ClientConfig, conn, limit: int | None = None, redo: bool = False) 
     items = [dict(r) | {"job_titles": json.loads(r["job_titles"])} for r in rows]
     if limit:
         items = items[:limit]
+    if cfg.ai.get("job_evidence"):
+        # Word matches for the job signal that Jev has to confirm (not the titles it already judges).
+        cap = cfg.ai.get("max_evidence_per_request", 8)
+        for item in items:
+            ev = conn.execute(
+                "SELECT label, quote FROM evidence WHERE account_id=? AND layer='L2' AND signal=?"
+                " AND label NOT LIKE 'job title: %' ORDER BY id",
+                (item["id"], l2_prefilter.job_signal(cfg))).fetchall()
+            item["job_evidence"] = [dict(e) for e in ev][:cap]
     est = budget.estimate(cfg, price_key(cfg), len(items)) if items else 0.0
     return JevPlan(items, est, cfg.ai["model"], best_clients.jev_profiles(cfg, conn))
 
@@ -115,6 +126,13 @@ def build_request(cfg: ClientConfig, item: dict,
                              "(sellers_best_customers): what it does, its size, and how it operates?"),
             "criteria": ["Not similar", "Somewhat similar", "Very similar"],
         }
+    je = cfg.ai.get("job_evidence")
+    for n, ev in enumerate(item.get("job_evidence") or [] if je else []):
+        questions[f"evidence_{n}"] = {
+            "type": "noul",
+            "instructions": je["question"].replace("{label}", ev["label"]).replace("{quote}", ev["quote"]),
+            "criteria": {"true": je["true"], "false": je["false"]},
+        }
     title_keys: dict[str, str] = {}
     for n, title in enumerate(titles):
         key = f"title_{n}"
@@ -138,16 +156,25 @@ def _log_call(conn, cfg: ClientConfig, account_id: int, result: JevResult | None
          "succeeded" if result else "failed", scrub(error)[:500] if error else None, db.now_iso()))
 
 
-def _save_decision(conn, account_id: int, result: JevResult, title_keys: dict[str, str]) -> None:
+def _save_decision(conn, account_id: int, result: JevResult, title_keys: dict[str, str],
+                   job_evidence: list[dict] | None = None) -> None:
     a = result.answers
     titles = {title: float(a[key]["noul"]) for key, title in title_keys.items()}
+    # Checks of word matches are kept across decisions: a match Jev rejected stays rejected until the
+    # page text around it changes (then it is a new match with a new key).
+    old = conn.execute("SELECT checks_json FROM jev_decisions WHERE account_id=?", (account_id,)).fetchone()
+    checks = json.loads(old["checks_json"] or "{}") if old else {}
+    for n, ev in enumerate(job_evidence or []):
+        if f"evidence_{n}" in a:
+            checks[l2_prefilter.evidence_key(ev["label"], ev["quote"])] = float(a[f"evidence_{n}"]["noul"])
     conn.execute(
         "INSERT OR REPLACE INTO jev_decisions(account_id, model_id, not_a_buyer, icp_fit, icp_confidence,"
-        " titles_json, raw_answers, decided_at, lookalike) VALUES (?,?,?,?,?,?,?,?,?)",
+        " titles_json, raw_answers, decided_at, lookalike, checks_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (account_id, result.model_id, float(a["not_a_buyer"]["noul"]), float(a["icp_fit"]["score"]),
          a["icp_fit"].get("confidence"), json.dumps(titles, ensure_ascii=False),
          json.dumps(a, ensure_ascii=False), db.now_iso(),
-         float(a["lookalike"]["score"]) if "lookalike" in a else None))
+         float(a["lookalike"]["score"]) if "lookalike" in a else None,
+         json.dumps(checks, ensure_ascii=False)))
 
 
 def run(cfg: ClientConfig, conn, jp: JevPlan, client: JevClient | None = None, workers: int | None = None) -> dict:
@@ -178,7 +205,7 @@ def run(cfg: ClientConfig, conn, jp: JevPlan, client: JevClient | None = None, w
                     other.cancel()
                 continue
             _log_call(conn, cfg, item["id"], result, None)
-            _save_decision(conn, item["id"], result, keys)
+            _save_decision(conn, item["id"], result, keys, item.get("job_evidence"))
             conn.commit()
             decided_ids.append(item["id"])
             totals["decided"] += 1

@@ -61,6 +61,8 @@ class SignalRules:
     rules: dict[str, list[tuple[str, str]]]
     job_page_signals: frozenset[str]
     case_sensitive: frozenset[str]
+    quote_width: int = 90          # characters kept on each side of a match
+    matches_per_label: int = 1     # how many separate matches of one label to keep as evidence
 
 
 DEFAULT_RULES = SignalRules(RULES, JOB_PAGE_SIGNALS, CASE_SENSITIVE)
@@ -77,6 +79,8 @@ def rules_for(scoring: dict | None) -> SignalRules:
           - {label: "part of (EN)", pattern: "...", }
       job_page_signals: [sales_job_ad]          # count only on careers or vacancy pages
       case_sensitive_signals: [subsidiary_of_large_group]
+      quote_width: 160                          # optional: more context around each match (default 90)
+      matches_per_label: 3                      # optional: keep up to 3 matches of one label (default 1)
     """
     detect = (scoring or {}).get("detect")
     if not detect:
@@ -84,7 +88,8 @@ def rules_for(scoring: dict | None) -> SignalRules:
     rules = {signal: [(r["label"], r["pattern"]) for r in entries] for signal, entries in detect.items()}
     return SignalRules(rules,
                        frozenset(scoring.get("job_page_signals", [])),
-                       frozenset(scoring.get("case_sensitive_signals", [])))
+                       frozenset(scoring.get("case_sensitive_signals", [])),
+                       int(scoring.get("quote_width", 90)), int(scoring.get("matches_per_label", 1)))
 
 
 @dataclass
@@ -102,7 +107,8 @@ def _quote(text: str, match: re.Match, width: int = 90) -> str:
 
 def extract(site: SiteCrawl, rules: SignalRules = DEFAULT_RULES) -> list[Evidence]:
     found: list[Evidence] = []
-    seen: set[tuple[str, str]] = set()
+    seen: dict[tuple[str, str], int] = {}
+    quotes: set[tuple[str, str, str]] = set()
     job_urls = {p.url for p in site.jobs}
     careers_url = site.careers.url if site.careers else None
     for page in site.pages:
@@ -116,10 +122,17 @@ def extract(site: SiteCrawl, rules: SignalRules = DEFAULT_RULES) -> list[Evidenc
                 continue
             for label, pattern in signal_rules:
                 flags = 0 if signal in rules.case_sensitive else re.I
-                m = re.search(pattern, page.text, flags)
-                if m and (signal, label) not in seen:
-                    seen.add((signal, label))
-                    found.append(Evidence(signal, label, page.url, _quote(page.text, m)))
+                # Usually the first match is enough. A client that has each job-ad match checked keeps a
+                # few per label: the first one may be a testimonial while a real vacancy is further down.
+                for m in re.finditer(pattern, page.text, flags):
+                    if seen.get((signal, label), 0) >= rules.matches_per_label:
+                        break
+                    quote = _quote(page.text, m, rules.quote_width)
+                    if (signal, label, quote) in quotes:
+                        continue
+                    quotes.add((signal, label, quote))
+                    seen[(signal, label)] = seen.get((signal, label), 0) + 1
+                    found.append(Evidence(signal, label, page.url, quote))
     return found
 
 

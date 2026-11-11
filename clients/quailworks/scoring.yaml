@@ -114,6 +114,14 @@ detect:
 
 # Job-ad words describe products on a homepage, so these count only on careers or vacancy pages.
 job_page_signals: [sales_job_ad, sales_stack]
+# Jev 1.14 checks every sales-job match (ai.yaml job_evidence): give it enough text to judge, and up
+# to three matches per role, because the first one on a page may be a testimonial.
+quote_width: 160
+matches_per_label: 3
+# Read the open jobs of hosted job boards (Greenhouse, Lever, Ashby) from their public feeds: most
+# venture-backed companies list vacancies there, where a plain crawl sees no titles. Jobs the board
+# places outside these countries are left out.
+job_boards: {countries: [US, GB]}
 case_sensitive_signals: [subsidiary_of_large_group]
 
 tiers:

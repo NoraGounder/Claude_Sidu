@@ -340,3 +340,163 @@ def test_one_smartlead_account_keeps_each_sending_domain_with_one_client(env):
     assert l6_send.shared_domains(load_client(TMJ)) == ["getmarblejar.com"]
     with pytest.raises(RuntimeError, match="getmarblejar.com"):
         l6_send.push(load_client(TMJ), db.connect(), sl=object())
+
+
+# ---------- job boards and checked job-ad matches (audit 2026-11-11) ----------
+
+BOARD_HOME = """<html lang="en"><head><title>Acme Robotics</title></head><body><p>Robotic welding cells.</p>
+<a href="/careers">Careers</a></body></html>"""
+BOARD_CAREERS = """<html lang="en"><body><h1>Join us</h1><p>“I love it here.” Dana Lee, Account Executive</p>
+<iframe src="https://jobs.ashbyhq.com/acme-robotics/embed"></iframe></body></html>"""
+ASHBY_FEED = {"jobs": [
+    {"title": "Welding Engineer", "location": "Detroit", "address": {"postalAddress": {"addressCountry": "United States"}}},
+    {"title": "Sales Development Representative", "location": "Austin", "isListed": True,
+     "address": {"postalAddress": {"addressCountry": "United States"}}},
+    {"title": "Account Executive", "location": "Chennai", "address": {"postalAddress": {"addressCountry": "India"}}},
+    {"title": "Hidden Role", "location": "Austin", "isListed": False}]}
+
+
+class BoardFetcher(FakeFetcher):
+    def __init__(self, pages, feeds):
+        super().__init__(pages)
+        self.feeds = feeds
+
+    def get_json(self, url):
+        self.requested.append(url)
+        return self.feeds.get(url)
+
+
+def test_job_board_feed_gives_exact_titles_only_when_the_client_asks(env):
+    from gtm import jobboards
+    from gtm.crawl import crawl_site
+
+    board = jobboards.find_board(["https://acme.example/about", "https://boards.greenhouse.io/embed/job_board/js?for=acme"])
+    assert (board.name, board.slug) == ("greenhouse", "acme") and board.feed.endswith("/v1/boards/acme/jobs")
+    assert jobboards.find_board(["https://jobs.lever.co/acme-labs/123"]).feed == "https://api.lever.co/v0/postings/acme-labs?mode=json"
+    assert jobboards.find_board(["https://www.linkedin.com/company/acme"]) is None
+    lever = jobboards.parse_feed("lever", [{"text": "BDR", "categories": {"location": "London"}, "country": "GB"}])
+    assert lever == [{"title": "BDR", "location": "London", "country": "GB"}]
+    gh = jobboards.parse_feed("greenhouse", {"jobs": [{"title": "AE ", "location": {"name": "Boston, MA"}}]})
+    assert jobboards.titles(gh, ["US", "GB"]) == ["AE (Boston, MA)"]        # no stated country: kept
+
+    pages = {"https://acme-robotics.example": BOARD_HOME, "https://acme-robotics.example/careers": BOARD_CAREERS}
+    feeds = {"https://api.ashbyhq.com/posting-api/job-board/acme-robotics": ASHBY_FEED}
+    plain = crawl_site(BoardFetcher(pages, feeds), "https://acme-robotics.example")
+    assert plain.job_titles == [] and plain.board_url == ""                 # default: feeds are not read
+    cfg = load_client(QW)
+    assert load_client(TMJ).scoring.get("job_boards") is None
+    site = crawl_site(BoardFetcher(pages, feeds), "https://acme-robotics.example", job_boards=cfg.scoring["job_boards"])
+    assert site.board_url == "https://jobs.ashbyhq.com/acme-robotics"
+    # the role in India and the unlisted role are left out; the location stays in the title
+    assert site.job_titles == ["Welding Engineer (Detroit, United States)",
+                               "Sales Development Representative (Austin, United States)"]
+    assert l2_prefilter.order_titles(cfg, site.job_titles)[0].startswith("Sales Development Representative")
+
+
+def test_jev_checks_job_ad_matches_before_they_count_or_are_quoted(env):
+    from gtm.crawl import crawl_site
+    from gtm.sources.jev import JevResult
+
+    cfg, tmj = load_client(QW), load_client(TMJ)
+    conn = db.connect()
+    acc = _account(conn, QW, "Acme Robotics", "https://acme-robotics.example", ["robotics_automation_us"])
+    conn.commit()
+    pages = {"https://acme-robotics.example": BOARD_HOME, "https://acme-robotics.example/careers": BOARD_CAREERS}
+    fetch = lambda: FakeFetcher(pages)                                      # noqa: E731
+    l2_prefilter.run(cfg, conn, workers=1, fetcher_factory=fetch)
+    # Not checked yet: the testimonial's "Account Executive" still counts as a sales job ad (Tier 1).
+    assert conn.execute("SELECT tier FROM l2_scores WHERE account_id=?", (acc,)).fetchone()["tier"] == "tier_1"
+
+    item = l2_jev.plan(cfg, conn).items[0]
+    assert [e["label"] for e in item["job_evidence"]] == ["account executive"]
+    _, questions, keys = l2_jev.build_request(cfg, item)
+    assert "Dana Lee, Account Executive" in questions["evidence_0"]["instructions"]
+    assert 'open position right now for the role "account executive"' in questions["evidence_0"]["instructions"]
+    _, tmj_questions, _ = l2_jev.build_request(tmj, item)
+    assert "evidence_0" not in tmj_questions                               # The Marble Jar: not opted in
+
+    def decide(p):
+        answers = {"not_a_buyer": {"noul": 0.02}, "icp_fit": {"score": 1.8}, "evidence_0": {"noul": p}}
+        l2_jev._save_decision(conn, acc, JevResult(answers, "typesafe/jev-1.14-test", 1, 1, 0.0, 1, None), keys,
+                              item["job_evidence"])
+        conn.commit()
+        l2_prefilter.run(cfg, conn, workers=1, fetcher_factory=fetch, account_ids=[acc])
+        tier = conn.execute("SELECT tier FROM l2_scores WHERE account_id=?", (acc,)).fetchone()["tier"]
+        facts = l5_copy.facts_for(conn, {"id": acc}, l5_copy.load_sequence(cfg), signals.rules_for(cfg.scoring),
+                                  "sales_job_ad", l2_prefilter.evidence_threshold(cfg))
+        return tier, facts.get("job_title", {}).get("value")
+
+    # Jev: a testimonial, not an open role. The signal goes, and so does Tier 1; nothing is quoted.
+    assert decide(0.05) == ("tier_3", None)
+    # A later decision that does not ask about the match again keeps the rejection.
+    l2_jev._save_decision(conn, acc, JevResult({"not_a_buyer": {"noul": 0.02}, "icp_fit": {"score": 1.8}},
+                                               "typesafe/jev-1.14-test", 1, 1, 0.0, 1, None), {}, [])
+    assert json.loads(conn.execute("SELECT checks_json FROM jev_decisions WHERE account_id=?", (acc,)).fetchone()[0])
+    # Jev: an open role. It counts again and the email may name the role.
+    assert decide(0.93) == ("tier_1", "account executive")
+    # Without the check (The Marble Jar's default), a word match is never quoted.
+    facts = l5_copy.facts_for(conn, {"id": acc}, l5_copy.load_sequence(cfg), signals.rules_for(cfg.scoring), "sales_job_ad")
+    assert "job_title" not in facts
+
+
+def test_several_matches_per_label_only_for_clients_that_ask(env):
+    from gtm.crawl import crawl_site
+
+    careers = ("<html><body><p>“Great team.” Sam, Account Executive</p>" + "<p>filler text here.</p>" * 30 +
+               "<h2>Open roles</h2><p>Account Executive, Chicago. Apply now.</p></body></html>")
+    pages = {"https://x.example": '<html><body>Robots. <a href="/careers">Careers</a></body></html>',
+             "https://x.example/careers": careers}
+    site = crawl_site(FakeFetcher(pages), "https://x.example")
+    qw = signals.extract(site, signals.rules_for(load_client(QW).scoring))
+    assert [e.label for e in qw if e.signal == "sales_job_ad"] == ["account executive", "account executive"]
+    default = signals.SignalRules({"sales_job_ad": [("account executive", r"account\s+executive")]},
+                                  frozenset({"sales_job_ad"}), frozenset())
+    assert len(signals.extract(site, default)) == 1                         # the default keeps the first match
+
+
+def test_unconfirmed_emails_wait_for_verification_only_for_quailworks(env):
+    from datetime import datetime, timezone
+
+    from gtm.layers import l4_gate
+
+    now = datetime(2026, 11, 12, tzinfo=timezone.utc)
+    conn = db.connect()
+    for client, domain in ((QW, "acme.example"), (TMJ, "voorbeeld.example")):
+        acc = _account(conn, client, "Acme", f"https://{domain}", [], status="tier_1")
+        conn.execute("INSERT INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, scored_at)"
+                     " VALUES (?,?,?,?,?,?,?)", (acc, 85, 35, "tier_1", 1, 0, "t"))
+        for first, status in (("sure", "DELIVERABLE"), ("maybe", "HIGH_PROBABILITY"), ("dead", "HIGH_PROBABILITY")):
+            conn.execute(
+                "INSERT INTO contacts(client, account_id, person_id, first_name, last_name, country, status, email,"
+                " email_status, email_source, data_source, verified_at, created_at, updated_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (client, acc, f"{client}-{first}", first, "X", "US" if client == QW else "NL", "email_found",
+                 f"{first}@{domain}", status, "FullEnrich", "FullEnrich people search", now.isoformat(),
+                 now.isoformat(), now.isoformat()))
+    conn.commit()
+
+    def statuses(client):
+        return {r["first_name"]: (r["status"], r["status_reason"])
+                for r in conn.execute("SELECT * FROM contacts WHERE client=?", (client,))}
+
+    l4_gate.run(load_client(TMJ), conn, now=now)
+    assert {s for s, _ in statuses(TMJ).values()} == {"ready"}             # The Marble Jar: unchanged
+    cfg = load_client(QW)
+    l4_gate.run(cfg, conn, now=now)
+    qw = statuses(QW)
+    assert qw["sure"] == ("held", "sender_consent_pending")                 # only the launch consent is missing
+    assert qw["maybe"] == qw["dead"] == ("held", "unverified_email:run gate --recheck")
+
+    class StubMV:
+        checked = []
+
+        def verify(self, email):
+            self.checked.append(email)
+            return {"result": "invalid" if email.startswith("dead") else "ok", "role": False, "free": False}
+
+    l4_gate.run(cfg, conn, recheck=True, mv=StubMV(), now=now)
+    qw = statuses(QW)
+    assert sorted(StubMV.checked) == ["dead@acme.example", "maybe@acme.example"]   # not the confirmed one
+    assert qw["maybe"] == ("held", "sender_consent_pending") and qw["dead"] == ("rejected_l4", "email_status:INVALID")
+    l4_gate.run(cfg, conn, recheck=True, mv=StubMV(), now=now)
+    assert len(StubMV.checked) == 2                                         # verified once, not again

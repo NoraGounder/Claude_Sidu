@@ -7,7 +7,9 @@ re-crawl or re-score never loses them.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 
@@ -32,6 +34,33 @@ def job_threshold(cfg: ClientConfig) -> float:
     return t["job_title"] if "job_title" in t else t["admin_role"]
 
 
+def evidence_threshold(cfg: ClientConfig) -> float:
+    return cfg.ai["thresholds"].get("job_evidence", job_threshold(cfg))
+
+
+def evidence_key(label: str, quote: str) -> str:
+    """Names one word match in Jev's stored checks: when the page text changes, it is a new match."""
+    return f"{label}|{hashlib.sha1(quote.encode()).hexdigest()[:10]}"
+
+
+def checked_evidence(cfg: ClientConfig, evidence: list[Evidence], jev: dict | None) -> list[Evidence]:
+    """Optional (ai.yaml `job_evidence`): a word match for the job signal on a careers page counts only
+    until Jev 1.14 has checked it and said it is not an open role (a testimonial, another job's
+    description, a role abroad). Matches not checked yet stay, so the next Jev run can check them."""
+    if not cfg.ai.get("job_evidence") or not jev:
+        return evidence
+    signal, threshold, checks = job_signal(cfg), evidence_threshold(cfg), jev.get("checks") or {}
+    return [e for e in evidence
+            if e.signal != signal or checks.get(evidence_key(e.label, e.quote), 1.0) >= threshold]
+
+
+def order_titles(cfg: ClientConfig, titles: list[str]) -> list[str]:
+    """Titles that match the job signal's rules first: a job board can list a hundred roles, and
+    only the first ones are stored and put to Jev 1.14."""
+    patterns = [p for _, p in rules_for(cfg.scoring).rules.get(job_signal(cfg), [])]
+    return sorted(titles, key=lambda t: not any(re.search(p, t, re.I) for p in patterns))
+
+
 @dataclass
 class Score:
     fit: int
@@ -48,7 +77,8 @@ def load_jev(conn, account_id: int) -> dict | None:
         return None
     return {"model_id": row["model_id"], "not_a_buyer": row["not_a_buyer"], "icp_fit": row["icp_fit"],
             "icp_confidence": row["icp_confidence"], "titles": json.loads(row["titles_json"]),
-            "lookalike": row["lookalike"] if "lookalike" in row.keys() else None}
+            "lookalike": row["lookalike"] if "lookalike" in row.keys() else None,
+            "checks": json.loads(row["checks_json"] or "{}") if "checks_json" in row.keys() else {}}
 
 
 def jev_evidence(cfg: ClientConfig, site: SiteCrawl | None, jev: dict | None) -> list[Evidence]:
@@ -56,7 +86,7 @@ def jev_evidence(cfg: ClientConfig, site: SiteCrawl | None, jev: dict | None) ->
         return []
     threshold, signal = job_threshold(cfg), job_signal(cfg)
     url = (site.careers.url if site and site.careers and site.careers.ok else
-           site.home.url if site else "")
+           (site.board_url or site.home.url) if site else "")
     return [Evidence(signal, f"job title: {title}", url, f"{title} (Jev 1.14, p={p:.2f})")
             for title, p in jev["titles"].items() if p >= threshold]
 
@@ -147,7 +177,8 @@ def tier_for(cfg: ClientConfig, fit: int, signal: int, lookalike: float | None =
 
 def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None,
                   jev: dict | None = None) -> tuple[Score, list[Evidence]]:
-    evidence = (extract(site, rules_for(cfg.scoring)) if site else []) + jev_evidence(cfg, site, jev)
+    found = checked_evidence(cfg, extract(site, rules_for(cfg.scoring)) if site else [], jev)
+    evidence = found + jev_evidence(cfg, site, jev)
     fit, fit_parts = fit_score(cfg, account, site, evidence, jev)
     signal, sig_parts = signal_score(cfg, site, evidence)
     flags = []
@@ -180,7 +211,7 @@ def _save(conn, account_id: int, site: SiteCrawl | None, score: Score, evidence:
         " job_link_count, job_titles, flags, breakdown, scored_at, home_title, home_excerpt)"
         " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (account_id, score.fit, score.signal, score.tier, int(home_ok), int(home_ok and is_dutch(site)),
-         site.careers.url if site and site.careers and site.careers.ok else None,
+         site.careers.url if site and site.careers and site.careers.ok else (site.board_url or None) if site else None,
          site.job_link_count if site else 0,
          json.dumps((site.job_titles if site else [])[:30], ensure_ascii=False),
          json.dumps(score.flags), json.dumps(score.breakdown), ts,
@@ -218,9 +249,14 @@ def run(cfg: ClientConfig, conn, limit: int | None = None, rescore: bool = False
     accounts = kept[:limit] if limit else kept
     run_id = db.start_run(conn, cfg.slug, "L2", "crawl", f"{len(accounts)} accounts", 0.0, {"limit": limit})
 
+    boards = cfg.scoring.get("job_boards")   # optional: read hosted job boards' public feeds
+
     def work(acc):
         try:
-            site = crawl_site(fetcher_factory(), acc["website"]) if acc.get("website") else None
+            site = (crawl_site(fetcher_factory(), acc["website"], job_boards=boards)
+                    if acc.get("website") else None)
+            if site and boards:
+                site.job_titles = order_titles(cfg, site.job_titles)
         except Exception as exc:  # noqa: BLE001 - score the account without a site, flag it
             site = SiteCrawl(home=Page(url=acc["website"], status=0, error=f"crawl_error:{type(exc).__name__}"))
         return acc, site

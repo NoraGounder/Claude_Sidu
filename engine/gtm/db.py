@@ -253,6 +253,7 @@ MIGRATIONS = [
     ("contacts", "verified_at", "TEXT"),
     ("contacts", "gate_checked_at", "TEXT"),
     ("jev_decisions", "lookalike", "REAL"),
+    ("jev_decisions", "checks_json", "TEXT"),
 ]
 
 

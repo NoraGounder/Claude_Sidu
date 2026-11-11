@@ -39,7 +39,7 @@ import yaml
 
 from gtm import brain, db
 from gtm.config import ClientConfig, data_dir
-from gtm.layers.l2_prefilter import job_signal
+from gtm.layers.l2_prefilter import evidence_key, evidence_threshold, job_signal
 from gtm.layers.l4_gate import load_rules
 from gtm.signals import DEFAULT_RULES, SignalRules, rules_for
 from gtm.sources.jev import JevClient, JevResult, check_policy
@@ -149,8 +149,10 @@ def clean_first_name(name: str) -> str:
 
 
 def facts_for(conn, account: dict, seq: dict | None = None, rules: SignalRules = DEFAULT_RULES,
-              title_signal: str = "admin_job_ad") -> dict:
-    """Facts with sources. Only exact titles found on the careers page are used as job titles."""
+              title_signal: str = "admin_job_ad", confirmed_from: float | None = None) -> dict:
+    """Facts with sources. Only exact titles found on the careers page are used as job titles.
+    With `confirmed_from` (the client has Jev 1.14 check job-ad word matches, ai.yaml `job_evidence`),
+    a role in a match that Jev confirmed as an open vacancy can be quoted too."""
     seq = seq or {}
     extra = _extra(seq.get("title_role_words"))
     facts: dict = {}
@@ -171,6 +173,22 @@ def facts_for(conn, account: dict, seq: dict | None = None, rules: SignalRules =
             hit = next((q for q in quote if re.search(q["pattern"], t, re.I)), None) if t in titles else None
             if hit:
                 facts["job_title"] = {"value": hit["label"], "raw": t, "source": careers}
+                break
+        if "job_title" not in facts and confirmed_from is not None:
+            row = conn.execute("SELECT checks_json FROM jev_decisions WHERE account_id=?", (account["id"],)).fetchone()
+            checks = json.loads(row["checks_json"] or "{}") if row else {}
+            patterns = dict(rules.rules.get(title_signal, []))
+            for e in ev:
+                if e["signal"] != title_signal or e["label"].startswith("job title: "):
+                    continue
+                if checks.get(evidence_key(e["label"], e["quote"]), 0.0) < confirmed_from:
+                    continue
+                m = re.search(patterns.get(e["label"]) or re.escape(e["label"]), e["quote"], re.I)
+                role = re.sub(r"\s+", " ", m.group(0)).lower() if m else e["label"]
+                if role.endswith("s") and not e["label"].endswith("s"):
+                    role = role[:-1]                     # "account executives" -> "account executive"
+                hit = next((q for q in quote if re.search(q["pattern"], role, re.I)), None)
+                facts["job_title"] = {"value": hit["label"] if hit else role, "raw": e["quote"], "source": e["url"]}
                 break
     else:
         exact = next((t for t in jev_titles + rule_titles
@@ -297,7 +315,8 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
         # Language comes from client.yaml: one default, with optional per-country overrides.
         lang_cfg = cfg.client.get("language", {})
         lang = (lang_cfg.get("by_country") or {}).get(account.get("country") or "", lang_cfg.get("default", "en"))
-        facts = facts_for(conn, account, seq, signal_rules, title_signal)
+        facts = facts_for(conn, account, seq, signal_rules, title_signal,
+                          evidence_threshold(cfg) if cfg.ai.get("job_evidence") else None)
         hooks = supported_hooks(seq, facts)
 
         state, questions = choose_request(seq, account, contact, hooks, brain.jev_context(cfg, "angle"))

@@ -24,6 +24,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
+from gtm import jobboards
 from gtm.config import data_dir
 
 USER_AGENT = "QuailworksBot/0.1 (+https://quailworks.co; company research)"
@@ -55,6 +56,7 @@ class Page:
     lang: str = ""
     links: list[tuple[str, str]] = field(default_factory=list)   # (absolute url, anchor text)
     error: str = ""
+    embeds: list[str] = field(default_factory=list)   # job-board addresses anywhere in the HTML
 
     @property
     def ok(self) -> bool:
@@ -75,7 +77,8 @@ def parse_html(url: str, html: str) -> Page:
     for tag in soup(["script", "style", "noscript", "svg", "template"]):
         tag.decompose()
     text = re.sub(r"\s+", " ", soup.get_text(" ", strip=True))
-    return Page(url=url, status=200, text=text, title=title, h1=h1, lang=lang.lower()[:5], links=links)
+    return Page(url=url, status=200, text=text, title=title, h1=h1, lang=lang.lower()[:5], links=links,
+                embeds=jobboards.board_urls(html))
 
 
 class Fetcher:
@@ -136,6 +139,28 @@ class Fetcher:
             return Page(url=url, status=0, error=type(exc).__name__)
         cache.write_text(json.dumps(page.__dict__, ensure_ascii=False), encoding="utf-8")
         return page
+
+    def get_json(self, url: str):
+        """A public JSON feed (job boards). Same robots.txt rules, politeness and cache; None on any failure."""
+        cache = self._cache_path("json:" + url)
+        if self.use_cache and cache.exists():
+            return json.loads(cache.read_text(encoding="utf-8"))
+        if not self.allowed(url):
+            return None
+        host = urlparse(url).netloc
+        wait = self.delay - (time.monotonic() - self._last_hit.get(host, 0))
+        if wait > 0:
+            time.sleep(wait)
+        self._last_hit[host] = time.monotonic()
+        try:
+            resp = self.http.get(url, timeout=TIMEOUT, headers={"Accept": "application/json"})
+            if resp.status_code != 200 or len(resp.content) > 4 * MAX_BYTES:
+                return None
+            data = resp.json()
+        except Exception:   # noqa: BLE001 - a missing or broken feed is the same as no feed
+            return None
+        cache.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        return data
 
 
 class BrowserPool:
@@ -242,6 +267,7 @@ class SiteCrawl:
     jobs: list[Page] = field(default_factory=list)
     job_link_count: int = 0      # vacancies linked from the careers page (we fetch at most max_jobs)
     job_titles: list[str] = field(default_factory=list)
+    board_url: str = ""          # the company's hosted job board, when its feed was read (job_boards)
 
     @property
     def pages(self) -> list[Page]:
@@ -272,7 +298,32 @@ def _job_links(page: Page) -> list[str]:
             if JOB_LINK_HINTS.search(urlparse(u).path) and len(urlparse(u).path.strip("/").split("/")) >= 2]
 
 
-def crawl_site(fetcher: Fetcher, website: str, max_jobs: int = 5) -> SiteCrawl:
+def crawl_site(fetcher: Fetcher, website: str, max_jobs: int = 5, job_boards: dict | None = None) -> SiteCrawl:
+    """Home page, careers page and a few vacancy pages. With `job_boards` (scoring.yaml), the open
+    jobs of a hosted job board linked or embedded on the site are added from its public feed."""
+    site = _crawl_pages(fetcher, website, max_jobs)
+    if job_boards and site.home.ok and hasattr(fetcher, "get_json"):
+        _add_board_jobs(fetcher, site, job_boards)
+    return site
+
+
+def _add_board_jobs(fetcher: Fetcher, site: SiteCrawl, job_boards: dict) -> None:
+    careers = site.careers if site.careers and site.careers.ok else None
+    # Most trusted first: the careers page itself, what it embeds and links to, then the home page.
+    urls = ([careers.url, *careers.embeds, *(u for u, _ in careers.links)] if careers else []) + \
+           [*site.home.embeds, *(u for u, _ in site.home.links)]
+    board = jobboards.find_board(urls)
+    if not board:
+        return
+    jobs = jobboards.parse_feed(board.name, fetcher.get_json(board.feed))
+    if not jobs:
+        return
+    site.board_url = board.page
+    site.job_titles = list(dict.fromkeys(jobboards.titles(jobs, job_boards.get("countries")) + site.job_titles))
+    site.job_link_count = max(site.job_link_count, len(jobs))
+
+
+def _crawl_pages(fetcher: Fetcher, website: str, max_jobs: int = 5) -> SiteCrawl:
     # LinkedIn often stores http:// addresses. Try https:// first (nearly every site has it, and
     # some networks only allow HTTPS), then fall back to the address as given.
     bare = re.sub(r"^https?://", "", website.strip(), flags=re.I)

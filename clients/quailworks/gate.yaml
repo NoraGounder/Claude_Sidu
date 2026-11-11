@@ -2,6 +2,10 @@
 # when every rule passes; "held" means it may pass later; "rejected_l4" means never send.
 
 accepted_email_status: [DELIVERABLE, HIGH_PROBABILITY]   # FullEnrich verification results
+# A third of the first run's emails were "high probability", not confirmed. Fresh mailboxes cannot
+# afford bounces, so these wait until MillionVerifier has checked them (`gate --recheck`, where the key
+# is set; about $0.004 each). Verified ones become DELIVERABLE, the rest are rejected.
+verify_statuses: [HIGH_PROBABILITY]
 
 catch_all:                     # the mail server accepts any address, so delivery can't be confirmed
   allowed_tiers: [tier_1, tier_2]
