@@ -88,14 +88,23 @@ Run the paid layers from a machine with open internet access, such as the user's
 Claude Code cloud session, each vendor's host must be allowed and its key saved as a network
 secret. See `.env.example`.
 
-## Memory: Notion
+## Memory and working across chats
 
-When the Notion connector is available, the user's Notion is the engine's memory. At the start of a
-session, read the page "Quailworks GTM Brain" (status, open items, key dates, learnings) and search the
-Notion memories for the client. After every paid run, decision change or result, add a row to that
-page's "Run log" database and update the page. A changed decision also goes into the client's
-`decisions.md` here: the repository stays the source of truth for config. Notion gets only counts,
-costs and lessons. Never put prospect names, contact details, client-private files or keys there.
+Each client runs in its own Claude Code chat (Quailworks in one, The Marble Jar in another), on the
+same branch, with the user's Notion as shared memory.
+
+- **Start of a session:** `git pull`, then read the Notion page "Quailworks GTM Brain" (status, open
+  items, key dates, learnings and its "Between chats" notes) and search the Notion memories for the client.
+- **Stay in your lane:** a chat edits only its own client's folder (`clients/<client>/`). A change to
+  shared files (`engine/`, `CLAUDE.md`, `.env.example`) or to anything the other client relies on (the
+  Smartlead account, a sending domain, a shared budget) gets a dated note under "Between chats". When
+  the other chat must know before its next run, also message its session directly (`send_message`).
+- **After every paid run, decision change or result:** add a row to the page's "Run log" database and
+  update the page. A changed decision also goes into the client's `decisions.md`: the repository stays
+  the source of truth for config.
+- **Before every push:** pull and rebase, because the other chat pushes to the same branch.
+- Notion gets only counts, costs and lessons. Never put prospect names, contact details,
+  client-private files or keys there.
 
 ## Where things live
 
