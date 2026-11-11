@@ -412,8 +412,9 @@ def test_jev_checks_job_ad_matches_before_they_count_or_are_quoted(env):
     _, questions, keys = l2_jev.build_request(cfg, item)
     assert "Dana Lee, Account Executive" in questions["evidence_0"]["instructions"]
     assert 'open position right now for the role "account executive"' in questions["evidence_0"]["instructions"]
-    _, tmj_questions, _ = l2_jev.build_request(tmj, item)
-    assert "evidence_0" not in tmj_questions                               # The Marble Jar: not opted in
+    tmj.ai.pop("job_evidence", None)            # The Marble Jar opted in on 2026-11-11; this is the default
+    _, default_questions, _ = l2_jev.build_request(tmj, item)
+    assert "evidence_0" not in default_questions                           # without the setting: no check
 
     def decide(p):
         answers = {"not_a_buyer": {"noul": 0.02}, "icp_fit": {"score": 1.8}, "evidence_0": {"noul": p}}
