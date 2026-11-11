@@ -51,8 +51,8 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
 
 One message, at launch, a few minutes:
 
-1. **Sign the data processing agreement** that Quailworks prepares (GDPR Art. 28: we process
-   personal data for his company, so the law requires it).
+1. **Done (11 November 2026):** Mithun accepted the data processing agreement in writing
+   (GDPR Art. 28). The user keeps his message as the signed copy.
 2. **A booking link or two time slots a week** for meetings. Until then, Quailworks forwards
    interested replies to him and proposes times.
 

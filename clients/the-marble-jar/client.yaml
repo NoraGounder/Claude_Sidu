@@ -25,5 +25,5 @@ handoff:
 
 # Quailworks decides (decisions.md). Only these need The Marble Jar, in one message at launch:
 needed_from_client:
-  - Signature on the data processing agreement Quailworks prepares (GDPR Art. 28)
+  - DONE 2026-11-11: data processing agreement accepted by Mithun in writing (GDPR Art. 28)
   - A booking link or weekly time slots for meetings (until then Quailworks proposes times)
