@@ -29,6 +29,10 @@ settings:
   stop_on_auto_reply: false
   send_as_plain_text: true
 
+# Smartlead sends in upload order: the strongest companies first (tier, then signal and fit scores), so
+# the small daily volume of the first weeks goes to the best-matched people (decisions.md Q37).
+send_order: best_first
+
 # Launch: only these tiers are uploaded. Add tier_3 once Tier 1-2 results prove the message.
 send_tiers: [tier_1, tier_2]
 

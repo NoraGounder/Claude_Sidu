@@ -86,11 +86,16 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
     from gtm.layers.l1_discover import sync_exclusions
     sync_exclusions(conn, cfg)          # last check before upload: the do-not-contact list is current
     suppressed = {k: db.suppressed_values(conn, cfg.slug, k) for k in ("email", "domain", "company")}
+    # Smartlead sends in upload order. Optional (sending.yaml send_order: best_first): the strongest
+    # companies go first (tier, then signal and fit scores), so a small daily volume is spent on them.
+    order = ("CASE a.status WHEN 'tier_1' THEN 1 WHEN 'tier_2' THEN 2 ELSE 3 END, s.signal DESC, s.fit DESC, c.rank, c.id"
+             if sending.get("send_order") == "best_first" else "c.rank, c.id")
     rows = [dict(r) for r in conn.execute(
         "SELECT d.id AS draft_id, d.subject, d.steps_json, c.*, a.name AS company, a.domain AS account_domain,"
         " a.country AS account_country, a.status AS account_tier FROM drafts d JOIN contacts c ON c.id=d.contact_id"
-        " JOIN accounts a ON a.id=c.account_id WHERE d.client=? AND d.status='approved'"
-        " AND c.id NOT IN (SELECT contact_id FROM outbound) ORDER BY c.rank, c.id", (cfg.slug,)).fetchall()]
+        " JOIN accounts a ON a.id=c.account_id LEFT JOIN l2_scores s ON s.account_id=a.id"
+        " WHERE d.client=? AND d.status='approved'"
+        f" AND c.id NOT IN (SELECT contact_id FROM outbound) ORDER BY {order}", (cfg.slug,)).fetchall()]
     window = (now - timedelta(days=sending["stagger_days_same_account"])).isoformat()
     active_accounts = {r[0] for r in conn.execute(
         "SELECT account_id FROM outbound WHERE client=? AND (pushed_at >= ? OR status='replied')",

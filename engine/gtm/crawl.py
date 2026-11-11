@@ -255,9 +255,10 @@ def browser_available() -> bool:
         return False
 
 
-def default_fetcher() -> Fetcher:
-    """HybridFetcher when Crawl4AI is installed (pip install -e '.[crawl]'), plain HTTP otherwise."""
-    return HybridFetcher() if browser_available() else Fetcher()
+def default_fetcher(use_cache: bool = True) -> Fetcher:
+    """HybridFetcher when Crawl4AI is installed (pip install -e '.[crawl]'), plain HTTP otherwise.
+    use_cache=False reads every page again (signals such as open jobs go stale) and renews the cache."""
+    return HybridFetcher(use_cache=use_cache) if browser_available() else Fetcher(use_cache=use_cache)
 
 
 @dataclass

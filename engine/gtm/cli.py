@@ -56,12 +56,15 @@ def cmd_discover(args) -> int:
 
 
 def cmd_prefilter(args) -> int:
+    from gtm.crawl import default_fetcher
     from gtm.layers import l2_prefilter
 
     cfg = load_client(args.client)
     conn = db.connect()
     print(f"Layer 2 for {cfg.slug}: crawling and scoring (free, uses time only)...")
-    summary = l2_prefilter.run(cfg, conn, limit=args.limit, rescore=args.rescore, workers=args.workers)
+    factory = (lambda: default_fetcher(use_cache=False)) if args.refresh else None
+    summary = l2_prefilter.run(cfg, conn, limit=args.limit, rescore=args.rescore, workers=args.workers,
+                               fetcher_factory=factory)
     print(f"Scored {summary['accounts']} accounts: Tier 1 {summary['tier_1']}, Tier 2 {summary['tier_2']}, "
           f"Tier 3 {summary['tier_3']}, dropped {summary['rejected_l2']}. "
           f"Unreachable sites {summary['unreachable']}; with Jev 1.14 decisions {summary['jev_decided']}.")
@@ -348,6 +351,31 @@ def cmd_best_clients(args) -> int:
     return 0
 
 
+def cmd_sample(args) -> int:
+    """The Signal Sample: companies in a prospect's market with a buying signal, for a person to send."""
+    from gtm import sample
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    ids = [i.strip() for i in (args.industry_ids or "").split(",") if i.strip()]
+    roles = [r.strip() for r in (args.roles or "").split(",") if r.strip()]
+    actor_input, est = sample.plan(cfg, args.search, ids, args.location or ["United States"], args.max_items)
+    print(f"Signal Sample '{args.name}': up to {actor_input['maxItems']} companies, estimated ${est:.2f}.")
+    print(f"  search: {json.dumps(actor_input)}")
+    if args.dry_run:
+        print("Dry run: nothing was called or spent.")
+        return 0
+    try:
+        r = sample.run(cfg, conn, args.name, actor_input, est, roles=roles, top=args.top)
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    print(f"Read {r['read']} of {r['fetched']} companies; {r['with_signal']} show a signal; {r['listed']} listed. "
+          f"Cost ${r['cost_usd']:.2f}.")
+    print(f"Check it, then send it: {r['path']}")
+    return 0
+
+
 def cmd_handoff(args) -> int:
     from gtm.layers import l7_handoff
 
@@ -470,6 +498,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("prefilter", help="Layer 2: crawl sites, find signals, score and tier")
     p.add_argument("--limit", type=int, help="only the first N unscored accounts (for testing)")
     p.add_argument("--rescore", action="store_true", help="re-score accounts already scored (uses the cache)")
+    p.add_argument("--refresh", action="store_true",
+                   help="read every site again instead of the cache (before a launch: open jobs go stale)")
     p.add_argument("--workers", type=int, default=8)
     p.set_defaults(func=cmd_prefilter)
 
@@ -514,6 +544,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     ap = sub.add_parser("approve", help="Layer 5: approve drafts that passed every automatic check")
     ap.set_defaults(func=cmd_approve)
+
+    sm = sub.add_parser("sample", help="Signal Sample: companies in a prospect's market with a buying signal")
+    sm.add_argument("--name", required=True, help="the prospect the sample is for (names the output file)")
+    sm.add_argument("--search", help="search phrase for the prospect's market, e.g. 'contract manufacturing'")
+    sm.add_argument("--industry-ids", help="LinkedIn industry IDs, comma-separated")
+    sm.add_argument("--location", action="append", help="country (repeatable; default United States)")
+    sm.add_argument("--roles", help="open job titles that mean a company needs the prospect's product, comma-separated")
+    sm.add_argument("--max-items", type=int, help="companies to read (default: sample.yaml)")
+    sm.add_argument("--top", type=int, default=10)
+    sm.add_argument("--dry-run", action="store_true", help="show the search and cost, call nothing")
+    sm.set_defaults(func=cmd_sample)
 
     pu = sub.add_parser("push", help="Layer 6: upload eligible leads to Smartlead (dry run unless --live)")
     pu.add_argument("--live", action="store_true")

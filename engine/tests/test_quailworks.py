@@ -500,3 +500,93 @@ def test_unconfirmed_emails_wait_for_verification_only_for_quailworks(env):
     assert qw["maybe"] == ("held", "sender_consent_pending") and qw["dead"] == ("rejected_l4", "email_status:INVALID")
     l4_gate.run(cfg, conn, recheck=True, mv=StubMV(), now=now)
     assert len(StubMV.checked) == 2                                         # verified once, not again
+
+
+# ---------- conversion pass (decisions.md Q37) ----------
+
+def test_best_companies_are_uploaded_first_only_when_the_client_asks(env, monkeypatch):
+    from gtm.layers import l6_send
+
+    conn = db.connect()
+    for slug in (QW, TMJ):
+        (env / slug / "private").mkdir()
+        (env / slug / "private" / "sender.yaml").write_text("first_name: Sam\nfull_name: Sam Example\n")
+        client = env / slug / "client.yaml"
+        client.write_text(client.read_text().replace("consent_to_send_in_name: pending", "consent_to_send_in_name: granted"))
+        country = "US" if slug == QW else "NL"
+        # inserted weakest first: upload order must not follow insertion order for Quailworks
+        for name, tier, signal in (("Weak Co", "tier_2", 20), ("Mid Co", "tier_1", 35), ("Best Co", "tier_1", 60)):
+            acc = _account(conn, slug, name, f"https://{name.split()[0].lower()}-{slug}.example", [], country=country, status=tier)
+            conn.execute("INSERT INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, scored_at)"
+                         " VALUES (?,?,?,?,?,?,?)", (acc, 85, signal, tier, 1, 0, "t"))
+            cur = conn.execute("INSERT INTO contacts(client, account_id, person_id, first_name, last_name, status, email,"
+                               " email_status, data_source, rank, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                               (slug, acc, f"{slug}-{name}", name.split()[0], "T", "ready",
+                                f"x@{name.split()[0].lower()}-{slug}.example", "DELIVERABLE", "FullEnrich", 1, "t", "t"))
+            conn.execute("INSERT INTO drafts(client, contact_id, language, hook, process, subject, steps_json, facts_json,"
+                         " status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                         (slug, cur.lastrowid, "en", "generic", "outbound", "s", json.dumps([{"day": 0, "body": "b"}]),
+                          "{}", "approved", "t", "t"))
+    conn.commit()
+    qw = l6_send.plan_push(load_client(QW), conn)
+    assert [lead["first_name"] for lead in qw.eligible["us"]] == ["Best", "Mid", "Weak"]
+    tmj = l6_send.plan_push(load_client(TMJ), conn)
+    assert [lead["first_name"] for lead in next(iter(tmj.eligible.values()))] == ["Weak", "Mid", "Best"]   # unchanged
+
+
+def test_email_one_is_short_and_asks_one_thing(env):
+    cfg = load_client(QW)
+    seq = l5_copy.load_sequence(cfg)
+    contact = {"id": 7, "first_name": "Dana", "title": "VP Sales", "persona": "sales_leader"}
+    account = {"name": "Acme Robotics, Inc.", "industry": "Robotics"}
+    sender, notice = {"first_name": "Sam"}, "Source and opt-out notice."
+    _, job = l5_copy.render(seq, "en", "sales_job_ad", "outbound", {"job_title": {"value": "account executive"}},
+                            contact, account, sender, notice)
+    _, plain = l5_copy.render(seq, "en", "generic", "outbound", {}, contact, account, sender, notice)
+    first = job[0]["body"]
+    assert "I saw the account executive opening at Acme Robotics." in first
+    assert "It could be that person's first list." in first and "It could be that person's first list." not in plain[0]["body"]
+    for body in (first, plain[0]["body"]):
+        assert body.count("?") <= 2 and "{" not in body and "No call needed." in body
+        assert len(body.replace(notice, "").split()) <= 100          # short enough to read on a phone
+    assert "12 qualified meetings" in job[1]["body"] and len(job[1]["body"].split()) <= 115
+    assert not [p for p in seq["banned_phrases"] for s in job if p in s["body"].lower()]
+
+
+def test_signal_sample_lists_companies_with_sources_and_stores_no_accounts(env):
+    from gtm import sample
+    from gtm.sources.apify import RunResult
+
+    cfg = load_client(QW)
+    conn = db.connect()
+    actor_input, est = sample.plan(cfg, "contract manufacturing", ["135"], ["United States"])
+    assert actor_input["maxItems"] == 60 and actor_input["searchQuery"] == "contract manufacturing" and est == 0.24
+
+    def company(name, site):
+        return {"name": name, "website": site, "employeeCountRange": {"start": 51, "end": 200},
+                "locations": [{"headquarter": True, "country": "US", "city": "Detroit"}]}
+
+    class Client:
+        def run_actor(self, actor, payload):
+            return RunResult([company("Hiring Works", "https://hiring.example"),
+                              company("Growing Plant", "https://growing.example"),
+                              company("Quiet Co", "https://quiet.example")], "run1", "SUCCEEDED", 0.0)
+
+    pages = {
+        "https://hiring.example": '<html><body>Machined parts. <a href="/careers">Careers</a></body></html>',
+        "https://hiring.example/careers": '<html><body><a href="/careers/jobs/controls-engineer">Controls Engineer</a></body></html>',
+        "https://hiring.example/careers/jobs/controls-engineer": "<html><body><h1>Controls Engineer</h1></body></html>",
+        "https://growing.example": "<html><body>We are opening a new production line in Ohio.</body></html>",
+        "https://quiet.example": "<html><body>Quality parts since 1970.</body></html>",
+    }
+    r = sample.run(cfg, conn, "Acme Robotics", actor_input, est, roles=["controls engineer"], client=Client(),
+                   fetcher_factory=lambda: FakeFetcher(pages), workers=1)
+    text = r["path"].read_text()
+    assert (r["read"], r["with_signal"], r["listed"]) == (3, 2, 2) and r["path"].name == "acme-robotics.md"
+    assert text.index("Hiring Works") < text.index("Growing Plant") and "Quiet Co" not in text
+    assert 'Hiring: "Controls Engineer" (https://hiring.example/careers)' in text
+    assert "Expanding:" in text and "(https://growing.example)" in text
+    # the prospect's market is not Quailworks' pipeline: only the run is logged
+    assert conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0] == 0
+    run = conn.execute("SELECT layer, vendor, label, status, actual_cost FROM runs").fetchone()
+    assert tuple(run) == ("SAMPLE", "apify", "sample:Acme Robotics", "succeeded", 0.012)

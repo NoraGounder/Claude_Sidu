@@ -19,6 +19,7 @@ behaviour applies:
   title_role_words                    extra regex words that make a vacancy title quotable
   company_suffixes                    extra legal suffixes to drop from company names (e.g. inc, llc)
   banned_phrases                      extra phrases that block automatic approval
+  cta / hooks.<hook>.cta              the ask after the opening ({cta} in a step), one for all or per hook
   quote_titles                        [{label, pattern}]: quote a clean role name found in a confirmed
                                       open title, never the raw title text
   job_title_qa / named_facts.<k>.qa   how the fact check sees a fact ("Open job on their careers page")
@@ -268,6 +269,9 @@ def render(seq: dict, lang: str, hook: str, process: str, facts: dict, contact: 
     values["signoff"] = _pick(seq["signoffs"][lang], contact["id"], "signoff")
     values["process"] = seq["process"][process][lang]
     values["hook"] = seq["hooks"][hook][lang].format(**values)
+    # Optional: the ask that follows the opening, per hook (hooks.<hook>.cta) or one for all (cta).
+    cta = seq["hooks"][hook].get("cta") or seq.get("cta") or {}
+    values["cta"] = cta.get(lang, "").format(**values)
     subject = seq["hooks"][hook]["subject"][lang].format(**values)
     steps = []
     for step in seq["steps"]:

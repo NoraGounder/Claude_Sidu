@@ -1,0 +1,43 @@
+# The Signal Sample (decisions.md Q31): 10 companies in a prospect's market that show a buying signal
+# now, each with its source. Built by `python -m gtm --client quailworks sample ...` for a prospect who
+# asked for it; a person checks the list before it is sent. Company-level data only.
+#
+# Status 2026-11-11: the first trial (60 contract manufacturers) found too few strong signals to send:
+# manufacturers keep their job lists in systems a crawl cannot read. The next version searches job
+# postings directly (Harvest's LinkedIn job search on Apify, $0.001 a job, no login), where every
+# result is a company hiring now. Apify asks the account owner to approve that actor once.
+
+max_items: 60                  # companies read per sample: about $0.24 on Apify
+company_sizes: ["51-200", "201-500", "501-1000"]    # the prospect's buyers are usually larger than the prospect
+job_board_countries: [US, GB]
+growth_min_open_roles: 8
+min_points: 15                 # a certificate or a trade show alone does not put a company on the list
+quote_width: 110
+
+# Points per kind of signal; a company is ranked by the sum of the signals found.
+signals:
+  hiring: 40          # an open role the prospect's product is bought for (add the prospect's own with --roles)
+  expansion: 30       # a new plant, line or facility
+  funding: 25
+  new_program: 20     # a contract win or a new product programme
+  growth: 15          # many open roles
+  trade_show: 10
+  certification: 5
+
+# Open job titles that mean an engineering or plant team is growing. Matched on exact titles from job
+# links and job boards only, never on page text.
+hiring_roles: [automation engineer, controls engineer, manufacturing engineer, process engineer,
+               quality engineer, robotics engineer, test engineer, mechanical engineer,
+               maintenance manager, plant manager, operations manager, continuous improvement]
+
+detect:
+  expansion:
+    - {label: "Expanding", pattern: 'new\s+(manufacturing\s+|production\s+)?(facility|plant|factory|production\s+line|headquarters)|expand(s|ed|ing)?\s+(its\s+|our\s+)?(capacity|production|manufacturing|operations|footprint)|breaks?\s+ground|square[- ]foot\s+expansion'}
+  funding:
+    - {label: "Funding", pattern: 'series\s+[A-E]\b\s+(funding|round|financing)|raised\s+\$\s?\d+|closes?\s+\$\s?\d+(\.\d+)?\s?(m|million)|funding\s+round'}
+  new_program:
+    - {label: "New programme", pattern: 'awarded\s+(a\s+)?(\$[\d.,]+\s?\w*\s+)?contract|wins?\s+(a\s+)?contract|selected\s+by\s+[A-Z]\w+|launch(es|ed)\s+(a\s+)?new\s+(product|platform|line)'}
+  trade_show:
+    - {label: "Exhibiting", pattern: '\b(IMTS|FABTECH|ProMat|MODEX|Automate|PACK\s+EXPO|Hannover\s+Messe|SEMICON)\b\s*(20\d\d)?'}
+  certification:
+    - {label: "Certified", pattern: '\b(AS9100|IATF\s?16949|ISO\s?13485|NADCAP)\b'}

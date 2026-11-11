@@ -17,6 +17,7 @@ unit_price_usd:
   "harvestapi/linkedin-company-search:short": 0.002
   "harvestapi/linkedin-company-search:full": 0.004
   "harvestapi/linkedin-profile-search:full": 0.0032
+  "harvestapi/linkedin-job-search:job": 0.001      # job postings (decisions.md Q38); needs the owner's approval on Apify
   "openrouter:typesafe/jev-1.14:request": 0.0001
   "fullenrich:credit": 0.055
   "fullenrich:person_returned": 0.01375

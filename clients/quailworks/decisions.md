@@ -280,6 +280,29 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   (the founder's single profile is the asset), person-level website visitor tracking (a GDPR risk for
   an EU company).
 
+- **Q37. Conversion pass (2026-11-11, the user: focus on Quailworks' own campaign and its conversion
+  rate).** What decides whether a cold email becomes a call, in order, and what was done for each:
+  (1) *reaching the inbox*: both sending domains have SPF, DKIM and DMARC, tracking is off, emails are
+  plain text, unconfirmed addresses wait for verification (Q35); (2) *the right company at the right
+  moment*: only confirmed signals (Q34), and `prefilter --rescore --refresh` plus `jev` in the launch
+  week, because a job ad seen on 11 November may be closed by 1 December; (3) *the best first*:
+  `sending.yaml` `send_order: best_first` uploads Tier 1 before Tier 2 and stronger signals before
+  weaker ones, so the 30 emails a day of week 1 go to the best-matched people; (4) *a short email with
+  one ask*: email 1 is under 100 words before the signature, names their confirmed open role and asks
+  one thing, the free list, tied to that role ("It could be that person's first list"); email 2 is a
+  quarter shorter; (5) *a fast, useful answer*: the list within two working days (Q38) and the booking
+  link in every answer. Not done on purpose: A/B tests. With about 225 contacts and a few replies
+  expected, two versions could not be told apart; testing starts once a segment has 300 contacts.
+  Change if: the first 100 emails bring no positive reply (then the opening and the ask change first).
+- **Q38. The Signal Sample needs job-posting data.** `python -m gtm --client quailworks sample` builds
+  the free list (`sample.yaml`). Its first version reads company websites; a trial on 30 contract
+  manufacturers found five companies with a signal, mostly certificates, which is not good enough to
+  send. Manufacturers keep their job lists in systems a crawl cannot read. Decided: the list is built
+  from job postings (Harvest's LinkedIn job search on Apify, $0.001 a job, public search, no login),
+  where every result is a company hiring now, with the title, date and link. The same source then
+  feeds our own discovery: companies advertising sales roles in our industries (Q36). Apify asks the
+  account owner to approve this actor once; asked of the user.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

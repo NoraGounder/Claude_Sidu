@@ -55,8 +55,18 @@ Drafts stay previews until `private/sender.yaml` exists; the founder sees them b
 | Positive replies | about 5-11 (estimate) | 2-5% of people emailed |
 | Booked calls | about 3-8 (estimate) | about 70% of positive replies |
 
-Before the first send, on the laptop: `gate --recheck` (verifies the 78 addresses, about $0.35), then
-`draft` for the newly ready contacts. Email 1 now offers the Signal Sample, so each "yes, send the list"
+Launch week, in this order (decisions.md Q37):
+
+```bash
+python -m gtm --client quailworks prefilter --rescore --refresh   # read every site again: are the roles still open? (free)
+python -m gtm --client quailworks jev                             # check new job-ad matches (cents)
+python -m gtm --client quailworks gate --recheck                  # laptop: verify the unconfirmed addresses (about $0.35)
+python -m gtm --client quailworks draft --redo && python -m gtm --client quailworks approve
+python -m gtm --client quailworks push                            # dry run: best companies first; --live uploads
+```
+
+Also in launch week: send one test email from each mailbox to a Gmail and an Outlook inbox and check
+that it lands in the inbox, not in spam. Email 1 now offers the Signal Sample, so each "yes, send the list"
 reply needs a list within two working days (decisions.md Q31).
 
 ## Every week: scale what books calls

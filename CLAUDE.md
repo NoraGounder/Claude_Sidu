@@ -63,7 +63,7 @@ python -m gtm --client the-marble-jar discover --segment logistics_nl --max-item
 python -m gtm --client the-marble-jar best-clients              # import private/best_clients.csv: exclude, crawl, lookalikes
 python -m gtm --client the-marble-jar stats
 python -m gtm --client the-marble-jar export --status qualified_l1
-python -m gtm --client the-marble-jar prefilter --limit 20     # Layer 2 trial (free)
+python -m gtm --client the-marble-jar prefilter --limit 20     # Layer 2 trial (free); --rescore --refresh re-reads every site
 python -m gtm --client the-marble-jar tiers --tier tier_1 --verbose
 python -m gtm --client the-marble-jar jev --dry-run            # Jev 1.14 decisions (shows first request)
 python -m gtm --client the-marble-jar jev                      # decide all scored accounts
@@ -81,6 +81,7 @@ python -m gtm --client the-marble-jar deals                    # pipeline and wo
 python -m gtm --client the-marble-jar crm                      # HubSpot dry run; --live writes after approval
 python -m gtm --client the-marble-jar retention                # DPA deletion schedule (dry run; --apply deletes local data)
 python -m gtm --client the-marble-jar learn                    # conversations, meetings and revenue per signal, opening, tier
+python -m gtm --client quailworks sample --name "Acme" --search "contract manufacturing" --dry-run   # Signal Sample for a prospect (sample.yaml)
 pytest -q
 ```
 
@@ -145,8 +146,10 @@ them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks
   checked them with `gate --recheck`)
 - `templates/sequence.yaml`: `hooks.<hook>.needs` / `.description`, `process.<name>.description`
   (one process means no Jev question), `named_facts`, `title_role_words`, `company_suffixes`,
-  `banned_phrases`
+  `banned_phrases`, `cta` and `hooks.<hook>.cta` (the ask after the opening, `{cta}` in a step)
 - `templates/replies.yaml`: `call_prep` (the meeting brief's call questions)
 - `client.yaml`: `crm.hubspot_token_env` (each client's own HubSpot portal)
-- `sending.yaml`: `mailbox_domains` (the client's own sending domains; one domain, one client)
+- `sending.yaml`: `mailbox_domains` (the client's own sending domains; one domain, one client),
+  `send_order: best_first` (upload the strongest companies first)
+- `sample.yaml`: the Signal Sample (`sample` command): signals and weights for a prospect's market
 - `.claude/skills/`: one skill per runnable layer
