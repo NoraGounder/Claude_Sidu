@@ -324,16 +324,17 @@ def test_quailworks_quotes_clean_role_names_and_trims_taglines(env):
     assert l5_copy.clean_company("Acme Robotics, Inc.", seq["company_suffixes"], cut) == "Acme Robotics"
 
 
-def test_smartlead_key_is_per_client_without_fallback(monkeypatch):
-    from gtm.layers.l6_send import smartlead_for
-    from gtm.sources.smartlead import SmartleadError
 
-    monkeypatch.setenv("SMARTLEAD_API_KEY", "tmj-key")
-    monkeypatch.delenv("SMARTLEAD_API_KEY_QUAILWORKS", raising=False)
-    assert smartlead_for(load_client(TMJ)).key == "tmj-key"
-    # Quailworks has its own Smartlead account: The Marble Jar's key is never used for it.
-    with pytest.raises(SmartleadError, match="SMARTLEAD_API_KEY_QUAILWORKS"):
-        smartlead_for(load_client(QW))
-    monkeypatch.setenv("SMARTLEAD_API_KEY_QUAILWORKS", "qw-key")
-    assert smartlead_for(load_client(QW)).key == "qw-key"
-    assert smartlead_for(load_client(TMJ)).key == "tmj-key"
+def test_one_smartlead_account_keeps_each_sending_domain_with_one_client(env):
+    from gtm.layers import l6_send
+
+    # The real config: The Marble Jar's and Quailworks' sending domains never overlap.
+    qw, tmj = load_client(QW), load_client(TMJ)
+    assert l6_send.shared_domains(qw) == [] and l6_send.shared_domains(tmj) == []
+    # A domain listed for both clients stops push for either of them before Smartlead is called.
+    sending = env / QW / "sending.yaml"
+    sending.write_text(sending.read_text().replace("mailbox_domains: []", "mailbox_domains: [GetMarbleJar.com]"))
+    assert l6_send.shared_domains(load_client(QW)) == ["getmarblejar.com"]
+    assert l6_send.shared_domains(load_client(TMJ)) == ["getmarblejar.com"]
+    with pytest.raises(RuntimeError, match="getmarblejar.com"):
+        l6_send.push(load_client(TMJ), db.connect(), sl=object())

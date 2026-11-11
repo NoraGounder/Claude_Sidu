@@ -124,14 +124,15 @@ Marble Jar build.
   unrelated domain names, which do not carry the Quailworks brand (the user, 2026-11-10). Why six and
   not four: sending capacity, not data, limits how many calls we book, and a mailbox costs less than one
   enriched company a week. The warm-up runs in parallel with discovery, scoring, contacts and drafts.
-  **Own Smartlead account** (the user, 2026-11-11: keep Quailworks' GTM separate from The Marble
-  Jar's, whose key is already in use elsewhere): a separate Smartlead account for Quailworks with its
-  own login, billing and API key (`SMARTLEAD_API_KEY_QUAILWORKS`, `sending.yaml` `api_key_env`; Layer 6
-  never falls back to The Marble Jar's key). The domains and mailboxes are bought through SmartSenders
-  inside that account, because Smartlead says SmartSenders purchases cannot be transferred. Plan: Base
-  ($39) or the free trial during warm-up, Pro ($94, the plan with API access and webhooks) from the
-  week before the first upload. Campaigns prefixed `QW`. A client workspace inside The Marble Jar's
-  account was rejected: it would share that account's API key.
+  **One Smartlead account, kept apart by domain** (the user, 2026-11-11): Quailworks uses the existing
+  Smartlead Pro account and its key, like The Marble Jar, and buys its domains and mailboxes there
+  through SmartSenders. The two clients never share a sending domain, a mailbox or a campaign:
+  `sending.yaml` `mailbox_domains` lists each client's domains, a campaign links only mailboxes on its
+  own client's domains, push stops if a domain is listed for two clients, campaigns are prefixed `QW`
+  and `TMJ`, and replies sync only from the client's own campaigns. Quailworks' chat manages Quailworks,
+  The Marble Jar's chat manages The Marble Jar. Every future client joins the same account the same
+  way (the user: all clients on one platform). Change if: a client needs to see its own campaigns;
+  then it gets a view limited to its campaigns, never a login to the whole account.
 - **Q19. Volume and ramp:** Tier 1-2 only, Monday to Thursday, in each market's working hours. Week 1
   after warm-up: 5 a day per mailbox (30 a day); week 2: 10 (60); week 3 on: 15 (90), each step only if
   bounces stay under 2% and there are no spam complaints; warm-up stays on. At 90 a day that is about

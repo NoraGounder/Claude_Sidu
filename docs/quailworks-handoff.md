@@ -54,8 +54,8 @@ and tiers → 3 FullEnrich people and emails → 4 send gate → 5 drafts, Jev f
    Quailworks. The DPA with TMJ (article 8.4) forbids using it for any other purpose or client, and
    GDPR purpose limitation says the same. Quailworks finds its own prospects with its own runs.
 2. **Separate sending infrastructure.** Quailworks sends from its own domains and mailboxes, never from
-   TMJ's sending domains. Own Smartlead account since 2026-11-11 (`api_key_env` and `campaign_prefix`
-   in `sending.yaml`).
+   TMJ's sending domains. Own Smartlead campaigns in the shared account (`campaign_prefix` and
+   `mailbox_domains` in `sending.yaml`).
 3. **Separate budgets.** Apify's free $5 credit is shared by the account and TMJ used $4.80 of it in
    November 2026: Quailworks discovery needs the next month or a paid Apify plan (ask the user before
    raising any cap). FullEnrich credits are shared too (about 770 left after TMJ's run).

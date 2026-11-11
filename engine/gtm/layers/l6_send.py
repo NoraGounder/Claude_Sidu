@@ -128,8 +128,8 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
 
 def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict]) -> tuple[list[int], list[str]]:
     cap = cfg.limits.sending.get("max_per_mailbox_per_day", 18)
-    # A campaign may only use this client's own sending domains (sending.yaml mailbox_domains), also when
-    # one Smartlead account serves several clients. No list means no mailbox, never all of them.
+    # One Smartlead account serves several clients: a campaign may only use this client's own
+    # sending domains (sending.yaml mailbox_domains). No list means no mailbox, never all of them.
     domains = {d.lower() for d in sending.get("mailbox_domains") or []}
     ok, problems = [], []
     for a in accounts:
@@ -152,19 +152,28 @@ def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict]) -> t
     return ok, problems
 
 
-def smartlead_for(cfg: ClientConfig) -> SmartleadClient:
-    """The client's own Smartlead account: sending.yaml api_key_env names the variable, and there is no
-    fallback to the default SMARTLEAD_API_KEY (another client's account)."""
-    return SmartleadClient(key_env=load_sending(cfg).get("api_key_env", "SMARTLEAD_API_KEY"))
+def shared_domains(cfg: ClientConfig) -> list[str]:
+    """This client's sending domains that another client also lists (clients/*/sending.yaml). One
+    Smartlead account serves several clients, so a domain must belong to exactly one of them."""
+    own = {d.lower() for d in load_sending(cfg).get("mailbox_domains") or []}
+    clash = set()
+    for f in Path(cfg.root).parent.glob("*/sending.yaml"):
+        if f.parent.name != Path(cfg.root).name:
+            other = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+            clash |= own & {d.lower() for d in other.get("mailbox_domains") or []}
+    return sorted(clash)
 
 
 def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushPlan | None = None,
          now: datetime | None = None) -> dict:
     sending = load_sending(cfg)
+    if clash := shared_domains(cfg):
+        raise RuntimeError(f"Sending domains listed for another client too: {', '.join(clash)}. "
+                           "Each domain belongs to one client (sending.yaml mailbox_domains).")
     plan = plan or plan_push(cfg, conn, now)
     if not plan.eligible:
         return {"pushed": 0, "held": plan.held, "campaigns": {}}
-    sl = sl or smartlead_for(cfg)
+    sl = sl or SmartleadClient()
     mailbox_ids, problems = check_mailboxes(cfg, sending, sl.email_accounts())
     if not mailbox_ids:
         raise RuntimeError("No usable mailboxes: " + ("; ".join(problems) or "none on this client's mailbox_domains "
@@ -216,7 +225,7 @@ def start(cfg: ClientConfig, conn, region: str, sl: SmartleadClient | None = Non
     row = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?", (cfg.slug, region)).fetchone()
     if not row:
         raise RuntimeError(f"No campaign for region '{region}'. Run push first.")
-    (sl or smartlead_for(cfg)).set_status(row["smartlead_id"], "ACTIVE")
+    (sl or SmartleadClient()).set_status(row["smartlead_id"], "ACTIVE")
     conn.execute("UPDATE campaigns SET status='ACTIVE' WHERE id=?", (row["id"],))
     conn.commit()
     return row["name"]
@@ -245,7 +254,7 @@ def latest_reply(history: list[dict]) -> tuple[str | None, str | None]:
 
 def sync(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, jev: JevClient | None = None) -> dict:
     check_policy(cfg.ai)
-    sl = sl or smartlead_for(cfg)
+    sl = sl or SmartleadClient()
     jev = jev or JevClient(cfg.ai)
     sender, _ = load_sender(cfg)
     totals = {"replies": 0, "needs_human": 0, "bounced": 0, "unsubscribed": 0, "categories": {}}

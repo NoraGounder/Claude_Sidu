@@ -1,15 +1,13 @@
 # Layer 6: Smartlead sending settings (engine/gtm/layers/l6_send.py).
 # Mailbox limits come from limits.yaml (sending: max_per_mailbox_per_day, max_emails_per_day).
-# Quailworks' own Smartlead account and sending domains, never The Marble Jar's (decisions.md Q18).
+# The Smartlead account (and SMARTLEAD_API_KEY) is shared with The Marble Jar; Quailworks is kept apart
+# by its own sending domains, mailboxes and `QW` campaigns (decisions.md Q18).
 
 campaign_prefix: "QW"
 
-# Quailworks' own Smartlead account (2026-11-11). Layer 6 reads only this variable: there is no fallback
-# to SMARTLEAD_API_KEY, which holds The Marble Jar's key.
-api_key_env: SMARTLEAD_API_KEY_QUAILWORKS
-
 # Only mailboxes on these domains are linked to Quailworks' campaigns. Empty until Quailworks' own
 # sending domains exist: push refuses to run without them, so no other client's mailbox is used.
+# A domain listed here and in another client's sending.yaml stops push for both.
 mailbox_domains: []
 
 # US and UK (decisions.md Q8). US Central time keeps sends inside working hours from coast to coast.

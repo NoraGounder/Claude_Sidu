@@ -37,8 +37,9 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
    Bundle those into one message at launch. Never send the client questionnaires.
 9. **Quailworks as its own client (2026-11-10):** `clients/quailworks/`. Never reuse The Marble Jar's
    accounts, contacts or replies for it (DPA article 8.4, GDPR purpose limitation): it runs its own
-   discovery, sends from its own domains in its own Smartlead account (`SMARTLEAD_API_KEY_QUAILWORKS`,
-   campaigns `QW`), and mirrors into its own HubSpot portal (`HUBSPOT_TOKEN_QUAILWORKS`). Offer, ICP and copy follow `clients/quailworks/decisions.md`.
+   discovery, sends from its own domains and mailboxes (`sending.yaml` `mailbox_domains`) in its own
+   campaigns (`QW`) in the shared Smartlead account, and mirrors into its own HubSpot portal
+   (`HUBSPOT_TOKEN_QUAILWORKS`). A sending domain belongs to exactly one client. Offer, ICP and copy follow `clients/quailworks/decisions.md`.
 
 ## The pipeline
 
@@ -50,7 +51,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 | 3 | Find decision-makers (FullEnrich people search), rank them with Jev 1.14 (titles only), find work emails for the chosen ones (max 2 per Tier 1–2 account; Tier 3 parked by the launch plan) | FullEnrich, TypeSafe Jev 1.14 | `gtm/layers/l3_contacts.py` | built |
 | 4 | Send gate: suppression, role/free-mail addresses, domain match, contact country, email status, catch-all cap, freshness, sender consent, GDPR source | Python rules (`gate.yaml`); MillionVerifier only to re-check stale emails | `gtm/layers/l4_gate.py` | built |
 | 5 | Drafts from human-written templates and crawled facts only; Jev 1.14 picks the angle and fact-checks the opening (a flagged opening falls back to a safer one); `approve` passes drafts that clear every check, the rest go to a person | Python templates, TypeSafe Jev 1.14, CSV round-trip | `gtm/layers/l5_copy.py` | built |
-| 6 | Upload approved, gate-ready leads (one campaign per region, checked mailboxes, one contact per company); start only with `--i-confirm` after approval; sync replies, bounces and unsubscribes (Jev 1.14 classifies masked replies) | Smartlead + SmartSenders mailboxes, TypeSafe Jev 1.14 | `gtm/layers/l6_send.py` | built (key in the URL: set the client's key variable, `sending.yaml` `api_key_env` or else `SMARTLEAD_API_KEY`, as an environment variable; each client links only its own `mailbox_domains`) |
+| 6 | Upload approved, gate-ready leads (one campaign per region, checked mailboxes, one contact per company); start only with `--i-confirm` after approval; sync replies, bounces and unsubscribes (Jev 1.14 classifies masked replies) | Smartlead + SmartSenders mailboxes, TypeSafe Jev 1.14 | `gtm/layers/l6_send.py` | built (one Smartlead account for all clients; key in the URL: set `SMARTLEAD_API_KEY` as an environment variable; each client links only its own `mailbox_domains`, and push stops if a domain is listed for two clients) |
 | 7 | Handoff: replies needing a person become deals and one-page briefs with the first answer; outcomes (the client's one word, proposal, won with value) feed learning and lookalikes; HubSpot mirror (writes only with `--live` after approval) | HubSpot (free), templates/replies.yaml | `gtm/layers/l7_handoff.py` | built |
 
 ## How to run
@@ -132,5 +133,5 @@ them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks
   `banned_phrases`
 - `templates/replies.yaml`: `call_prep` (the meeting brief's call questions)
 - `client.yaml`: `crm.hubspot_token_env` (each client's own HubSpot portal)
-- `sending.yaml`: `api_key_env` (each client's own Smartlead account, no fallback), `mailbox_domains`
+- `sending.yaml`: `mailbox_domains` (the client's own sending domains; one domain, one client)
 - `.claude/skills/`: one skill per runnable layer
