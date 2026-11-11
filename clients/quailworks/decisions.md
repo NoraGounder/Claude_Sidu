@@ -31,17 +31,20 @@ Marble Jar build.
   anyone: "from launch-vehicle turbopumps to hypercar suspension" (both in the CV). Employer names stay
   out of cold email and out of this repository: naming them could read as an endorsement and may touch
   NDAs; prospects who look the founder up see them on LinkedIn anyway.
-- **Q3. No claims we cannot back.** No results, meeting counts, response rates, guarantees, prices, or
-  build times (the site's "typical build 2-4 weeks" stays on the site). Quailworks has one client, The
+- **Q3. No claims we cannot back.** No results, meeting counts achieved, response rates, prices, or
+  build times (the site's "typical build 2-4 weeks" stays on the site). Since 2026-11-11 one promise
+  is made, in the exact words of email 2 (Q32): it is a commitment we can keep (working on without a
+  fee), not a claim about past results. Quailworks has one client, The
   Marble Jar, launching late November 2026, and no results yet. Change if: real results exist (then
   quote them, with the client's permission when named).
 - **Q4. Proof without names.** No client names. The proof is the system itself: email 2 says this email
   came out of the same kind of system, which is true.
-- **Q5. Next step: the site's own offer.** A 30-minute working session, and a written note on the three
-  things we would fix first, whether or not we work together (quailworks.co contact section). Email 3
-  offers a lighter alternative: 10 companies in their market showing a signal now, each with its source
-  (Layers 1-2 only, company-level data, at most 5 a month, under $1 each).
-- **Q6. Price: priced on value, for buyers who are not price-sensitive** (the user, 2026-11-10: target
+- **Q5. Next step: the Signal Sample first, the working session second** (changed 2026-11-11, Q31).
+  Email 1 offers 10 companies in their market showing a signal now, each with its source, with no call
+  needed; emails 2 and 3 offer 30 minutes. The site's working session and written note remain what
+  happens on the call.
+- **Q6. Price (replaced by Q33 on 2026-11-11; kept for the record): priced on value, for buyers who are
+  not price-sensitive** (the user, 2026-11-10: target
   companies with discretionary budget and charge for the service; this replaces the earlier "first
   engagement under $3,000"). Never in email. On calls, the path on quailworks.co: a **GTM audit at
   $3,500** (1-2 weeks, fixed fee, credited in full against a build sprint started within 30 days), a
@@ -185,6 +188,87 @@ Marble Jar build.
   renewal: if Apollo wins clearly, it becomes a second Layer 1 source and Apify can drop back to the free
   plan; if not, cancel the seat. BlitzAPI (flat from $99 a month) only pays off at about ten times our
   volume; GetLeads.io has no API for the engine.
+
+## Review of 11 November 2026: market, offer and pipeline
+
+The user asked for a full review and for Quailworks to take charge of the market, the offer and the
+pipeline (2026-11-11). Each decision below still says what would change it.
+
+- **Q29. Market: the United States, companies whose product is software or automation, sold to
+  engineering and plant teams.** LinkedIn's own totals for our searches (11-1,000 employees) and the
+  first run's results:
+
+  | Segment | Companies on LinkedIn | Good fit (Jev 1.14) | Strong fit | With a buying signal |
+  |---|---|---|---|---|
+  | Robotics and automation, US | 6,056 | 76% | 45% | 13.8% |
+  | Manufacturing software, US | 1,360 | 71% | 46% | 12.3% |
+  | Industrial AI, US | 510 | 83% | 62% | 15.9% |
+  | Aerospace software, US | 279 | 86% | 76% | 18.4% |
+  | Manufacturing software, UK | 339 | 73% | 38% | 6.1% |
+  | Test and measurement, US | 210 | 76% | 43% | 4.2% |
+  | Aerospace and space hardware, US | 11,144 | 47% | 9% | 4.2% |
+  | Aerospace and space hardware, UK | 1,632 | 24% | 10% | 1.6% |
+
+  About 10,700 good-fit companies in these searches, about 4,000 of them in robotics and automation,
+  where only 300 had been seen. Decided: the budget goes to robotics and automation (the next 700
+  fetched on 2026-11-11), manufacturing software, industrial AI and aerospace software. Two new software
+  searches proved worth it in a 50-company test: "machine vision" (638 companies) and "digital twin"
+  (201); four others returned almost nothing. Paused: aerospace and space hardware in both countries
+  (mostly build-to-print shops, few signals) and test and measurement (all 210 seen). The UK keeps
+  manufacturing software only. Younger companies show signals more often (13% of those founded since
+  2019, 8% of those founded before 2010); size makes little difference. This market is large enough
+  for the goal: 11 clients is 0.1% of the good-fit companies. Change if: a paused segment books calls,
+  or the core segments stop yielding 10% with a signal.
+- **Q30. Offer: the 90-day Signal Engine** (`offer.md`). One product instead of three steps (audit,
+  sprint, embedded): we build the client's outbound engine in their name, run it for 90 days and hand
+  over or continue month to month. Why: recurring revenue needs a retainer as the first purchase, the
+  buyer hiring a sales rep already has budget for exactly this job, and one clear outcome is easier to
+  buy than a project. Included: market map, weekly signal watch, verified contacts, fact-sourced emails,
+  sending set-up, replies handled the same working day, meeting briefs, weekly report, full ownership,
+  all tools. Bonuses that remove reasons to wait: the founder's review from the engineer's seat,
+  reactivation of lost deals in week 1 while mailboxes warm up, a trade-show play. Change if: calls ask
+  for something else first.
+- **Q31. Free first step: the Signal Sample.** 10 companies in the prospect's market with a buying signal
+  now, each with its source. It moves from email 3 to email 1, because it shows the product, costs the
+  prospect nothing and needs no call. Layers 1-2 only (company data), about $0.50 each; up to 20 a
+  month once the Apify cap allows (asked of the user, Q36). Change if: samples are requested but do
+  not turn into calls (then the call comes first again).
+- **Q32. One promise: at least 12 qualified meetings held in the first 90 days of sending, or we keep
+  working without a fee until the client has them.** About one a week. Conditions: deals of $20,000 or
+  more, a market of at least 1,500 companies, first emails approved within three working days, meeting
+  times offered within five working days. Why: outbound agencies commonly promise meetings (public
+  examples: 4-6 a month, or pay per meeting at $250-$1,200), so a buyer expects the risk to be shared;
+  our cost of keeping the promise is time, since tools cost about $200-300 a month per client. Honest
+  limit: Quailworks has no results of its own yet, so the number is a commitment, not a forecast. The
+  user can veto or change the number before the first send (drafts are previews until the "go").
+  Change if: The Marble Jar's or our own first 90 days show a different number is right.
+- **Q33. Price** (calls and proposals only). Founding clients, the first three: $6,000 a month for the
+  90 days, no set-up fee, in exchange for a named case study. Standard: $8,500 a month plus a $5,000
+  set-up fee. If price is the objection: $2,500 a month plus $900 per qualified meeting held. Other
+  work starts with the $3,500 audit. Why: published agency retainers run from about $3,500 to $14,000
+  a month, a sales development rep costs more than either price once salary, tools and management are
+  counted, and for a $25,000+ deal one won customer pays for the 90 days. $1M of recurring revenue is
+  about 11 clients at these prices. Change if: three calls in a row stall on price, or three sign
+  without hesitation (then raise the standard price by 20%).
+- **Q34. A hiring signal counts only when it is real.** In the first run the sales-job signal came from
+  word matches on careers pages. Checked by Jev 1.14 on 2026-11-11 (`ai.yaml` `job_evidence`): 127 of
+  318 matches (40%) were not open sales roles in the US or UK (testimonials, lines inside other job
+  descriptions, roles abroad). 39 of 115 Tier 1 companies lost their place. Reading the public feeds of
+  job boards (Greenhouse, Lever, Ashby; `scoring.yaml` `job_boards`) found exact titles at 145
+  companies and raised 36 companies into Tier 1-2. A confirmed role is now named in the email opening.
+- **Q35. Unconfirmed emails wait.** A third of the first run's addresses were "high probability". They
+  are held until MillionVerifier has checked them (`gate.yaml` `verify_statuses`; `gate --recheck` on
+  the laptop, where the key is). Fresh mailboxes cannot afford bounces.
+- **Q36. Stack: nothing replaced, three small additions asked of the user.** Harvest on Apify,
+  FullEnrich, Jev 1.14, Smartlead and HubSpot free stay: the first 185 contacts cost $25.70. Asked:
+  (1) raise the Apify cap from $15 to $40 a month (deeper discovery plus Signal Samples); (2) the
+  MillionVerifier key on the laptop (about $1 a month); (3) four more mailboxes on one more domain in
+  January, only if positive replies reach 2%. Tested next, no purchase yet: a job-posting search as a
+  discovery source (every company found already has the signal), first with the Apify actor we already
+  pay for, then Apollo in December (Q28) and TheirStack (from $49 a month) if neither is good enough.
+  Not worth buying: Clay, a second enrichment provider, intent-data subscriptions, LinkedIn automation
+  (the founder's single profile is the asset), person-level website visitor tracking (a GDPR risk for
+  an EU company).
 
 ## Needed from the user (only what we cannot do ourselves)
 

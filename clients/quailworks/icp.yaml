@@ -67,11 +67,18 @@ segments:
   - {name: industrial_ai_us,        enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 300, search_query: industrial AI}
   - {name: iiot_us,                 enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: IIoT}   # 1 result
   - {name: robotics_automation_us,  enabled: true,  industry_group: robotics_automation, locations: [United States], max_items: 300}
-  - {name: test_measurement_us,     enabled: true,  industry_group: test_measurement,    locations: [United States], max_items: 300}
-  - {name: aerospace_space_us,      enabled: true,  industry_group: aerospace_space,     locations: [United States], max_items: 300}
+  - {name: test_measurement_us,     enabled: false, industry_group: test_measurement,    locations: [United States], max_items: 300}   # all 210 seen; 4% in-signal (Q29)
+  - {name: aerospace_space_us,      enabled: false, industry_group: aerospace_space,     locations: [United States], max_items: 300}   # 11,144 companies but 9% strong fit, 4% in-signal: paused (Q29)
+  # Adjacent software niches whose buyers are engineers and plant teams: 50-company tests (Q29).
+  - {name: simulation_software_us,  enabled: false,  industry_group: industrial_software, locations: [United States], max_items: 50, search_query: simulation software}   # 2 results (2026-11-11)
+  - {name: digital_twin_us,         enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 150, search_query: digital twin}   # 201 on LinkedIn
+  - {name: predictive_maint_us,     enabled: false,  industry_group: industrial_software, locations: [United States], max_items: 50, search_query: predictive maintenance}   # 1 result (2026-11-11)
+  - {name: machine_vision_us,       enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 300, search_query: machine vision}   # 638 on LinkedIn
+  - {name: industrial_automation_sw_us, enabled: false, industry_group: industrial_software, locations: [United States], max_items: 50, search_query: industrial automation}   # 0 results (2026-11-11)
+  - {name: quality_software_us,     enabled: false,  industry_group: industrial_software, locations: [United States], max_items: 50, search_query: quality management software}   # 1 result (2026-11-11)
   # United Kingdom: software and aerospace/space technology only
   - {name: industrial_software_uk,  enabled: true,  industry_group: industrial_software, locations: [United Kingdom], max_items: 300, search_query: manufacturing software}
-  - {name: aerospace_space_uk,      enabled: true,  industry_group: aerospace_space,     locations: [United Kingdom], max_items: 300}
+  - {name: aerospace_space_uk,      enabled: false, industry_group: aerospace_space,     locations: [United Kingdom], max_items: 300}   # 1.6% in-signal, 24% fit (Q29)
   # Parked (decisions.md Q9): price-sensitive buyers. Re-open only if the core segments run dry.
   - {name: automotive_suppliers_us, enabled: false, industry_group: automotive_suppliers, locations: [United States], max_items: 300}
   - {name: engineering_services_us, enabled: false, industry_group: engineering_services, locations: [United States], max_items: 300, search_query: aerospace}

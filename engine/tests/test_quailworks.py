@@ -51,14 +51,14 @@ def test_quailworks_config_loads_and_follows_the_jev_policy(env):
     assert cfg.icp.allowed_countries == ["US", "GB"]
     assert "themarblejar.io" in cfg.icp.exclusions.domains
     plans = l1_discover.plan(cfg, None, None)
+    # Segments after the review of 2026-11-11 (decisions.md Q29): software, robotics and automation.
     assert [p.segment.name for p in plans] == ["mfg_software_us", "industrial_software_aero_us",
                                                "industrial_ai_us", "robotics_automation_us",
-                                               "test_measurement_us", "aerospace_space_us",
-                                               "industrial_software_uk", "aerospace_space_uk"]
-    assert round(sum(p.est_cost for p in plans), 2) == 9.60          # inside the $15 Apify cap
-    assert plans[5].actor_input["industryIds"] == ["1", "52"]
+                                               "digital_twin_us", "machine_vision_us", "industrial_software_uk"]
+    assert round(sum(p.est_cost for p in plans), 2) == 7.80          # inside the $15 Apify cap
+    assert plans[3].actor_input["industryIds"] == ["147", "3247", "3248"]
     assert plans[1].actor_input["searchQuery"] == "aerospace software"      # two-word phrases (live test)
-    assert plans[7].actor_input["locations"] == ["United Kingdom"]
+    assert plans[6].actor_input["locations"] == ["United Kingdom"]
     software = plans[0].actor_input
     assert software["industryIds"] == ["4"] and software["searchQuery"] == "manufacturing software"
     assert software["companySize"] == ["11-50", "51-200", "201-500", "501-1000"] and software["locations"] == ["United States"]

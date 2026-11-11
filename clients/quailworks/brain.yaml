@@ -20,8 +20,10 @@ market_profile:
 
 offer:
   - {status: decided, note: "decisions.md Q1", text: "Signal-based outbound built as a system: finds accounts with a reason to buy, writes to the right person from facts on their own website, books first calls; runs in the client's own tools and they own it."}
-  - {status: decided, jev: false, note: "decisions.md Q3", text: "No results, meeting counts, guarantees, prices or build times in outreach."}
-  - {status: confirmed, jev: false, note: "quailworks.co", text: "Next step: a 30-minute working session and a written note on the three things we would fix first, whether or not we work together."}
+  - {status: decided, note: "decisions.md Q30", text: "The 90-day Signal Engine: Quailworks builds the outbound engine in the client's name, runs it for 90 days (market map, weekly signal watch, verified contacts, fact-sourced emails, replies handled, meeting briefs) and the client owns all of it."}
+  - {status: decided, jev: false, note: "decisions.md Q32", text: "One promise: at least 12 qualified meetings held in the first 90 days of sending, or we keep working without a fee until the client has them. Conditions in offer.md."}
+  - {status: decided, jev: false, note: "decisions.md Q3", text: "No results, meeting counts achieved, prices or build times in outreach, and no promise other than Q32 in the words of email 2."}
+  - {status: decided, jev: false, note: "decisions.md Q31", text: "First step: the Signal Sample, 10 companies in the prospect's market with a buying signal now, each with its source, no call needed. Then a 30-minute working session."}
 
 personas:
   sales_leader:
@@ -51,7 +53,8 @@ objections:   # for replies and call prep, never in a first email
   - {status: hypothesis, objection: "We already have business development people.", answer_direction: "The system feeds them researched accounts with a reason to call; it does not replace them."}
   - {status: hypothesis, objection: "Cold email doesn't work for engineering buyers.", answer_direction: "Ask what was sent; signal-based, fact-based emails to a short list differ from list blasting."}
   - {status: hypothesis, objection: "We tried an agency and got junk meetings.", answer_direction: "Agree the qualified-meeting definition first; the client owns every account, domain and prompt."}
-  - {status: hypothesis, objection: "No budget right now.", answer_direction: "Start with the fixed-fee audit, or the 10-company list."}
+  - {status: hypothesis, objection: "No budget right now.", answer_direction: "Send the 10-company list first; compare the fee with the cost and ramp time of the sales hire they are advertising; the lower fixed fee plus a fee per meeting held is the fallback."}
+  - {status: hypothesis, objection: "You have no case studies.", answer_direction: "True, and the reason for the founding-client terms and the promise: the risk sits with us, and the list they received is the proof of the method."}
   - {status: hypothesis, objection: "Is this compliant? We work on export-controlled programs.", answer_direction: "Only public company data; source, opt-out and address in every first email; NDAs and DPAs as standard (quailworks.co)."}
 
 competitors:  # what the buyer would otherwise do; companies of these types are not prospects
