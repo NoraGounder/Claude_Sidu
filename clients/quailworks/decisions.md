@@ -269,6 +269,12 @@ pipeline (2026-11-11). Each decision below still says what would change it.
 - **Q35. Unconfirmed emails wait.** A third of the first run's addresses were "high probability". They
   are held until MillionVerifier has checked them (`gate.yaml` `verify_statuses`; `gate --recheck` on
   the laptop, where the key is). Fresh mailboxes cannot afford bounces.
+  **Checked 2026-11-12** (all 289 stored addresses, $1.16): 187 deliverable, 94 on catch-all domains,
+  4 invalid, 4 unknown. At Tier 1-2: 181 contacts at 118 companies are cleared and wait only for the
+  sender's confirmation; 48 catch-all addresses are held by the 15% cap (`gate.yaml`), 8 are rejected.
+  A third of the addresses being catch-all is the new limit on volume: loosen the cap only after the
+  first two weeks show bounces under 2%. BlitzAPI's first 10 addresses included 2 invalid ones
+  (FullEnrich: 2 of 279), so its emails stay behind this check.
 - **Q36. Stack: nothing replaced, three small additions asked of the user.** Harvest on Apify,
   FullEnrich, Jev 1.14, Smartlead and HubSpot free stay: the first 185 contacts cost $25.70. Asked:
   (1) raise the Apify cap from $15 to $40 a month (deeper discovery plus Signal Samples; **done 2026-11-12, the user said yes**); (2) the
