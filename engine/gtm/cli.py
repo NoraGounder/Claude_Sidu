@@ -647,7 +647,30 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def load_env_file(path=None) -> int:
+    """Read KEY=value lines from the repository's .env (never committed) into the environment, without
+    overriding variables that are already set. Values are never printed. Returns how many were set."""
+    import os
+    from gtm.config import REPO_ROOT
+
+    path = path or REPO_ROOT / ".env"
+    if not path.exists():
+        return 0
+    count = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.split(" #", 1)[0].strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (part.strip() for part in line.split("=", 1))
+        value = value.strip("'\"")
+        if key and value and key not in os.environ:
+            os.environ[key] = value
+            count += 1
+    return count
+
+
 def main(argv: list[str] | None = None) -> int:
+    load_env_file()
     args = build_parser().parse_args(argv)
     return args.func(args)
 

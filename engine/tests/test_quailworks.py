@@ -679,3 +679,17 @@ def test_blitzapi_is_tried_first_for_emails_only_when_the_client_asks(env):
     assert conn.execute("SELECT status FROM contacts WHERE first_name='unknown'").fetchone()[0] == "selected"
     # opt-in: Quailworks switched it on for the trial (2026-11-12); The Marble Jar has not
     assert (cfg.scoring["enrichment_policy"].get("email_first"), load_client(TMJ).scoring.get("enrichment_policy", {}).get("email_first")) == ("blitzapi", None)
+
+
+def test_env_file_is_read_without_overriding_or_printing(tmp_path, monkeypatch, capsys):
+    from gtm import cli
+
+    env_file = tmp_path / ".env"
+    env_file.write_text("# keys\nMILLIONVERIFIER_API_KEY=abc123   # Layer 4\nSMARTLEAD_API_KEY='from-file'\nEMPTY=\nnot a line\n")
+    monkeypatch.delenv("MILLIONVERIFIER_API_KEY", raising=False)
+    monkeypatch.setenv("SMARTLEAD_API_KEY", "already-set")
+    assert cli.load_env_file(env_file) == 1
+    import os
+    assert os.environ["MILLIONVERIFIER_API_KEY"] == "abc123" and os.environ["SMARTLEAD_API_KEY"] == "already-set"
+    assert "EMPTY" not in os.environ and capsys.readouterr().out == ""
+    assert cli.load_env_file(tmp_path / "missing.env") == 0
