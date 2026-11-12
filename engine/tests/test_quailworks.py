@@ -592,3 +592,90 @@ def test_signal_sample_lists_companies_with_sources_and_stores_no_accounts(env):
     assert conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0] == 0
     run = conn.execute("SELECT layer, vendor, label, status, actual_cost FROM runs").fetchone()
     assert tuple(run) == ("SAMPLE", "apify", "sample:Acme Robotics", "succeeded", 0.012)
+
+
+# ---------- BlitzAPI: discovery by hiring signal and first email source (decisions.md Q39) ----------
+
+class _Resp:
+    def __init__(self, data, status=200):
+        self._data, self.status_code, self.text = data, status, json.dumps(data)
+
+    def json(self):
+        return self._data
+
+
+class BlitzSession:
+    """Stands in for requests.Session: answers BlitzAPI's three endpoints from canned data."""
+
+    def __init__(self, companies, emails):
+        self.headers, self.calls, self.companies, self.emails = {}, [], companies, emails
+
+    def post(self, url, json=None, timeout=None):
+        self.calls.append((url.rsplit("/v2", 1)[1], json))
+        usage = {"records_used": 1, "records_remaining": 990}
+        if url.endswith("/company/tam-by-jobs"):
+            start = int(json.get("cursor") or 0)
+            page = self.companies[start:start + json["max_results"]]
+            nxt = str(start + len(page)) if start + len(page) < len(self.companies) else None
+            return _Resp({"results": page, "cursor": nxt, "fair_usage": usage})
+        if url.endswith("/enrichment/email"):
+            email = self.emails.get(json["person_linkedin_url"])
+            return _Resp({"found": bool(email), "email": email, "fair_usage": usage})
+        return _Resp({"error": "unknown"}, 404)
+
+
+def _blitz_company(name, domain, country="US", size="51-200"):
+    return {"company": {"linkedin_url": f"https://www.linkedin.com/company/{domain.split('.')[0]}", "linkedin_id": 1,
+                        "name": name, "about": "Robots.", "industry": "Robotics Engineering", "size": size,
+                        "employees_on_linkedin": 120, "hq": {"city": "Austin", "country_code": country},
+                        "domain": domain, "website": f"https://www.{domain}"}, "matched_jobs": 2}
+
+
+def test_discovery_by_hiring_signal_stores_accounts_within_the_record_allowance(env):
+    from gtm import budget
+    from gtm.layers import l1_hiring
+    from gtm.sources.blitz import BlitzClient
+
+    cfg = load_client(QW)
+    conn = db.connect()
+    plans = l1_hiring.plan(cfg, ["hiring_robotics_us"], 3)
+    assert plans[0].job["date_posted"] == {"last_days": 30} and plans[0].job["location"] == {"country_code": {"include": ["US"]}}
+    assert "Robotics Engineering" in plans[0].company["industry"]["include"]
+    assert plans[0].company["employee_count"] == {"min": 11, "max": 1000} and plans[0].est_cost == 0
+    session = BlitzSession([_blitz_company("Halden Robotics", "halden.example"),
+                            _blitz_company("Mega Corp", "mega.example", size="10001+"),
+                            _blitz_company("Elsewhere GmbH", "elsewhere.example", country="DE"),
+                            _blitz_company("Never Fetched", "never.example")], {})
+    res = l1_hiring.run(cfg, conn, plans, client=BlitzClient(api_key="k", session=session))[0]
+    assert (res.fetched, res.new, res.qualified) == (3, 3, 1) and set(res.rejected) == {"size_out_of_range", "country"}
+    acc = conn.execute("SELECT * FROM accounts WHERE status='qualified_l1'").fetchone()
+    assert (acc["name"], acc["domain"], acc["country"], acc["employee_range"]) == ("Halden Robotics", "halden.example", "US", "51-200")
+    assert json.loads(acc["segments"]) == ["robotics_automation_us"] and acc["source"] == "blitzapi:companies-hiring:hiring_robotics_us"
+    assert session.headers["x-api-key"] == "k"
+    assert l1_hiring.records_used(conn, QW) == 3
+    # the month's record allowance is a hard stop (limits.yaml blitzapi_records: 1000)
+    with pytest.raises(budget.BudgetExceeded, match="blitzapi"):
+        l1_hiring.run(cfg, conn, l1_hiring.plan(cfg, ["hiring_robotics_us"], 998), client=BlitzClient(api_key="k", session=session))
+    assert not (env / TMJ / "hiring.yaml").exists()                         # The Marble Jar: not set up
+
+
+def test_blitzapi_is_tried_first_for_emails_only_when_the_client_asks(env):
+    from gtm.sources.blitz import BlitzClient
+
+    cfg = load_client(QW)
+    conn = db.connect()
+    acc = _account(conn, QW, "Halden Robotics", "https://halden.example", ["robotics_automation_us"], status="tier_1")
+    for first in ("known", "unknown"):
+        conn.execute("INSERT INTO contacts(client, account_id, person_id, first_name, last_name, linkedin_url, status,"
+                     " data_source, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                     (QW, acc, first, first, "X", f"https://www.linkedin.com/in/{first}", "selected", "FullEnrich people search", "t", "t"))
+    conn.commit()
+    rows = [dict(r) for r in conn.execute("SELECT * FROM contacts ORDER BY id")]
+    session = BlitzSession([], {"https://www.linkedin.com/in/known": "Known@Halden.example"})
+    left = l3_contacts.blitz_emails(cfg, conn, rows, BlitzClient(api_key="k", session=session))
+    assert [r["first_name"] for r in left] == ["unknown"]                   # goes on to FullEnrich
+    got = conn.execute("SELECT status, email, email_status, email_source FROM contacts WHERE first_name='known'").fetchone()
+    assert tuple(got) == ("email_found", "known@halden.example", "DELIVERABLE", "BlitzAPI")
+    assert conn.execute("SELECT status FROM contacts WHERE first_name='unknown'").fetchone()[0] == "selected"
+    # off by default: scoring.yaml enrichment_policy.email_first is not set for either client yet
+    assert (cfg.scoring["enrichment_policy"].get("email_first"), load_client(TMJ).scoring.get("enrichment_policy", {}).get("email_first")) == (None, None)

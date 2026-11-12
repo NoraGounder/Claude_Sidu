@@ -259,7 +259,42 @@ def _apply_emails(cfg: ClientConfig, conn, result: dict, totals: dict) -> float:
     return credits
 
 
-def find_emails(cfg: ClientConfig, conn, fe: FullEnrichClient | None = None, limit: int | None = None) -> dict:
+def blitz_emails(cfg: ClientConfig, conn, rows: list[dict], blitz=None) -> list[dict]:
+    """Optional first email source (scoring.yaml enrichment_policy.email_first: blitzapi): look each
+    selected contact up by LinkedIn profile on BlitzAPI's flat plan, and return the contacts it did
+    not find, for FullEnrich. Found addresses are stored like any other and wait for the send gate."""
+    from gtm.layers import l1_hiring
+    from gtm.sources.blitz import BlitzClient
+
+    with_profile = [r for r in rows if r.get("linkedin_url")]
+    if not with_profile:
+        return rows
+    l1_hiring.check_records(conn, cfg, len(with_profile))
+    api = blitz or BlitzClient()
+    run_id = db.start_run(conn, cfg.slug, "L3-email", l1_hiring.VENDOR, f"work email x{len(with_profile)}", 0.0,
+                          {"contacts": [r["id"] for r in with_profile]})
+    found: set[int] = set()
+    try:
+        for r in with_profile:
+            email = api.work_email(r["linkedin_url"])
+            if email:
+                ts = db.now_iso()
+                conn.execute("UPDATE contacts SET status='email_found', email=?, email_status='DELIVERABLE',"
+                             " email_source='BlitzAPI', updated_at=?, verified_at=? WHERE id=? AND client=?",
+                             (email.lower(), ts, ts, r["id"], cfg.slug))
+                found.add(r["id"])
+        conn.commit()
+    except Exception as exc:
+        conn.commit()
+        db.finish_run(conn, run_id, "failed", len(found), 0.0, str(exc)[:300])
+        raise
+    db.finish_run(conn, run_id, "succeeded", len(found), 0.0,
+                  f"found {len(found)} of {len(with_profile)}; records remaining: {api.records_remaining}")
+    return [r for r in rows if r["id"] not in found]
+
+
+def find_emails(cfg: ClientConfig, conn, fe: FullEnrichClient | None = None, limit: int | None = None,
+                blitz=None) -> dict:
     """Step 5: work emails for selected contacts only, in batches of up to 100.
 
     A batch FullEnrich has not finished within the wait is recorded as a `pending` run (its
@@ -286,6 +321,11 @@ def find_emails(cfg: ClientConfig, conn, fe: FullEnrichClient | None = None, lim
         " WHERE c.client=? AND c.status='selected' ORDER BY c.id", (cfg.slug,)).fetchall()
     rows = [dict(r) for r in rows if r["id"] not in waiting][: limit or None]
     totals["requested"] = len(rows)
+    if rows and (cfg.scoring.get("enrichment_policy") or {}).get("email_first") == "blitzapi":
+        left = blitz_emails(cfg, conn, rows, blitz)
+        totals["found"] += len(rows) - len(left)
+        totals["blitzapi_found"] = len(rows) - len(left)
+        rows = left
     if not rows:
         return totals | {"cost_usd": round(totals["credits"] * credit_usd, 4)}
     budget.check(conn, cfg, VENDOR, budget.estimate(cfg, EMAIL_KEY, len(rows)))

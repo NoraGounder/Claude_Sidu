@@ -351,6 +351,40 @@ def cmd_best_clients(args) -> int:
     return 0
 
 
+def cmd_discover_hiring(args) -> int:
+    """Layer 1 by signal: companies with an open job for the role the offer replaces (BlitzAPI)."""
+    from gtm.layers import l1_hiring
+    from gtm.sources.blitz import BlitzError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    plans = l1_hiring.plan(cfg, args.search, args.max_items)
+    used = l1_hiring.records_used(conn, cfg.slug)
+    cap = int(cfg.limits.month_budget_usd.get("blitzapi_records", 0))
+    print(f"Discovery by hiring signal for {cfg.slug}: {len(plans)} searches, up to {sum(p.max_items for p in plans)} "
+          f"records; {used} of {cap} BlitzAPI records used this month.")
+    for p in plans:
+        print(f"  - {p.name} (counts towards {p.segment}): up to {p.max_items} companies")
+        print(f"    job: {json.dumps(p.job)}\n    company: {json.dumps(p.company)}")
+    if args.dry_run:
+        print("Dry run: nothing was called or spent.")
+        return 0
+    try:
+        results = l1_hiring.run(cfg, conn, plans)
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    except BlitzError as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    for r in results:
+        rejected = ", ".join(f"{k} {v}" for k, v in sorted(r.rejected.items())) or "none"
+        print(f"{r.segment}: fetched {r.fetched}, new {r.new}, duplicates {r.duplicates}, qualified {r.qualified}, "
+              f"rejected: {rejected}.")
+    print("Next: prefilter, then jev (they confirm each open role on the company's own site).")
+    return 0
+
+
 def cmd_sample(args) -> int:
     """The Signal Sample: companies in a prospect's market with a buying signal, for a person to send."""
     from gtm import sample
@@ -544,6 +578,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     ap = sub.add_parser("approve", help="Layer 5: approve drafts that passed every automatic check")
     ap.set_defaults(func=cmd_approve)
+
+    dh = sub.add_parser("discover-hiring", help="Layer 1 by signal: companies hiring for the role (BlitzAPI, hiring.yaml)")
+    dh.add_argument("--search", action="append", help="search name from hiring.yaml (repeatable)")
+    dh.add_argument("--max-items", type=int, help="cap companies per search (default: hiring.yaml)")
+    dh.add_argument("--dry-run", action="store_true", help="show the searches, call nothing")
+    dh.set_defaults(func=cmd_discover_hiring)
 
     sm = sub.add_parser("sample", help="Signal Sample: companies in a prospect's market with a buying signal")
     sm.add_argument("--name", required=True, help="the prospect the sample is for (names the output file)")

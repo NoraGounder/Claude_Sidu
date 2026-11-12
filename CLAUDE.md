@@ -82,6 +82,7 @@ python -m gtm --client the-marble-jar crm                      # HubSpot dry run
 python -m gtm --client the-marble-jar retention                # DPA deletion schedule (dry run; --apply deletes local data)
 python -m gtm --client the-marble-jar learn                    # conversations, meetings and revenue per signal, opening, tier
 python -m gtm --client quailworks sample --name "Acme" --search "contract manufacturing" --dry-run   # Signal Sample for a prospect (sample.yaml)
+python -m gtm --client quailworks discover-hiring --dry-run   # Layer 1 by signal: companies hiring for the role (BlitzAPI, hiring.yaml)
 pytest -q
 ```
 
@@ -152,4 +153,7 @@ them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks
 - `sending.yaml`: `mailbox_domains` (the client's own sending domains; one domain, one client),
   `send_order: best_first` (upload the strongest companies first)
 - `sample.yaml`: the Signal Sample (`sample` command): signals and weights for a prospect's market
+- `hiring.yaml`: discovery by hiring signal (`discover-hiring`, BlitzAPI): job titles, industries per
+  search; `limits.yaml` `blitzapi_records` caps the records used a month. `scoring.yaml`
+  `enrichment_policy.email_first: blitzapi` tries BlitzAPI for work emails before FullEnrich
 - `.claude/skills/`: one skill per runnable layer

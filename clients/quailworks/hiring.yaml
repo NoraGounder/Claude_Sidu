@@ -1,0 +1,18 @@
+# Layer 1 by signal (engine/gtm/layers/l1_hiring.py, decisions.md Q39): companies that posted a sales
+# job in the last 30 days, found with BlitzAPI's "companies hiring" search. Each search names the
+# icp.yaml segment its companies count towards, so the fit score works as for any other account.
+# Layer 2 still confirms the open role on the company's own site before it is scored or quoted.
+#   python -m gtm --client quailworks discover-hiring --dry-run
+
+job_titles: [Account Executive, Sales Development Representative, Business Development Representative,
+             Sales Engineer, Inside Sales, Business Development Manager]
+posted_last_days: 30
+job_countries: [US]
+
+searches:
+  - {name: hiring_robotics_us, segment: robotics_automation_us, max_items: 100,
+     industries: [Automation Machinery Manufacturing, Robotics Engineering, Robot Manufacturing, Industrial Automation]}
+  - {name: hiring_mfg_software_us, segment: mfg_software_us, max_items: 100,
+     industries: [Software Development], keywords: [manufacturing software, MES, industrial software, factory]}
+  - {name: hiring_industrial_ai_us, segment: industrial_ai_us, max_items: 50,
+     industries: [Software Development], keywords: [industrial AI, machine vision, digital twin, predictive maintenance]}

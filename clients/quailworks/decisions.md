@@ -332,6 +332,11 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   December, the Apollo test (Q28) and TheirStack are dropped, and the Harvest job search (Q38) is not
   needed. Kept: Jev 1.14, our own crawler, MillionVerifier, Smartlead, HubSpot free. Change if: the
   trial shows fewer than a third good fits, or under 60% of emails found.
+  **Built 2026-11-12, not yet run:** `discover-hiring` (`hiring.yaml`: three searches for companies
+  that posted a sales job in the last 30 days) and BlitzAPI as an optional first email source, both
+  tested against canned responses. The engine may use 1,000 BlitzAPI records a month and no money
+  (`limits.yaml`) until the user chooses a plan. The first live run waits for the user's free
+  BlitzAPI key.
 
 - **Q40. Website rebuilt to match the campaign (2026-11-11, the user asked).** A prospect who clicks
   through now finds what the email promised: "Outbound for companies that sell to engineers", the free

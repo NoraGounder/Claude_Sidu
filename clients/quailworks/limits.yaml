@@ -11,6 +11,8 @@ month_budget_usd:
   fullenrich: 40     # ~730 credits: people search plus work emails for ~150 Tier 1-2 accounts
   millionverifier: 2
   openrouter: 3      # TypeSafe Jev 1.14 decisions only (see ai.yaml). Actual cost per request is logged.
+  blitzapi: 0        # free trial: no money may be spent (decisions.md Q39); a paid plan needs the user's say-so
+  blitzapi_records: 1000   # records a month the engine may use on BlitzAPI: the free trial's allowance
 
 # Unit prices used for estimates before a run (USD per item), as for The Marble Jar (checked 2026-11-06).
 unit_price_usd:
@@ -18,6 +20,7 @@ unit_price_usd:
   "harvestapi/linkedin-company-search:full": 0.004
   "harvestapi/linkedin-profile-search:full": 0.0032
   "harvestapi/linkedin-job-search:job": 0.001      # job postings (decisions.md Q38); needs the owner's approval on Apify
+  "blitzapi:record": 0.0     # flat plan, no charge per record: the free trial is 1,000 records, Start is $99 for 200,000 (Q39)
   "openrouter:typesafe/jev-1.14:request": 0.0001
   "fullenrich:credit": 0.055
   "fullenrich:person_returned": 0.01375
