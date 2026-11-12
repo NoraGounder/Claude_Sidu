@@ -6,7 +6,7 @@
 # are shared with The Marble Jar, whose own caps are unchanged; the guard counts each client separately.
 
 month_budget_usd:
-  apify: 15          # paid Apify plan (Starter); first run 2,700 companies = $10.80
+  apify: 40          # raised from 15 on the user's say-so (2026-11-12): deeper discovery and Signal Samples (decisions.md Q36)
   leadmagic: 0       # not used
   fullenrich: 40     # ~730 credits: people search plus work emails for ~150 Tier 1-2 accounts
   millionverifier: 2

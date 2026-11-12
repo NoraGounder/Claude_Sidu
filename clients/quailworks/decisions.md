@@ -271,7 +271,7 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   the laptop, where the key is). Fresh mailboxes cannot afford bounces.
 - **Q36. Stack: nothing replaced, three small additions asked of the user.** Harvest on Apify,
   FullEnrich, Jev 1.14, Smartlead and HubSpot free stay: the first 185 contacts cost $25.70. Asked:
-  (1) raise the Apify cap from $15 to $40 a month (deeper discovery plus Signal Samples); (2) the
+  (1) raise the Apify cap from $15 to $40 a month (deeper discovery plus Signal Samples; **done 2026-11-12, the user said yes**); (2) the
   MillionVerifier key on the laptop (about $1 a month); (3) four more mailboxes on one more domain in
   January, only if positive replies reach 2%. Tested next, no purchase yet: a job-posting search as a
   discovery source (every company found already has the signal), first with the Apify actor we already
@@ -337,6 +337,16 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   tested against canned responses. The engine may use 1,000 BlitzAPI records a month and no money
   (`limits.yaml`) until the user chooses a plan. The first live run waits for the user's free
   BlitzAPI key.
+  **Trial, 2026-11-12 (free records, 202 used):** the three searches returned 192 companies with a
+  sales job posted in the last 30 days. About two thirds were already in our database, which says
+  both sources see the same market. Of the 58 new ones, 33 were a fit (Jev 1.14), and our own check
+  of each company's site confirmed the open role at 13; 9 became Tier 1. So BlitzAPI's signal is
+  real but our crawl can only confirm about a quarter of it, because many job lists sit in systems it
+  cannot read. Next: take the posting itself (title, date, link) from BlitzAPI's job search as the
+  evidence, so a confirmed role does not depend on the company's website. Emails: BlitzAPI found 10
+  of 13 (77%), FullEnrich the other 3, for $0.17 instead of $0.72; `email_first: blitzapi` is now on.
+  Verdict so far: keep BlitzAPI for emails and as a second discovery source; decide on the $99 plan
+  after the job-search evidence is built and the 1,000 free records are used.
 
 - **Q40. Website rebuilt to match the campaign (2026-11-11, the user asked).** A prospect who clicks
   through now finds what the email promised: "Outbound for companies that sell to engineers", the free

@@ -677,5 +677,5 @@ def test_blitzapi_is_tried_first_for_emails_only_when_the_client_asks(env):
     got = conn.execute("SELECT status, email, email_status, email_source FROM contacts WHERE first_name='known'").fetchone()
     assert tuple(got) == ("email_found", "known@halden.example", "DELIVERABLE", "BlitzAPI")
     assert conn.execute("SELECT status FROM contacts WHERE first_name='unknown'").fetchone()[0] == "selected"
-    # off by default: scoring.yaml enrichment_policy.email_first is not set for either client yet
-    assert (cfg.scoring["enrichment_policy"].get("email_first"), load_client(TMJ).scoring.get("enrichment_policy", {}).get("email_first")) == (None, None)
+    # opt-in: Quailworks switched it on for the trial (2026-11-12); The Marble Jar has not
+    assert (cfg.scoring["enrichment_policy"].get("email_first"), load_client(TMJ).scoring.get("enrichment_policy", {}).get("email_first")) == ("blitzapi", None)

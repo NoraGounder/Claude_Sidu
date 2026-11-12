@@ -140,6 +140,8 @@ enrichment_policy:
   # People based outside gate.yaml's contact countries (US, GB) are never selected or paid for: the
   # first live test picked directors in Poland, Greece and Hong Kong that the gate would hold back.
   only_sendable_countries: true
+  # Work emails: BlitzAPI first (flat plan), FullEnrich for the ones it does not find (decisions.md Q39).
+  email_first: blitzapi
   tier_1: {max_contacts: 2}
   tier_2: {max_contacts: 2}
   tier_3: {max_contacts: 0}   # parked until Tier 1-2 replies show a message that works
