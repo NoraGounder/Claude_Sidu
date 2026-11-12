@@ -333,6 +333,16 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   needed. Kept: Jev 1.14, our own crawler, MillionVerifier, Smartlead, HubSpot free. Change if: the
   trial shows fewer than a third good fits, or under 60% of emails found.
 
+- **Q40. Website rebuilt to match the campaign (2026-11-11, the user asked).** A prospect who clicks
+  through now finds what the email promised: "Outbound for companies that sell to engineers", the free
+  Signal Sample and the 90-day Signal Engine, the stack we really run, the founder and his engineering
+  background, our own engine's numbers (2,922 companies read, 40% of hiring matches rejected, 185 with
+  a confirmed signal, $38 of data), company details in the footer and a privacy section for people we
+  email. Not on the site until the user confirms them: the promise of 12 meetings (Q32) and prices
+  (Q33). Source on branch `claude/lucid-hypatia-c3qlip`; it goes live when the user approves the
+  deploy. Still needed from the user: a LinkedIn link and a photo, and the register court and share
+  capital for the footer.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):
