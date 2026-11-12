@@ -129,7 +129,10 @@ def run(cfg: ClientConfig, conn, recheck: bool = False, mv: MillionVerifierClien
                     conn.execute("UPDATE contacts SET email_status=?, verified_at=?, email_source=? WHERE id=?",
                                  (status, r["verified_at"], r["email_source"], r["id"]))
             except MillionVerifierError as exc:
-                db.finish_run(conn, run_id, "failed", 0, None, str(exc)[:300])
+                # Checks made before the failure were paid for and are kept: record them, not the estimate.
+                done = sum("MillionVerifier" in (r.get("email_source") or "") and r.get("verified_at") == now.isoformat()
+                           for r in stale)
+                db.finish_run(conn, run_id, "failed", done, budget.estimate(cfg, PRICE_KEY, done), str(exc)[:300])
                 raise
             db.finish_run(conn, run_id, "succeeded", len(stale), budget.estimate(cfg, PRICE_KEY, len(stale)))
 
