@@ -657,3 +657,12 @@ button[disabled] { opacity: .6; cursor: progress; }
 @media (max-width: 960px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .stats { grid-template-columns: 1fr; } .stat { padding: 26px 20px 28px; } }
 .foot-bottom span:first-child { max-width: 72ch; }
+
+/* Founder */
+.founder-card { display: flex; align-items: center; gap: 18px; margin-top: 34px; padding-top: 26px; border-top: 1px solid var(--line); max-width: 480px; }
+.founder-card img { width: 76px; height: 76px; border-radius: 50%; object-fit: cover; flex: none; filter: grayscale(1) contrast(1.05); }
+.founder-card div { display: flex; flex-direction: column; gap: 3px; }
+.founder-card b { font-size: 17px; font-weight: 600; }
+.founder-card span { color: var(--ink-3); font-size: 14.5px; }
+.founder-card a { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); margin-top: 5px; }
+.founder-card a span { color: inherit; font-size: inherit; }
