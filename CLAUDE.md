@@ -83,6 +83,7 @@ python -m gtm --client the-marble-jar retention                # DPA deletion sc
 python -m gtm --client the-marble-jar learn                    # conversations, meetings and revenue per signal, opening, tier
 python -m gtm --client quailworks sample --name "Acme" --search "contract manufacturing" --dry-run   # Signal Sample for a prospect (sample.yaml)
 python -m gtm --client quailworks discover-hiring --dry-run   # Layer 1 by signal: companies hiring for the role (BlitzAPI, hiring.yaml)
+python -m gtm --client quailworks funnel                      # funnel and cost per step, this client only (free)
 pytest -q
 ```
 

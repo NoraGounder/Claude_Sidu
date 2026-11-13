@@ -351,6 +351,15 @@ def cmd_best_clients(args) -> int:
     return 0
 
 
+def cmd_funnel(args) -> int:
+    """Funnel and cost per step for one client (free, local data only)."""
+    from gtm import funnel
+
+    cfg = load_client(args.client)
+    print("\n".join(funnel.format_report(cfg, funnel.report(cfg, db.connect()))))
+    return 0
+
+
 def cmd_discover_hiring(args) -> int:
     """Layer 1 by signal: companies with an open job for the role the offer replaces (BlitzAPI)."""
     from gtm.layers import l1_hiring
@@ -359,6 +368,12 @@ def cmd_discover_hiring(args) -> int:
     cfg = load_client(args.client)
     conn = db.connect()
     plans = l1_hiring.plan(cfg, args.search, args.max_items)
+    if not args.force:
+        recent = l1_hiring.recently_run(conn, cfg.slug)
+        skipped = [p.name for p in plans if p.name in recent]
+        plans = [p for p in plans if p.name not in recent]
+        if skipped:
+            print(f"Skipped (run in the last {l1_hiring.RERUN_DAYS} days, same results; --force to repeat): {', '.join(skipped)}")
     used = l1_hiring.records_used(conn, cfg.slug)
     cap = int(cfg.limits.month_budget_usd.get("blitzapi_records", 0))
     print(f"Discovery by hiring signal for {cfg.slug}: {len(plans)} searches, up to {sum(p.max_items for p in plans)} "
@@ -583,7 +598,11 @@ def build_parser() -> argparse.ArgumentParser:
     dh.add_argument("--search", action="append", help="search name from hiring.yaml (repeatable)")
     dh.add_argument("--max-items", type=int, help="cap companies per search (default: hiring.yaml)")
     dh.add_argument("--dry-run", action="store_true", help="show the searches, call nothing")
+    dh.add_argument("--force", action="store_true", help="repeat a search run in the last few days (uses records)")
     dh.set_defaults(func=cmd_discover_hiring)
+
+    fu = sub.add_parser("funnel", help="funnel and cost per step for this client (free)")
+    fu.set_defaults(func=cmd_funnel)
 
     sm = sub.add_parser("sample", help="Signal Sample: companies in a prospect's market with a buying signal")
     sm.add_argument("--name", required=True, help="the prospect the sample is for (names the output file)")

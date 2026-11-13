@@ -23,6 +23,15 @@ from gtm.sources.blitz import BlitzClient
 VENDOR = "blitzapi"
 PRICE_KEY = "blitzapi:record"
 PAGE = 50
+RERUN_DAYS = 7     # job postings are listed for weeks: a repeat within a week returns the same companies
+
+
+def recently_run(conn, client: str, days: int = RERUN_DAYS) -> set[str]:
+    """Searches that succeeded in the last `days` days. Re-running them spends records on companies we
+    already have, so the CLI skips them unless asked (--force)."""
+    rows = conn.execute("SELECT label FROM runs WHERE client=? AND vendor=? AND layer='L1-hiring' AND status='succeeded'"
+                        " AND started_at >= strftime('%Y-%m-%dT%H:%M:%S', 'now', ?)", (client, VENDOR, f"-{days} days"))
+    return {r[0] for r in rows}
 
 
 @dataclass

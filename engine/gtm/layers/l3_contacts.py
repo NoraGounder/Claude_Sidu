@@ -76,10 +76,13 @@ def plan(cfg: ClientConfig, conn, limit: int | None = None, search_limit: int = 
         " AND a.id NOT IN (SELECT account_id FROM l3_progress)"
         " ORDER BY CASE s.tier WHEN 'tier_1' THEN 1 WHEN 'tier_2' THEN 2 ELSE 3 END, s.signal DESC, s.fit DESC",
         (cfg.slug,)).fetchall()
-    suppressed = db.suppressed_values(conn, cfg.slug, "domain")
+    suppressed = {k: db.suppressed_values(conn, cfg.slug, k) for k in ("domain", "company", "linkedin")}
+    # Checked again here, before any paid lookup: the do-not-contact list may have grown since Layer 1.
     # Tiers with max_contacts 0 are parked: no people search, nothing spent.
     accounts = [dict(r) for r in rows
-                if r["domain"] not in suppressed and policy(cfg, r["tier"]).get("max_contacts", 1) > 0]
+                if r["domain"] not in suppressed["domain"] and (r["name"] or "").lower() not in suppressed["company"]
+                and (r["linkedin_url"] or "") not in suppressed["linkedin"]
+                and policy(cfg, r["tier"]).get("max_contacts", 1) > 0]
     if limit:
         accounts = accounts[:limit]
     est = budget.estimate(cfg, SEARCH_KEY, len(accounts) * search_limit) if accounts else 0.0

@@ -364,6 +364,26 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   deploy. Still needed from the user: a LinkedIn link and a photo, and the register court and share
   capital for the footer.
 
+- **Q41. Review of an outside "lean outbound" brief (2026-11-13).** Most of it was already in place:
+  per-client SQLite with evidence URLs and dates, costs per run, Jev-checked claims, verification
+  results; a company gate before people search (Tier 1-2 with `min_jev_icp`) and a buyer gate before
+  email lookup (Jev 1.14 title ranking, personas, countries); cached crawls, pending FullEnrich batches
+  collected rather than re-bought, one upload per contact, and sending only with `--i-confirm` after
+  the user's go. Added: (1) `funnel`: companies found to customers won, with spend and cost per step,
+  per client; (2) the do-not-contact list is checked by company name and LinkedIn page as well as domain
+  right before paid people search; (3) `discover-hiring` skips a search run in the last 7 days unless
+  `--force`, so records are not spent on companies we already have.
+  **Finding: BlitzAPI sells the same data pay-as-you-go through ZeroClick** (agents.blitz-api.ai):
+  $0.001 per record returned, prepaid by card from $0.50, no subscription; the catalog covers company
+  search, people search, verified work emails and job search. At our volume (about 5,000-10,000 records
+  a month even with ten clients) that is $5-10 a month instead of $99, so the $99 Start plan is not
+  worth it until roughly 100,000 records a month. Not set up: it needs a payment method registered,
+  which is the user's decision. Change if: volume passes about 50,000 records a month.
+  **Proposed, not changed:** MillionVerifier cap from $2 to $15 a month (prepaid credits already
+  bought; about 3,750 checks), needs the user's say-so. **HubSpot:** the network proxy can hold one key
+  per host, and both clients' portals live on api.hubapi.com, so Quailworks' token must be an
+  environment variable (`HUBSPOT_TOKEN_QUAILWORKS`), never a proxy secret shared with The Marble Jar.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

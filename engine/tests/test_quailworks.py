@@ -693,3 +693,29 @@ def test_env_file_is_read_without_overriding_or_printing(tmp_path, monkeypatch, 
     assert os.environ["MILLIONVERIFIER_API_KEY"] == "abc123" and os.environ["SMARTLEAD_API_KEY"] == "already-set"
     assert "EMPTY" not in os.environ and capsys.readouterr().out == ""
     assert cli.load_env_file(tmp_path / "missing.env") == 0
+
+
+def test_funnel_counts_one_client_and_suppression_is_checked_before_paid_lookups(env):
+    from gtm import funnel
+
+    conn = db.connect()
+    for slug in (QW, TMJ):
+        acc = _account(conn, slug, f"{slug} Co", f"https://{slug}.example", [], status="tier_1")
+        conn.execute("INSERT INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, scored_at) VALUES (?,?,?,?,?,?,?)",
+                     (acc, 85, 35, "tier_1", 1, 0, "t"))
+        conn.execute("INSERT INTO contacts(client, account_id, person_id, first_name, last_name, status, status_reason, email,"
+                     " email_status, data_source, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                     (slug, acc, slug, "A", "B", "held", "sender_consent_pending", f"a@{slug}.example", "DELIVERABLE", "x", "t", "t"))
+        conn.execute("INSERT INTO runs(client, layer, vendor, label, started_at, status, est_cost, actual_cost) VALUES (?,?,?,?,?,?,?,?)",
+                     (slug, "L3-email", "fullenrich", "x", "t", "succeeded", 1.0, 2.0 if slug == QW else 50.0))
+    blocked = _account(conn, QW, "Blocked Robotics", "https://blocked.example", [], status="tier_1")
+    conn.execute("INSERT INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, scored_at) VALUES (?,?,?,?,?,?,?)",
+                 (blocked, 85, 35, "tier_1", 1, 0, "t"))
+    db.add_suppression(conn, QW, "company", "blocked robotics", "asked not to be contacted")
+    conn.commit()
+    cfg = load_client(QW)
+    r = funnel.report(cfg, conn)
+    assert r["steps"]["qualified companies (Tier 1-2)"] == 2 and r["steps"]["usable (verified, passed the gate)"] == 1
+    assert r["total"] == 2.0 and r["cost_per"]["usable (verified, passed the gate)"] == 2.0      # the client's spend is not counted
+    names = [a["name"] for a in l3_contacts.plan(cfg, conn).accounts]
+    assert "Blocked Robotics" not in names and "quailworks Co" in names
