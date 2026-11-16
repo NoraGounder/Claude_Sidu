@@ -351,6 +351,23 @@ def cmd_best_clients(args) -> int:
     return 0
 
 
+def cmd_linkedin(args) -> int:
+    """People emailed on a given day (default yesterday) at Tier 1 companies, for manual LinkedIn requests."""
+    from datetime import date, timedelta
+
+    cfg = load_client(args.client)
+    day = args.day or (date.today() - timedelta(days=1)).isoformat()
+    rows = db.connect().execute(
+        "SELECT c.first_name, c.last_name, c.title, a.name AS company, c.linkedin_url FROM outbound o"
+        " JOIN contacts c ON c.id=o.contact_id JOIN accounts a ON a.id=o.account_id"
+        " WHERE o.client=? AND a.status='tier_1' AND substr(o.pushed_at, 1, 10)=? ORDER BY a.name",
+        (cfg.slug, day)).fetchall()
+    print(f"Tier 1 contacts emailed on {day}: {len(rows)}. Send a plain connection request, no note needed.")
+    for r in rows:
+        print(f"  {r['first_name']} {r['last_name']}, {r['title']} at {r['company']}: {r['linkedin_url'] or 'no profile link'}")
+    return 0
+
+
 def cmd_funnel(args) -> int:
     """Funnel and cost per step for one client (free, local data only)."""
     from gtm import funnel
@@ -408,6 +425,21 @@ def cmd_sample(args) -> int:
     conn = db.connect()
     ids = [i.strip() for i in (args.industry_ids or "").split(",") if i.strip()]
     roles = [r.strip() for r in (args.roles or "").split(",") if r.strip()]
+    if args.source == "jobs":
+        from gtm.sources.blitz import BlitzError
+        if not roles:
+            print("Give --roles: the job titles that mean a company needs the prospect's product.")
+            return 2
+        keywords = [k.strip() for k in (args.search or "").split(",") if k.strip()]
+        try:
+            r = sample.run_jobs(cfg, conn, args.name, roles, keywords or None, None,
+                                [c.strip().upper() for c in (args.countries or "US").split(",")], args.top,
+                                exclude_companies=[e.strip() for e in (args.exclude or "").split(",") if e.strip()])
+        except (budget.BudgetExceeded, BlitzError) as exc:
+            print(f"Stopped: {exc}")
+            return 2
+        print(f"Read {r['postings']} postings at {r['companies']} companies; {r['listed']} listed. Check it, then send it: {r['path']}")
+        return 0
     actor_input, est = sample.plan(cfg, args.search, ids, args.location or ["United States"], args.max_items)
     print(f"Signal Sample '{args.name}': up to {actor_input['maxItems']} companies, estimated ${est:.2f}.")
     print(f"  search: {json.dumps(actor_input)}")
@@ -601,6 +633,10 @@ def build_parser() -> argparse.ArgumentParser:
     dh.add_argument("--force", action="store_true", help="repeat a search run in the last few days (uses records)")
     dh.set_defaults(func=cmd_discover_hiring)
 
+    li = sub.add_parser("linkedin", help="Tier 1 contacts emailed on a day (default yesterday), for manual LinkedIn requests")
+    li.add_argument("--day", help="YYYY-MM-DD (default: yesterday)")
+    li.set_defaults(func=cmd_linkedin)
+
     fu = sub.add_parser("funnel", help="funnel and cost per step for this client (free)")
     fu.set_defaults(func=cmd_funnel)
 
@@ -612,6 +648,10 @@ def build_parser() -> argparse.ArgumentParser:
     sm.add_argument("--roles", help="open job titles that mean a company needs the prospect's product, comma-separated")
     sm.add_argument("--max-items", type=int, help="companies to read (default: sample.yaml)")
     sm.add_argument("--top", type=int, default=10)
+    sm.add_argument("--source", choices=["jobs", "sites"], default="jobs",
+                    help="jobs: live job postings via BlitzAPI (default); sites: company websites via Harvest")
+    sm.add_argument("--countries", help="with --source jobs: HQ countries, comma-separated (default US)")
+    sm.add_argument("--exclude", help="company names to leave out: the prospect, its competitors and customers")
     sm.add_argument("--dry-run", action="store_true", help="show the search and cost, call nothing")
     sm.set_defaults(func=cmd_sample)
 

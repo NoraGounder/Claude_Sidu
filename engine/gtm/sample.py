@@ -70,6 +70,76 @@ def find_signals(conf: dict, site, roles: list[str]) -> list[dict]:
     return sorted(found, key=lambda f: -f["weight"])
 
 
+def run_jobs(cfg: ClientConfig, conn, name: str, roles: list[str], keywords: list[str] | None = None,
+             industries: list[str] | None = None, countries: list[str] | None = None, top: int = 10,
+             max_postings: int = 100, client=None, exclude_companies: list[str] | None = None) -> dict:
+    """The Signal Sample from live job postings (BlitzAPI): companies in the prospect's market hiring for
+    roles that use what the prospect sells. Each line quotes the posting's title and date and links to
+    the posting itself, so the signal does not depend on reading the company's website."""
+    from gtm.layers import l1_hiring
+    from gtm.sources.blitz import BlitzClient
+
+    conf = load_config(cfg)
+    l1_hiring.check_records(conn, cfg, max_postings)
+    job = {"title": {"include": roles}, "date_posted": {"last_days": conf.get("posted_last_days", 30)}}
+    if conf.get("exclude_title_words"):
+        job["title"]["exclude"] = conf["exclude_title_words"]
+    company = {"employee_count": {"min": conf.get("min_employees", 51), "max": conf.get("max_employees", 5000)},
+               "hq": {"country_code": {"include": countries or ["US"]}}}
+    if keywords:
+        company["keywords"] = {"include": keywords}
+    if industries:
+        company["industry"] = {"include": industries}
+    if conf.get("exclude_industries"):
+        company.setdefault("industry", {})["exclude"] = conf["exclude_industries"]
+    api = client or BlitzClient()
+    run_id = db.start_run(conn, cfg.slug, "SAMPLE", l1_hiring.VENDOR, f"sample:{name}", 0.0, {"job": job, "company": company})
+    postings, cursor = [], None
+    try:
+        while len(postings) < max_postings:
+            data = api.jobs(job, company, min(50, max_postings - len(postings)), cursor)
+            page = data.get("results") or []
+            postings.extend(page)
+            cursor = data.get("cursor")
+            if not page or not cursor:
+                break
+    except Exception as exc:
+        db.finish_run(conn, run_id, "failed", len(postings), 0.0, str(exc)[:300])
+        raise
+    by_company: dict[str, list[dict]] = {}
+    skip = [s.lower() for s in exclude_companies or []]
+    for p in postings:
+        key = p.get("company_linkedin_url") or p.get("company_name")
+        if any(s in (p.get("company_name") or "").lower() for s in skip):
+            continue                       # the prospect itself, its competitors, its existing customers
+        if key:
+            by_company.setdefault(key, []).append(p)
+    # Most matching postings first, then the most recent: several open roles is the stronger signal.
+    ranked = sorted(by_company.values(), key=lambda ps: (len(ps), max(p.get("date_posted") or "" for p in ps)),
+                    reverse=True)[:top]
+    out_dir = data_dir() / "samples"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}.md"
+    today = datetime.now(timezone.utc).date().isoformat()
+    lines = [f"# Signal Sample: {name} ({today})", "",
+             f"Companies hiring for: {', '.join(roles)}" + (f" · market: {', '.join(keywords)}" if keywords else "")
+             + f". Postings read: {len(postings)}; companies: {len(by_company)}.",
+             "Check every line before sending: each posting must still be open.", ""]
+    for n, ps in enumerate(ranked, start=1):
+        first = ps[0]
+        loc = first.get("location") or {}
+        where = ", ".join(x for x in [loc.get("city"), loc.get("country_code")] if x)
+        lines.append(f"{n}. **{first.get('company_name')}** ({first.get('company_linkedin_url') or 'no LinkedIn page'})")
+        for p in ps[:3]:
+            lines.append(f"   - Hiring: \"{p.get('title')}\"{', ' + where if where else ''}, posted {str(p.get('date_posted') or '')[:10]} ({p.get('url')})")
+        if len(ps) > 3:
+            lines.append(f"   - and {len(ps) - 3} more matching postings")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    db.finish_run(conn, run_id, "succeeded", len(postings), 0.0,
+                  json.dumps({"postings": len(postings), "companies": len(by_company), "listed": len(ranked)}))
+    return {"path": path, "postings": len(postings), "companies": len(by_company), "listed": len(ranked)}
+
+
 def run(cfg: ClientConfig, conn, name: str, actor_input: dict, est_cost: float, roles: list[str] | None = None,
         top: int = 10, client: ApifyClient | None = None, fetcher_factory=None, workers: int = 8) -> dict:
     conf = load_config(cfg)

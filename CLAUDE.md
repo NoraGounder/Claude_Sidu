@@ -81,9 +81,10 @@ python -m gtm --client the-marble-jar deals                    # pipeline and wo
 python -m gtm --client the-marble-jar crm                      # HubSpot dry run; --live writes after approval
 python -m gtm --client the-marble-jar retention                # DPA deletion schedule (dry run; --apply deletes local data)
 python -m gtm --client the-marble-jar learn                    # conversations, meetings and revenue per signal, opening, tier
-python -m gtm --client quailworks sample --name "Acme" --search "contract manufacturing" --dry-run   # Signal Sample for a prospect (sample.yaml)
+python -m gtm --client quailworks sample --name "Acme" --roles "Controls Engineer" --search "packaging" --exclude "Acme"   # Signal Sample from job postings (sample.yaml)
 python -m gtm --client quailworks discover-hiring --dry-run   # Layer 1 by signal: companies hiring for the role (BlitzAPI, hiring.yaml)
 python -m gtm --client quailworks funnel                      # funnel and cost per step, this client only (free)
+python -m gtm --client quailworks linkedin                    # yesterday's Tier 1 contacts, for manual LinkedIn requests
 pytest -q
 ```
 

@@ -93,6 +93,10 @@ def clean_company(name: str, extra_suffixes: list[str] | None = None, cut: list[
         head = name.split(sep)[0].strip()
         if sep in name and len(head) >= 2:
             name = head
+    # Trademark signs and a trailing abbreviation in brackets read oddly in a sentence:
+    # "AssetWatch®" -> "AssetWatch", "Autonomous Solutions, Inc. (ASI)" -> "Autonomous Solutions".
+    name = re.sub(r"\s*[®™©]", "", name)
+    name = re.sub(r"\s*\([A-Z0-9&.\- ]{2,10}\)\s*$", "", name)
     out = LEGAL_SUFFIX.sub("", name.strip())
     if extra_suffixes:
         alts = "|".join(re.escape(s).replace(r"\.", r"\.?") for s in extra_suffixes)
@@ -146,6 +150,8 @@ def usable_title(title: str, extra: re.Pattern | None = None) -> bool:
 
 def clean_first_name(name: str) -> str:
     name = (name or "").strip()
+    if name.isupper() and len(name) <= 3:
+        return name                    # initials used as a first name ("TVN"): "Tvn" would read as a typo
     return name.title() if name.isupper() or name.islower() else name
 
 

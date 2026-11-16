@@ -7,6 +7,12 @@
 # postings directly (Harvest's LinkedIn job search on Apify, $0.001 a job, no login), where every
 # result is a company hiring now. Apify asks the account owner to approve that actor once.
 
+# From job postings (`--source jobs`, the default since 2026-11-16, BlitzAPI): leave out recruiters,
+# who post on behalf of others, and software roles that only share the job title's words.
+exclude_industries: [Staffing and Recruiting, Human Resources Services, IT Services and IT Consulting]
+exclude_title_words: [software, test automation, QA, marketing automation, recruiter]
+min_employees: 51
+
 max_items: 60                  # companies read per sample: about $0.24 on Apify
 company_sizes: ["51-200", "201-500", "501-1000"]    # the prospect's buyers are usually larger than the prospect
 job_board_countries: [US, GB]

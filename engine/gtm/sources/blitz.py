@@ -60,6 +60,14 @@ class BlitzClient:
             body["cursor"] = cursor
         return self._post("/company/tam-by-jobs", body)
 
+    def jobs(self, job: dict, company: dict, max_results: int = 50, cursor: str | None = None) -> dict:
+        """Live job postings. Returns {results: [{title, url, date_posted, company_name, company_linkedin_url,
+        location}], cursor}. One record per posting returned."""
+        body = {"job": job, "company": company, "max_results": max_results}
+        if cursor:
+            body["cursor"] = cursor
+        return self._post("/jobs/search", body)
+
     def people(self, company_linkedin_url: str, cascade: list[dict], max_results: int = 4) -> list[dict]:
         """Best-matching people at one company from ordered title tiers. Each: {icp, ranking, person}."""
         data = self._post("/search/waterfall-icp-keyword",

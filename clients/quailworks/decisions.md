@@ -377,7 +377,14 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   $0.001 per record returned, prepaid by card from $0.50, no subscription; the catalog covers company
   search, people search, verified work emails and job search. At our volume (about 5,000-10,000 records
   a month even with ten clients) that is $5-10 a month instead of $99, so the $99 Start plan is not
-  worth it until roughly 100,000 records a month. Not set up: it needs a payment method registered,
+  worth it until roughly 100,000 records a month.
+  **2026-11-16:** the Signal Sample is now built from job postings (`sample`, BlitzAPI job search, about
+  100 records each): a trial for a robotics prospect read 100 postings at 61 companies and listed 10
+  companies hiring controls, automation or robotics engineers, each with the posting's title, date and
+  link. The first trial ranked a staffing agency first and listed a robot maker, so recruiters and
+  software roles are filtered out (`sample.yaml`) and `--exclude` drops the prospect's competitors and
+  customers. A person still checks every list before it is sent. Also new: `linkedin` lists yesterday's
+  Tier 1 contacts for the founder's manual connection requests (Q24). Not set up: it needs a payment method registered,
   which is the user's decision. Change if: volume passes about 50,000 records a month.
   **Proposed, not changed:** MillionVerifier cap from $2 to $15 a month (prepaid credits already
   bought; about 3,750 checks), needs the user's say-so. **HubSpot:** the network proxy can hold one key

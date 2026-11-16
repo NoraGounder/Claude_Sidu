@@ -719,3 +719,43 @@ def test_funnel_counts_one_client_and_suppression_is_checked_before_paid_lookups
     assert r["total"] == 2.0 and r["cost_per"]["usable (verified, passed the gate)"] == 2.0      # the client's spend is not counted
     names = [a["name"] for a in l3_contacts.plan(cfg, conn).accounts]
     assert "Blocked Robotics" not in names and "quailworks Co" in names
+
+
+def test_signal_sample_from_job_postings_quotes_each_posting(env):
+    from gtm import sample
+    from gtm.sources.blitz import BlitzClient
+
+    class JobsSession(BlitzSession):
+        def post(self, url, json=None, timeout=None):
+            if url.endswith("/jobs/search"):
+                self.calls.append(("/jobs/search", json))
+                jobs = [{"title": "Controls Engineer", "url": "https://jobs.example/1", "date_posted": "2026-11-10T00:00:00Z",
+                         "company_name": "Ferro Plant", "company_linkedin_url": "https://linkedin.com/company/ferro", "location": {"city": "Toledo", "country_code": "US"}},
+                        {"title": "Automation Engineer", "url": "https://jobs.example/2", "date_posted": "2026-11-12T00:00:00Z",
+                         "company_name": "Ferro Plant", "company_linkedin_url": "https://linkedin.com/company/ferro", "location": {}},
+                        {"title": "Controls Engineer", "url": "https://jobs.example/3", "date_posted": "2026-11-01T00:00:00Z",
+                         "company_name": "Solo Co", "company_linkedin_url": "https://linkedin.com/company/solo", "location": {}}]
+                return _Resp({"results": jobs, "cursor": None, "fair_usage": {"records_remaining": 700}})
+            return super().post(url, json, timeout)
+
+    cfg = load_client(QW)
+    conn = db.connect()
+    session = JobsSession([], {})
+    r = sample.run_jobs(cfg, conn, "Acme Robotics", ["Controls Engineer", "Automation Engineer"], ["packaging"],
+                        client=BlitzClient(api_key="k", session=session))
+    text = r["path"].read_text()
+    assert (r["postings"], r["companies"], r["listed"]) == (3, 2, 2)
+    assert text.index("Ferro Plant") < text.index("Solo Co")                 # two open roles rank first
+    assert 'Hiring: "Controls Engineer", Toledo, US, posted 2026-11-10 (https://jobs.example/1)' in text
+    body = session.calls[0][1]
+    assert body["job"]["title"]["include"] == ["Controls Engineer", "Automation Engineer"] and body["company"]["keywords"] == {"include": ["packaging"]}
+    assert conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0] == 0   # not added to our pipeline
+
+
+def test_company_and_first_names_read_naturally(env):
+    seq = l5_copy.load_sequence(load_client(QW))
+    clean = lambda n: l5_copy.clean_company(n, seq["company_suffixes"], seq["company_name_cut"])   # noqa: E731
+    assert clean("AssetWatch®") == "AssetWatch" and clean("Addtronics ®") == "Addtronics"
+    assert clean("Autonomous Solutions, Inc. (ASI)") == "Autonomous Solutions"
+    assert clean("Acme (Robotics) Corp") == "Acme (Robotics)"                # only a trailing abbreviation goes
+    assert l5_copy.clean_first_name("TVN") == "TVN" and l5_copy.clean_first_name("JORDAN") == "Jordan"
