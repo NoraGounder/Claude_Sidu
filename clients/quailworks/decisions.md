@@ -422,6 +422,16 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   (5) *Launch:* not decided by Quailworks. Sending needs the user's own "go" (CLAUDE.md rule 3), the
   mailboxes finish warming up around 1-3 December, and a launch check is scheduled for 1 December.
 
+- **Q44. BlitzAPI Start plan, $99 a month (2026-11-16, the user's choice, replacing Q43 item 1).**
+  Pay-as-you-go through ZeroClick would cost less at our volume (about $5-10 a month) but needs a card
+  registered with a separate storefront and per-record bookkeeping; the user prefers one flat plan on
+  the account and key we already use. The plan covers 200,000 records a month; the engine caps itself
+  at 20,000 (`limits.yaml`), far above our need (market lists about 1,400 a month, discovery and
+  emails a few thousand). Market lists go back to weekly. With BlitzAPI doing discovery by hiring
+  signal, Apify can drop to its free plan when Starter renews on 9 December; Harvest stays available
+  for industry searches. Monthly tool spend for Quailworks: about $99 BlitzAPI + $27 mailboxes + $2
+  domains + FullEnrich as fallback only (Smartlead is shared and already paid).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

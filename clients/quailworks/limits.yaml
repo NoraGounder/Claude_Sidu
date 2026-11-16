@@ -11,8 +11,8 @@ month_budget_usd:
   fullenrich: 40     # ~730 credits: people search plus work emails for ~150 Tier 1-2 accounts
   millionverifier: 15   # raised from 2 on 2026-11-16 (the user: "take a decision and go ahead"); credits are prepaid (Q43)
   openrouter: 3      # TypeSafe Jev 1.14 decisions only (see ai.yaml). Actual cost per request is logged.
-  blitzapi: 0        # free trial: no money may be spent (decisions.md Q39); a paid plan needs the user's say-so
-  blitzapi_records: 1000   # records a month the engine may use on BlitzAPI: the free trial's allowance
+  blitzapi: 0        # flat $99 Start plan, paid outside the engine: no charge per call (decisions.md Q44)
+  blitzapi_records: 20000  # the engine's own monthly ceiling; the Start plan allows 200,000 records a month
 
 # Unit prices used for estimates before a run (USD per item), as for The Marble Jar (checked 2026-11-06).
 unit_price_usd:
