@@ -351,6 +351,29 @@ def cmd_best_clients(args) -> int:
     return 0
 
 
+def cmd_markets(args) -> int:
+    """Market lists for email 1: hiring companies per segment, from job postings (markets.yaml)."""
+    from gtm import markets
+    from gtm.sources.blitz import BlitzError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    if not markets.load_config(cfg):
+        print(f"No markets.yaml for {cfg.slug}.")
+        return 1
+    if args.refresh:
+        try:
+            out = markets.refresh(cfg, conn, force=args.force)
+        except (budget.BudgetExceeded, BlitzError) as exc:
+            print(f"Stopped: {exc}")
+            return 2
+        print("Refreshed: " + ", ".join(f"{k} {v}" for k, v in out.items()))
+    for segment in (markets.load_config(cfg).get("segments") or {}):
+        lst = markets.load_list(cfg, segment)
+        print(f"  {segment}: " + (f"{len(lst['companies'])} hiring companies, refreshed {lst['refreshed_at'][:10]}" if lst else "no list yet"))
+    return 0
+
+
 def cmd_linkedin(args) -> int:
     """People emailed on a given day (default yesterday) at Tier 1 companies, for manual LinkedIn requests."""
     from datetime import date, timedelta
@@ -632,6 +655,11 @@ def build_parser() -> argparse.ArgumentParser:
     dh.add_argument("--dry-run", action="store_true", help="show the searches, call nothing")
     dh.add_argument("--force", action="store_true", help="repeat a search run in the last few days (uses records)")
     dh.set_defaults(func=cmd_discover_hiring)
+
+    mk = sub.add_parser("markets", help="market lists for email 1: hiring companies per segment (markets.yaml)")
+    mk.add_argument("--refresh", action="store_true", help="fetch job postings for lists older than a week (BlitzAPI)")
+    mk.add_argument("--force", action="store_true", help="refresh even lists newer than a week")
+    mk.set_defaults(func=cmd_markets)
 
     li = sub.add_parser("linkedin", help="Tier 1 contacts emailed on a day (default yesterday), for manual LinkedIn requests")
     li.add_argument("--day", help="YYYY-MM-DD (default: yesterday)")

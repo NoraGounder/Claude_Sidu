@@ -39,7 +39,7 @@ Bonuses (they remove the usual reasons to wait):
 - **The trade-show play.** Meetings booked before their next show and follow-ups after it.
 - **All tools included.** No extra bills for data, sending or verification.
 
-## The promise (Q32)
+## The promise (Q32; stated in email 1 since 2026-11-16, Q42)
 
 At least **12 qualified meetings held in the first 90 days of sending, or we keep working without a fee
 until they have them.** It holds when: their deals are worth $20,000 or more, their market has at least

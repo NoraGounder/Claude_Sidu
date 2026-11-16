@@ -85,6 +85,7 @@ python -m gtm --client quailworks sample --name "Acme" --roles "Controls Enginee
 python -m gtm --client quailworks discover-hiring --dry-run   # Layer 1 by signal: companies hiring for the role (BlitzAPI, hiring.yaml)
 python -m gtm --client quailworks funnel                      # funnel and cost per step, this client only (free)
 python -m gtm --client quailworks linkedin                    # yesterday's Tier 1 contacts, for manual LinkedIn requests
+python -m gtm --client quailworks markets --refresh           # weekly: hiring companies per segment, named in email 1 (markets.yaml)
 pytest -q
 ```
 
@@ -155,6 +156,8 @@ them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks
 - `sending.yaml`: `mailbox_domains` (the client's own sending domains; one domain, one client),
   `send_order: best_first` (upload the strongest companies first)
 - `sample.yaml`: the Signal Sample (`sample` command): signals and weights for a prospect's market
+- `markets.yaml` + `sequence.yaml` `market_line` / `cta_market`: name three hiring companies in the
+  prospect's market in email 1 (`markets --refresh` weekly; `never_name` keeps vendors and recruiters out)
 - `hiring.yaml`: discovery by hiring signal (`discover-hiring`, BlitzAPI): job titles, industries per
   search; `limits.yaml` `blitzapi_records` caps the records used a month. `scoring.yaml`
   `enrichment_policy.email_first: blitzapi` tries BlitzAPI for work emails before FullEnrich

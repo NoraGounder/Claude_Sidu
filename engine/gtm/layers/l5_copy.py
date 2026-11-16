@@ -275,13 +275,22 @@ def render(seq: dict, lang: str, hook: str, process: str, facts: dict, contact: 
     values["signoff"] = _pick(seq["signoffs"][lang], contact["id"], "signoff")
     values["process"] = seq["process"][process][lang]
     values["hook"] = seq["hooks"][hook][lang].format(**values)
+    market = facts.get("market")
+    if market and seq.get("market_line"):
+        from gtm.markets import join_names
+        line = (seq["hooks"][hook].get("market_line") or seq["market_line"])[lang]
+        values["market_line"] = line.format(market_names=join_names(market["names"]), market_role=market["role"])
+    else:
+        values["market_line"] = ""
     # Optional: the ask that follows the opening, per hook (hooks.<hook>.cta) or one for all (cta).
     cta = seq["hooks"][hook].get("cta") or seq.get("cta") or {}
+    if market and seq.get("cta_market"):
+        cta = seq["cta_market"]            # the names were given: the ask is for the rest of the list
     values["cta"] = cta.get(lang, "").format(**values)
     subject = seq["hooks"][hook]["subject"][lang].format(**values)
     steps = []
     for step in seq["steps"]:
-        body = step[lang].format(**values).strip()
+        body = re.sub(r"[ \t]+\n", "\n", step[lang].format(**values)).strip()
         steps.append({"day": step["day"], "body": re.sub(r"\n{3,}", "\n\n", body)})
     return subject, steps
 
@@ -328,6 +337,15 @@ def draft(cfg: ClientConfig, conn, jev: JevClient | None = None, redo: bool = Fa
         lang = (lang_cfg.get("by_country") or {}).get(account.get("country") or "", lang_cfg.get("default", "en"))
         facts = facts_for(conn, account, seq, signal_rules, title_signal,
                           evidence_threshold(cfg) if cfg.ai.get("job_evidence") else None)
+        if seq.get("market_line"):
+            # Optional (sequence.yaml market_line, clients/<client>/markets.yaml): three companies in the
+            # prospect's market that are hiring now, from job postings, named in email 1.
+            from gtm import markets
+            m = markets.pick(cfg, conn, account)
+            if m:
+                facts["market"] = {"value": f"{markets.join_names(m['names'])} are hiring {m['role']} this month",
+                                   "names": m["names"], "role": m["role"], "source": " ".join(m["sources"]),
+                                   "qa": "Companies in the recipient's market with open job postings now (not the recipient)"}
         hooks = supported_hooks(seq, facts)
 
         state, questions = choose_request(seq, account, contact, hooks, brain.jev_context(cfg, "angle"))

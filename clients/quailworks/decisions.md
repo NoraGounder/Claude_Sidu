@@ -391,6 +391,22 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   per host, and both clients' portals live on api.hubapi.com, so Quailworks' token must be an
   environment variable (`HUBSPOT_TOKEN_QUAILWORKS`), never a proxy secret shared with The Marble Jar.
 
+- **Q42. Email 1 shows the work first (2026-11-16, the user: "go ahead and build it").** From an outside
+  template the user liked, three moves were kept and the rest dropped. Kept: give value before asking,
+  put the promise in email 1, and ask for something small. Email 1 now names three companies in the
+  prospect's market that are hiring the prospect's buyers this month (`markets.yaml`, refreshed weekly
+  from job postings with `markets --refresh`; about 50 BlitzAPI records per segment), then states the
+  promise (12 qualified meetings in the first 90 days of sending, or we keep working without a fee),
+  then asks "Want the other seven, with the job posting behind each?". Email 2 no longer repeats the
+  promise; it explains how the engine checks each signal and asks for 30 minutes. Dropped from the
+  template: "20+ meetings a month" (a result we cannot show), an attached list (attachments from new
+  mailboxes go to spam), a personal video per prospect (founder time), and exclamation marks. Robot
+  makers, integrators, software vendors, recruiters and any company in our own prospect list are never
+  named (`never_name`), and the three names rotate per prospect. 190 of 217 drafts name three
+  companies; the other 27 fall back to offering the list. Change if: replies ask who those companies
+  are and why they were named (then explain the signal in the sentence), or naming them lowers replies
+  against the plain version once 300 have been sent in a segment.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

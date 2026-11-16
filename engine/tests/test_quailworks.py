@@ -550,8 +550,9 @@ def test_email_one_is_short_and_asks_one_thing(env):
     assert "It could be that person's first list." in first and "It could be that person's first list." not in plain[0]["body"]
     for body in (first, plain[0]["body"]):
         assert body.count("?") <= 2 and "{" not in body and "No call needed." in body
-        assert len(body.replace(notice, "").split()) <= 100          # short enough to read on a phone
-    assert "12 qualified meetings" in job[1]["body"] and len(job[1]["body"].split()) <= 115
+        assert len(body.replace(notice, "").split()) <= 125          # short enough to read on a phone
+        assert "12 qualified meetings" in body                         # the promise is in email 1 (Q42)
+    assert "12 qualified meetings" not in job[1]["body"] and len(job[1]["body"].split()) <= 90
     assert not [p for p in seq["banned_phrases"] for s in job if p in s["body"].lower()]
 
 
@@ -759,3 +760,39 @@ def test_company_and_first_names_read_naturally(env):
     assert clean("Autonomous Solutions, Inc. (ASI)") == "Autonomous Solutions"
     assert clean("Acme (Robotics) Corp") == "Acme (Robotics)"                # only a trailing abbreviation goes
     assert l5_copy.clean_first_name("TVN") == "TVN" and l5_copy.clean_first_name("JORDAN") == "Jordan"
+
+
+def test_email_one_names_three_hiring_companies_in_the_market(env):
+    from gtm import markets
+    from gtm.sources.blitz import BlitzClient
+
+    class JobsSession(BlitzSession):
+        def post(self, url, json=None, timeout=None):
+            names = ["Plant One", "Plant Two", "Plant Three", "Plant Four", "Halden Robotics", "Rival Robotics"]
+            jobs = [{"title": "Controls Engineer", "url": f"https://jobs.example/{i}", "date_posted": "2026-11-1" + str(i),
+                     "company_name": n, "company_linkedin_url": None} for i, n in enumerate(names)]
+            return _Resp({"results": jobs, "cursor": None, "fair_usage": {}})
+
+    cfg = load_client(QW)
+    conn = db.connect()
+    prospect = _account(conn, QW, "Halden Robotics", "https://halden.example", ["robotics_automation_us"], status="tier_1")
+    _account(conn, QW, "Rival Robotics", "https://rival.example", ["robotics_automation_us"], status="tier_3")   # another vendor
+    conn.commit()
+    out = markets.refresh(cfg, conn, client=BlitzClient(api_key="k", session=JobsSession([], {})))
+    assert out["robotics_automation_us"] == 6
+    assert markets.refresh(cfg, conn, client=None)["robotics_automation_us"] == "fresh"        # weekly, not every run
+    account = dict(conn.execute("SELECT * FROM accounts WHERE id=?", (prospect,)).fetchone())
+    m = markets.pick(cfg, conn, account)
+    assert len(m["names"]) == 3 and not {"Halden Robotics", "Rival Robotics"} & set(m["names"])
+    seq = l5_copy.load_sequence(cfg)
+    facts = {"job_title": {"value": "account executive"},
+             "market": {"names": m["names"], "role": m["role"], "value": "x"}}
+    _, steps = l5_copy.render(seq, "en", "sales_job_ad", "outbound", facts, {"id": 1, "first_name": "Dana"},
+                              {"name": "Halden Robotics"}, {"first_name": "Sam"}, "Notice.")
+    body = steps[0]["body"]
+    assert f"Before that person starts: {markets.join_names(m['names'])} are hiring automation and controls engineers this month." in body
+    assert "Want the other seven, with the job posting behind each?" in body and "12 qualified meetings" in body
+    assert len(body.replace("Notice.", "").split()) <= 115 and "12 qualified meetings" not in steps[1]["body"]
+    _, plain = l5_copy.render(seq, "en", "generic", "outbound", {}, {"id": 1, "first_name": "Dana"},
+                              {"name": "Halden Robotics"}, {"first_name": "Sam"}, "Notice.")
+    assert "Shall I send you 10 companies" in plain[0]["body"] and "  " not in plain[0]["body"].split("\n")[2]
