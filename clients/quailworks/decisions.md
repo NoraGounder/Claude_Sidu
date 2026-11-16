@@ -432,6 +432,16 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   for industry searches. Monthly tool spend for Quailworks: about $99 BlitzAPI + $27 mailboxes + $2
   domains + FullEnrich as fallback only (Smartlead is shared and already paid).
 
+- **Q45. Sender, signature and booking link (2026-11-16).** The founder set "Sidarth Thrumurthy" as the
+  sender name on all six Quailworks mailboxes in Smartlead, which records his consent to send in his own
+  name. No Smartlead signature is set, and we keep it that way: every step already ends with the sign-off,
+  his first name and the GDPR footer (company, address, opt-out), and a second HTML signature block would
+  double the ending and read as a mass email. The booking link is a HubSpot meetings link. HubSpot's API can
+  list and book meeting links but cannot create one, and a link needs the founder's own calendar connected,
+  so that is the one step left to him. The link is used only in reply answers (Layer 7), never in cold email,
+  so it does not hold up the launch: until it exists, replies offer times. Would change: a reply rate that
+  suggests the emails look unsigned or anonymous (then add a plain-text title line, not an HTML block).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

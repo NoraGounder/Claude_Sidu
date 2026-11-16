@@ -16,7 +16,7 @@ language:
 sender:
   mode: founder                  # founder | agency_rep
   details: private/sender.yaml   # name, title, signature, booking link
-  consent_to_send_in_name: pending   # confirmed by the founder in the launch "go" (decisions.md Q17)
+  consent_to_send_in_name: granted   # 2026-11-16: the founder set his own name as sender on the Quailworks mailboxes (Q45)
   consent_scope: send in the founder's own name, from Quailworks' own sending domains only
 
 handoff:
@@ -30,5 +30,7 @@ crm:
 needed_from_client:
   - DONE 2026-11-11: two brand sending domains and six fresh SmartSenders mailboxes, warm-up on (decisions.md Q18)
   - DONE 2026-11-11: Apify on a paid plan, FullEnrich credits topped up (decisions.md Q20)
-  - Confirm the founder sends in their own name, and fill private/sender.yaml
+  - DONE 2026-11-16: the founder sends in his own name; private/sender.yaml filled (decisions.md Q45)
+  - DONE 2026-11-16: HubSpot token saved (HUBSPOT_TOKEN_QUAILWORKS)
+  - Connect a calendar in HubSpot so a meetings link exists (only the founder can; replies offer times until then)
   - The "go" to start sending (CLAUDE.md rule 3)
