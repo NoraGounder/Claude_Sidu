@@ -3,6 +3,9 @@
 What one full set-up taught us, with numbers. Counts and costs only: no prospect names (public repo).
 Start a new client with the `new-client` skill and `clients/_template/`.
 
+**Restore point:** commit `e360e86` on branch `claude/laughing-hawking-2i9nrl` is the launch-ready
+state (tag it `quailworks-launch-v1` from a laptop: `git tag quailworks-launch-v1 e360e86 && git push origin quailworks-launch-v1`).
+
 ## Quailworks' own launch (US and UK, companies selling to engineering teams), 2026-11-10 to 11-16
 
 | Step | Count | Note |
