@@ -217,3 +217,27 @@ def test_mailbox_check_uses_real_smartlead_fields_and_own_domains(env):
     assert ok == [10] and len(problems) == 2
     sending["mailbox_domains"] = []
     assert l6_send.check_mailboxes(cfg, sending, real) == ([], [])     # no list: no mailbox at all
+
+
+def test_mailboxes_still_warming_up_are_held_back_when_the_client_sets_a_minimum(env):
+    from datetime import datetime
+    cfg = load_client(CLIENT)
+    now = datetime(2026, 12, 1, 9, 0)
+    def box(i, created, rep):
+        return {"id": i, "from_email": f"m{i}@tmj-mail.example", "message_per_day": 15, "is_smtp_success": True,
+                "is_imap_success": True, "created_at": created,
+                "warmup_details": {"status": "ACTIVE", "warmup_reputation": rep}}
+    boxes = [box(1, "2026-11-10T08:00:00.000Z", "100%"),   # 21 days, warm
+             box(2, "2026-11-25T08:00:00.000Z", "100%"),   # 6 days: too new, whatever the reputation says
+             box(3, "2026-11-10T08:00:00.000Z", "80%"),    # old enough, reputation too low
+             box(4, None, "100%")]                         # age unknown: held
+    sending = {**l6_send.load_sending(cfg), "mailbox_domains": ["tmj-mail.example"]}
+    assert l6_send.check_mailboxes(cfg, sending, boxes, now)[0] == [1, 2, 3, 4]   # default: no minimum
+    ok, problems = l6_send.check_mailboxes(cfg, {**sending, "min_warmup_days": 14, "min_warmup_reputation": 95},
+                                           boxes, now)
+    assert ok == [1] and len(problems) == 3
+    assert any("6 of 14 days" in p for p in problems) and any("80.0%" in p for p in problems)
+    # a mailbox ceiling above the per-mailbox cap: held by default, used when the campaign total keeps the cap
+    cfg.limits.sending["max_per_mailbox_per_day"] = 5
+    assert l6_send.check_mailboxes(cfg, sending, boxes[:1], now)[0] == []
+    assert l6_send.check_mailboxes(cfg, {**sending, "spread_daily_cap": True}, boxes[:1], now)[0] == [1]

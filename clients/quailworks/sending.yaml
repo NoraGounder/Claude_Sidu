@@ -9,7 +9,7 @@ campaign_prefix: "QW"
 # used. A domain listed here and in another client's sending.yaml stops push for both.
 # Bought 2026-11-11 through SmartSenders, 3 mailboxes each, both forwarding to quailworks.co:
 # getquailworks.com on Google, quailworksforward.com on Outlook.
-mailbox_domains: [getquailworks.com, quailworksforward.com]
+mailbox_domains: [getquailworks.com, quailworksforward.com, quailworks.work, teamquailworks.com]
 
 # US and UK (decisions.md Q8). US Central time keeps sends inside working hours from coast to coast.
 regions:
@@ -41,3 +41,10 @@ stagger_days_same_account: 21
 
 # Mailboxes must have warm-up on before they are linked to a campaign.
 require_warmup: true
+# A mailbox joins a campaign only after 14 days of warm-up with a reputation of 95% or more, so mailboxes
+# added later (quailworks.work, teamquailworks.com on 2026-11-16) join by themselves when ready (Q46).
+min_warmup_days: 14
+min_warmup_reputation: 95
+# The ramp (limits.yaml) is kept by the campaign's daily total, capped at ready mailboxes x the per-mailbox
+# cap, so a mailbox whose own Smartlead ceiling is higher (15 a day) can still be used (Q46).
+spread_daily_cap: true

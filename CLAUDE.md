@@ -154,7 +154,9 @@ them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks
 - `templates/replies.yaml`: `call_prep` (the meeting brief's call questions)
 - `client.yaml`: `crm.hubspot_token_env` (each client's own HubSpot portal)
 - `sending.yaml`: `mailbox_domains` (the client's own sending domains; one domain, one client),
-  `send_order: best_first` (upload the strongest companies first)
+  `send_order: best_first` (upload the strongest companies first),
+  `min_warmup_days` / `min_warmup_reputation` (mailboxes join a campaign only when warm; every upload
+  links newly ready ones), `spread_daily_cap` (the per-mailbox cap is kept by the campaign total)
 - `sample.yaml`: the Signal Sample (`sample` command): signals and weights for a prospect's market
 - `markets.yaml` + `sequence.yaml` `market_line` / `cta_market`: name three hiring companies in the
   prospect's market in email 1 (`markets --refresh` weekly; `never_name` keeps vendors and recruiters out)

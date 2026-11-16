@@ -442,6 +442,16 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   so it does not hold up the launch: until it exists, replies offer times. Would change: a reply rate that
   suggests the emails look unsigned or anonymous (then add a plain-text title line, not an HTML block).
 
+- **Q46. Eleven mailboxes, joining when warm (2026-11-16).** The founder added five Google mailboxes on
+  two more domains (quailworks.work, teamquailworks.com); all four domains are Quailworks' only. A mailbox
+  joins a campaign after 14 days of warm-up with a reputation of at least 95% (`sending.yaml`), and every
+  upload links mailboxes that have become ready since, so the new ones join by themselves (about 1 December).
+  The ramp (5 a day per mailbox in week 1, `limits.yaml`) is kept by the campaign's daily total, capped at
+  ready mailboxes x 5: the mailboxes' own Smartlead ceiling (15) stays as it is, so warm-up is untouched.
+  The daily caps are not raised: more mailboxes spread the same 30 a day thinner (about 3 each), which is
+  kinder to new domains. Raising the ramp needs the user's say-so. Would change: bounces over 2% or a
+  spam complaint (hold the ramp), or a mailbox's reputation dropping under 95% (it drops out by itself).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

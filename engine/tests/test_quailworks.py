@@ -334,7 +334,7 @@ def test_one_smartlead_account_keeps_each_sending_domain_with_one_client(env):
     # A domain listed for both clients stops push for either of them before Smartlead is called.
     sending = env / QW / "sending.yaml"
     text = sending.read_text()
-    assert "mailbox_domains: [getquailworks.com, quailworksforward.com]" in text
+    assert "mailbox_domains: [getquailworks.com, quailworksforward.com, quailworks.work, teamquailworks.com]" in text
     sending.write_text(text.replace("mailbox_domains: [getquailworks.com,", "mailbox_domains: [GetMarbleJar.com, getquailworks.com,"))
     assert l6_send.shared_domains(load_client(QW)) == ["getmarblejar.com"]
     assert l6_send.shared_domains(load_client(TMJ)) == ["getmarblejar.com"]
@@ -498,7 +498,7 @@ def test_unconfirmed_emails_wait_for_verification_only_for_quailworks(env):
     l4_gate.run(cfg, conn, recheck=True, mv=StubMV(), now=now)
     qw = statuses(QW)
     assert sorted(StubMV.checked) == ["dead@acme.example", "maybe@acme.example", "sure@acme.example"]
-    assert qw["sure"] == qw["maybe"] == ("held", "sender_consent_pending")   # only the launch consent is missing
+    assert qw["sure"] == qw["maybe"] == ("ready", None)   # verified, and the founder's consent is recorded (Q45)
     assert qw["dead"] == ("rejected_l4", "email_status:INVALID")
     l4_gate.run(cfg, conn, recheck=True, mv=StubMV(), now=now)
     assert len(StubMV.checked) == 3                                         # verified once, not again

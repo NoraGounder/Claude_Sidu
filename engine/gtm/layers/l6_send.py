@@ -131,8 +131,30 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
     return plan
 
 
-def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict]) -> tuple[list[int], list[str]]:
+def _warm_days(account: dict, now: datetime) -> int | None:
+    """Days since the mailbox was added to Smartlead (warm-up starts then); None when unknown."""
+    raw = str(account.get("created_at") or "")[:19]
+    try:
+        return (now.replace(tzinfo=None) - datetime.fromisoformat(raw)).days
+    except ValueError:
+        return None
+
+
+def _reputation(account: dict) -> float | None:
+    raw = str((account.get("warmup_details") or {}).get("warmup_reputation") or "").rstrip("%").strip()
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict],
+                    now: datetime | None = None) -> tuple[list[int], list[str]]:
+    """Mailboxes this client may link. Optional sending.yaml keys hold back mailboxes that are still
+    warming up: `min_warmup_days` (days since the mailbox was added) and `min_warmup_reputation` (%)."""
     cap = cfg.limits.sending.get("max_per_mailbox_per_day", 18)
+    now = now or datetime.utcnow()
+    min_days, min_rep = sending.get("min_warmup_days"), sending.get("min_warmup_reputation")
     # One Smartlead account serves several clients: a campaign may only use this client's own
     # sending domains (sending.yaml mailbox_domains). No list means no mailbox, never all of them.
     domains = {d.lower() for d in sending.get("mailbox_domains") or []}
@@ -148,10 +170,14 @@ def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict]) -> t
             problems.append(f"{name}: SMTP or IMAP connection failed")
         elif warmup.get("blocked_reason"):
             problems.append(f"{name}: warm-up blocked ({warmup['blocked_reason']})")
-        elif per_day and int(per_day) > cap:
+        elif per_day and int(per_day) > cap and not sending.get("spread_daily_cap"):
             problems.append(f"{name}: sends up to {per_day}/day, cap is {cap}")
         elif sending.get("require_warmup", True) and not warm:
             problems.append(f"{name}: warm-up is off")
+        elif min_days and (_warm_days(a, now) is None or _warm_days(a, now) < int(min_days)):
+            problems.append(f"{name}: still warming up ({_warm_days(a, now)} of {min_days} days)")
+        elif min_rep and (_reputation(a) is None or _reputation(a) < float(min_rep)):
+            problems.append(f"{name}: warm-up reputation {_reputation(a)}% is below {min_rep}%")
         else:
             ok.append(int(a["id"]))
     return ok, problems
@@ -179,13 +205,17 @@ def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushP
     if not plan.eligible:
         return {"pushed": 0, "held": plan.held, "campaigns": {}}
     sl = sl or SmartleadClient()
-    mailbox_ids, problems = check_mailboxes(cfg, sending, sl.email_accounts())
+    mailbox_ids, problems = check_mailboxes(cfg, sending, sl.email_accounts(), now)
     if not mailbox_ids:
         raise RuntimeError("No usable mailboxes: " + ("; ".join(problems) or "none on this client's mailbox_domains "
                                                        "(sending.yaml) in Smartlead"))
     ts = db.now_iso()
     totals = {"pushed": 0, "held": plan.held, "campaigns": {}, "mailbox_problems": problems}
     daily = cfg.limits.sending.get("max_emails_per_day", 120)
+    if sending.get("spread_daily_cap"):
+        # The per-mailbox cap is kept by the campaign total, not by each mailbox's own Smartlead ceiling:
+        # Smartlead rotates sends across the linked mailboxes (sending.yaml spread_daily_cap, Q46).
+        daily = min(daily, len(mailbox_ids) * cfg.limits.sending.get("max_per_mailbox_per_day", 18))
     for region, leads in plan.eligible.items():
         row = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?", (cfg.slug, region)).fetchone()
         if row:
@@ -207,11 +237,13 @@ def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushP
             per_region = max(1, daily // 4 // max(1, len(sending["regions"])))
             sl.set_schedule(campaign_id, {"timezone": r["timezone"], **{k: v for k, v in sending["schedule"].items()},
                                           "max_new_leads_per_day": per_region})
-            sl.link_email_accounts(campaign_id, mailbox_ids)
             cur = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"
                                " VALUES (?,?,?,?,?,?,?)", (cfg.slug, region, campaign_id, name, r["timezone"],
                                                            "DRAFTED", ts))
             campaign_db_id = cur.lastrowid
+        # Every upload links the mailboxes that are ready now, so a mailbox that finished warming up
+        # after the campaign was created joins it (Smartlead keeps mailboxes already linked).
+        sl.link_email_accounts(campaign_id, mailbox_ids)
         for start in range(0, len(leads), 400):
             batch = leads[start:start + 400]
             sl.add_leads(campaign_id, [{k: v for k, v in lead.items() if not k.startswith("_")} for lead in batch])
