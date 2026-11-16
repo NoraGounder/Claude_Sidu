@@ -796,3 +796,14 @@ def test_email_one_names_three_hiring_companies_in_the_market(env):
     _, plain = l5_copy.render(seq, "en", "generic", "outbound", {}, {"id": 1, "first_name": "Dana"},
                               {"name": "Halden Robotics"}, {"first_name": "Sam"}, "Notice.")
     assert "Shall I send you 10 companies" in plain[0]["body"] and "  " not in plain[0]["body"].split("\n")[2]
+
+
+def test_the_new_client_template_loads_and_can_never_send():
+    from gtm.config import load_client
+    from gtm.layers import l6_send
+    cfg = load_client("_template")
+    sending = l6_send.load_sending(cfg)
+    assert sending["mailbox_domains"] == []                      # no mailbox until the client's own domains
+    assert cfg.client["sender"]["consent_to_send_in_name"] == "pending"
+    assert sending["min_warmup_days"] and sending["spread_daily_cap"] and sending["send_order"] == "best_first"
+    assert cfg.limits.month_budget_usd["fullenrich"] <= 20       # trial caps, not Quailworks' own

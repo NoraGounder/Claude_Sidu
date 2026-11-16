@@ -130,6 +130,8 @@ same branch, with the user's Notion as shared memory.
 - `clients/<client>/private/exclusions.csv`: real do-not-contact list (gitignored)
 - `engine/gtm/`: the engine; `engine/tests/`: tests with synthetic data only
 - `docs/quailworks-handoff.md`: starting point for running the engine for Quailworks itself
+- `clients/_template/` + the `new-client` skill: start a new client from Quailworks' setup; `docs/playbook.md`:
+  counts, costs and lessons from Quailworks' launch
 - `clients/quailworks/`: Quailworks' own outbound (US and UK companies that sell to hardware engineering teams); every
   command takes `--client quailworks`; `launch-plan.md` has the run order
 
