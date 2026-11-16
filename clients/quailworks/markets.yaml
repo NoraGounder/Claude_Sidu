@@ -3,6 +3,10 @@
 # keeps the hiring companies; email 1 names three of them. role_label is how the email says the role.
 
 posted_last_days: 30
+# Every two weeks, 30 postings per segment: about 210 BlitzAPI records a refresh. A posting stays up for
+# weeks, and the names rotate per prospect, so a weekly refresh buys little (decisions.md Q43).
+refresh_days: 14
+postings_per_segment: 30
 min_employees: 51
 exclude_industries: [Staffing and Recruiting, Human Resources Services, IT Services and IT Consulting]
 exclude_title_words: [software, test automation, QA, marketing automation, recruiter, intern]

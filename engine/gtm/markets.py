@@ -18,7 +18,7 @@ import yaml
 from gtm import db
 from gtm.config import ClientConfig, data_dir
 
-REFRESH_DAYS = 7
+REFRESH_DAYS = 7   # default; markets.yaml refresh_days overrides
 
 
 def load_config(cfg: ClientConfig) -> dict | None:
@@ -38,16 +38,18 @@ def load_list(cfg: ClientConfig, segment: str) -> dict | None:
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
 
 
-def refresh(cfg: ClientConfig, conn, force: bool = False, client=None, max_postings: int = 50) -> dict:
+def refresh(cfg: ClientConfig, conn, force: bool = False, client=None, max_postings: int | None = None) -> dict:
     """Fetch job postings per segment and keep the hiring companies. Skips lists newer than a week."""
     from gtm.layers import l1_hiring
     from gtm.sources.blitz import BlitzClient
 
     conf = load_config(cfg) or {}
+    max_postings = max_postings or conf.get("postings_per_segment", 50)
     out = {}
     for segment, spec in (conf.get("segments") or {}).items():
         current = load_list(cfg, segment)
-        if current and not force and datetime.fromisoformat(current["refreshed_at"]) > datetime.now(timezone.utc) - timedelta(days=REFRESH_DAYS):
+        days = conf.get("refresh_days", REFRESH_DAYS)
+        if current and not force and datetime.fromisoformat(current["refreshed_at"]) > datetime.now(timezone.utc) - timedelta(days=days):
             out[segment] = "fresh"
             continue
         l1_hiring.check_records(conn, cfg, max_postings)

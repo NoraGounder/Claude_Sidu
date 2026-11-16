@@ -407,6 +407,21 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   are and why they were named (then explain the signal in the sentence), or naming them lowers replies
   against the plain version once 300 have been sent in a segment.
 
+- **Q43. Open items decided by Quailworks (2026-11-16, the user: "you know what we are trying to
+  achieve, so take a decision and go ahead").**
+  (1) *Data:* BlitzAPI through ZeroClick pay-as-you-go ($0.001 a record) instead of the $99 plan, as
+  soon as the user registers a card there; until then the free records last because market lists are
+  refreshed every two weeks with 30 postings per segment (about 210 records), not weekly.
+  (2) *MillionVerifier cap* raised from $2 to $15 a month: the credits are prepaid, and every address
+  of each new batch must be checked before it is sent.
+  (3) *Email 3* keeps its first sentence ("the supplier emails worth answering were the few that showed
+  the sender knew what I was working on"): it follows from the founder's CV (a decade choosing and
+  managing suppliers) and the user has read it twice without objecting.
+  (4) *Booking:* until the user makes a Google Calendar booking page, replies propose two times (the
+  fallback in `replies.yaml`).
+  (5) *Launch:* not decided by Quailworks. Sending needs the user's own "go" (CLAUDE.md rule 3), the
+  mailboxes finish warming up around 1-3 December, and a launch check is scheduled for 1 December.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

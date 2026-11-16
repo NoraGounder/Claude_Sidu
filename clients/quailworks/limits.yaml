@@ -9,7 +9,7 @@ month_budget_usd:
   apify: 40          # raised from 15 on the user's say-so (2026-11-12): deeper discovery and Signal Samples (decisions.md Q36)
   leadmagic: 0       # not used
   fullenrich: 40     # ~730 credits: people search plus work emails for ~150 Tier 1-2 accounts
-  millionverifier: 2
+  millionverifier: 15   # raised from 2 on 2026-11-16 (the user: "take a decision and go ahead"); credits are prepaid (Q43)
   openrouter: 3      # TypeSafe Jev 1.14 decisions only (see ai.yaml). Actual cost per request is logged.
   blitzapi: 0        # free trial: no money may be spent (decisions.md Q39); a paid plan needs the user's say-so
   blitzapi_records: 1000   # records a month the engine may use on BlitzAPI: the free trial's allowance
