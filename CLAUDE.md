@@ -8,7 +8,8 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 
 ## Hard rules
 
-1. **This repository is public.** Never commit prospect data, contact details, client-private
+1. **Treat this repository as shareable** (private since 2026-11-16, but its history was public and it
+   may be shared again). Never commit prospect data, contact details, client-private
    files, exports or API keys. Pipeline data lives in `data/` and client-private files in
    `clients/<client>/private/`. Both are gitignored. Check `git status` before every commit.
 2. **Money:** every paid call goes through the budget guard (`gtm.budget`) and is logged in the
