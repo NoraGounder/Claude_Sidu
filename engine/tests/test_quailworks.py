@@ -8,6 +8,7 @@ import json
 import shutil
 
 import pytest
+from conftest import engine_defaults
 from test_l2_prefilter import FakeFetcher
 
 from gtm import db, signals
@@ -37,6 +38,7 @@ def env(tmp_path, monkeypatch):
     clients = tmp_path / "clients"
     for slug in (QW, TMJ):
         shutil.copytree(REPO_ROOT / "clients" / slug, clients / slug, ignore=shutil.ignore_patterns("private"))
+    engine_defaults(clients / TMJ)       # The Marble Jar stands in for the engine's default behaviour
     monkeypatch.setenv("GTM_CLIENTS_DIR", str(clients))
     monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("OPENROUTER_API_KEY", "proxy-injected")
@@ -807,3 +809,14 @@ def test_the_new_client_template_loads_and_can_never_send():
     assert cfg.client["sender"]["consent_to_send_in_name"] == "pending"
     assert sending["min_warmup_days"] and sending["spread_daily_cap"] and sending["send_order"] == "best_first"
     assert cfg.limits.month_budget_usd["fullenrich"] <= 20       # trial caps, not Quailworks' own
+
+
+def test_the_marble_jar_keeps_its_launch_safeguards():
+    """decisions.md D15-D17: warm mailboxes only, best companies first, every email re-checked."""
+    import yaml
+    root = REPO_ROOT / "clients" / TMJ
+    sending = yaml.safe_load((root / "sending.yaml").read_text(encoding="utf-8"))
+    gate = yaml.safe_load((root / "gate.yaml").read_text(encoding="utf-8"))
+    assert sending["min_warmup_days"] >= 14 and sending["min_warmup_reputation"] >= 95
+    assert sending["send_order"] == "best_first"
+    assert set(gate["verify_statuses"]) >= {"DELIVERABLE", "HIGH_PROBABILITY"}

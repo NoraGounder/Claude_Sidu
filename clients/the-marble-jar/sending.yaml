@@ -33,3 +33,11 @@ stagger_days_same_account: 21
 
 # Mailboxes must have warm-up on before they are linked to a campaign.
 require_warmup: true
+# A mailbox joins a campaign only after 14 days of warm-up with a reputation of 95% or more
+# (decisions.md D15). On 2026-11-16 the Outlook mailboxes on marblejarhub.com were at 86-96%.
+min_warmup_days: 14
+min_warmup_reputation: 95
+
+# The first weeks' small volume goes to the strongest companies first: tier, then signal and fit
+# (decisions.md D16).
+send_order: best_first

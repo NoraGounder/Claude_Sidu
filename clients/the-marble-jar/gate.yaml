@@ -27,3 +27,8 @@ gdpr_notice:
   # US CAN-SPAM needs a physical postal address and a working opt-out; UK PECR / Irish ePrivacy need
   # the sender's identity and an easy opt-out for corporate addresses. Address is the one on themarblejar.io.
   en: "I found your business contact details via LinkedIn and FullEnrich. Prefer not to hear from me? Just reply 'stop'. The Marble Jar BV, Verlengde Poolseweg 16, 4818 CL Breda, The Netherlands."
+
+# Emails rated by the finder are re-checked with MillionVerifier (`gate --recheck`) before they can be
+# sent, because new sending domains cannot afford bounces (decisions.md D17). In a Quailworks sample,
+# 2 of 7 "deliverable" results failed a second check.
+verify_statuses: [HIGH_PROBABILITY, DELIVERABLE]

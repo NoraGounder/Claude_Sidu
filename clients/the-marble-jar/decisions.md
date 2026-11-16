@@ -47,6 +47,23 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
   if the engagement ends, Quailworks transfers the domains to The Marble Jar on request.
 - **D14. Consent:** sending in Mithun's name is confirmed (2026-11-06).
 
+## Deliverability (2026-11-16)
+
+- **D15. Warm mailboxes only:** a mailbox joins a campaign after 14 days of warm-up and at least 95%
+  warm-up reputation. Why: the Outlook mailboxes on marblejarhub.com were at 86-96% on 2026-11-16.
+  Change if: Smartlead's warm-up stays below 95% for a mailbox that sends fine.
+- **D16. Best first:** uploads go in order of tier, then signal and fit, so the small early volume
+  reaches the strongest companies. Change if: the `learn` report shows Tier 2 replying better.
+- **D17. Re-check every email before sending:** finder results rated DELIVERABLE or HIGH_PROBABILITY
+  are verified again with MillionVerifier (`gate --recheck`, about $0.004 each) at launch. Why: a
+  bounce rate above about 2% hurts new domains, and in a Quailworks sample 2 of 7 "deliverable"
+  results failed a second check. Change if: re-checks keep agreeing with the finder.
+- **Not adopted from the Quailworks build (2026-11-16):** naming hiring companies in the prospect's
+  market (conflicts with D5, no names in emails); a free sample list as the ask (conflicts with D4, no
+  free work promised); job-board feeds (Greenhouse, Lever and Ashby rarely cover Dutch companies;
+  a Recruitee feed could, later); BlitzAPI for discovery and emails (coverage of Dutch SMEs untested).
+  Revisit after the first 100 contacts.
+
 ## Needed from Mithun (only what we cannot do for him)
 
 One message, at launch, a few minutes:

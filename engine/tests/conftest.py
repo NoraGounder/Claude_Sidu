@@ -5,6 +5,22 @@ from pathlib import Path
 import yaml
 
 
+# Opt-in safeguards The Marble Jar turned on for its launch (decisions.md D15-D17). Tests that use its
+# config as the engine's default behaviour take them out again; test_quailworks.py checks they are set.
+LAUNCH_SAFEGUARDS = {"gate.yaml": ["verify_statuses"],
+                     "sending.yaml": ["min_warmup_days", "min_warmup_reputation", "send_order"]}
+
+
+def engine_defaults(client_dir: Path) -> None:
+    """Remove the client's opt-in launch safeguards from a temp copy, back to engine defaults."""
+    for name, keys in LAUNCH_SAFEGUARDS.items():
+        path = client_dir / name
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        for key in keys:
+            data.pop(key, None)
+        path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
+
 def legacy_nl(client_dir: Path) -> None:
     """Switch a temp copy of the client config to the earlier Dutch market, which the synthetic
     fixtures in these tests are written for. The engine logic under test is market-independent."""
@@ -24,3 +40,4 @@ def legacy_nl(client_dir: Path) -> None:
     scoring = yaml.safe_load(scoring_path.read_text(encoding="utf-8"))
     scoring["fit"]["dutch_language_site"] = 5
     scoring_path.write_text(yaml.safe_dump(scoring, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    engine_defaults(client_dir)

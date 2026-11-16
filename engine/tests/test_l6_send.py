@@ -4,6 +4,7 @@ import json
 import shutil
 
 import pytest
+import yaml
 
 from conftest import legacy_nl
 from gtm import db
@@ -86,8 +87,9 @@ def make_env(tmp_path, monkeypatch):
     shutil.copytree(REPO_ROOT / "clients" / CLIENT, clients / CLIENT, ignore=shutil.ignore_patterns("private"))
     legacy_nl(clients / CLIENT)
     sending = clients / CLIENT / "sending.yaml"
-    sending.write_text(sending.read_text().replace("mailbox_domains: [getmarblejar.com, marblejarhub.com]",
-                                                   "mailbox_domains: [tmj-mail.example]"))
+    data = yaml.safe_load(sending.read_text(encoding="utf-8"))
+    data["mailbox_domains"] = ["tmj-mail.example"]          # the stub's mailboxes
+    sending.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
     (clients / CLIENT / "private").mkdir()
     (clients / CLIENT / "private" / "sender.yaml").write_text("first_name: Sam\nfull_name: Sam Example\n")
     monkeypatch.setenv("GTM_CLIENTS_DIR", str(clients))
