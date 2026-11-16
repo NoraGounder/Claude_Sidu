@@ -654,9 +654,9 @@ def test_discovery_by_hiring_signal_stores_accounts_within_the_record_allowance(
     assert json.loads(acc["segments"]) == ["robotics_automation_us"] and acc["source"] == "blitzapi:companies-hiring:hiring_robotics_us"
     assert session.headers["x-api-key"] == "k"
     assert l1_hiring.records_used(conn, QW) == 3
-    # the month's record allowance is a hard stop (limits.yaml blitzapi_records: 1000)
+    # the month's record allowance is a hard stop (limits.yaml blitzapi_records: 20000)
     with pytest.raises(budget.BudgetExceeded, match="blitzapi"):
-        l1_hiring.run(cfg, conn, l1_hiring.plan(cfg, ["hiring_robotics_us"], 998), client=BlitzClient(api_key="k", session=session))
+        l1_hiring.run(cfg, conn, l1_hiring.plan(cfg, ["hiring_robotics_us"], 19998), client=BlitzClient(api_key="k", session=session))
     assert not (env / TMJ / "hiring.yaml").exists()                         # The Marble Jar: not set up
 
 
