@@ -135,8 +135,8 @@ def test_scoring_and_tiers_end_to_end(env):
     a = rows["Voorbeeld Logistiek"]
     # fit: in range 30 + sweet spot 10 + logistics 25 + NL 15 + site 5 + Dutch 5 = 90
     assert a["fit"] == 90
-    # signals: admin 30 + multiple admin 15 + manual 20 + ERP 10 + growth 10 = 85
-    assert a["signal"] == 85 and a["status"] == "tier_1"
+    # signals: admin 30 + multiple admin 15 + manual 10 (audit H4) + ERP 10 + growth 10 = 75
+    assert a["signal"] == 75 and a["status"] == "tier_1"
 
     b = rows["Groot Machine NL"]
     assert "subsidiary" in json.loads(b["flags"])
@@ -164,8 +164,9 @@ def test_scoring_and_tiers_end_to_end(env):
                      fetcher_factory=lambda: FakeFetcher(pages))
     b2 = conn.execute("SELECT fit, signal, tier, breakdown, flags FROM l2_scores WHERE account_id=?",
                       (ids["Groot Machine NL"],)).fetchone()
-    # fit 65 + Jev ICP 15 = 80; one confirmed admin title = 30 -> Tier 2
-    assert (b2["fit"], b2["signal"], b2["tier"]) == (80, 30, "tier_2")
+    # fit 65 + Jev ICP 15 = 80; one confirmed admin title = 30 -> Tier 2, but a subsidiary is parked
+    # in Tier 3 (scoring.yaml tiers.subsidiary_max_tier, audit H5)
+    assert (b2["fit"], b2["signal"], b2["tier"]) == (80, 30, "tier_3")
     assert json.loads(b2["breakdown"])["fit"]["jev_icp_fit"] == 15
     assert "jev:typesafe/jev-1.14-20261014" in json.loads(b2["flags"])
     quotes = [r[0] for r in conn.execute("SELECT quote FROM evidence WHERE account_id=? AND signal='admin_job_ad'",

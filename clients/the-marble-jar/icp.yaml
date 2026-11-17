@@ -6,7 +6,7 @@ version: 1
 
 # Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md D1, D8).
 buyer_profile: >-
-  English-speaking companies in the United States, the United Kingdom, Ireland or the Netherlands with 50-500
+  Companies in the Netherlands and Belgium (later the US, UK and Ireland) with 50-500
   employees in logistics, wholesale and distribution, installation and technical services, or
   manufacturing, that run operations and finance processes (invoices, orders, planning) where
   manual work can be automated or replaced with well-designed custom software.
@@ -111,6 +111,11 @@ personas:
     - Manager Operations
     - Logistiek Manager
     - Supply Chain Manager
+    - Bedrijfsleider
+    - Hoofd Bedrijfsbureau
+    - Manager Customer Service
+    - Customer Service Manager
+    - Teamleider Administratie
   finance:
     - CFO
     - Financieel Directeur
@@ -119,11 +124,19 @@ personas:
     - Manager Financiën
     - Hoofd Financiële Administratie
     - Manager Financiële Administratie
+    - Controller
+    - Financial Controller
+    - Hoofd Administratie
+    - Manager Finance & Control
+    - Manager Finance and Control
   owner_led:          # use only for companies under about 150 employees
     - Algemeen Directeur
     - Managing Director
     - Directeur-eigenaar
     - CEO
+    - Directeur
+    - Eigenaar
+    - DGA
   # An entry matches at a word end, also inside Dutch compounds (managementassistent), but not inside a
   # longer word: "Intern" no longer drops "International ..." titles (2026-11-10), so the longer forms
   # (Internship, Stagiaire, Traineeship) are listed separately.

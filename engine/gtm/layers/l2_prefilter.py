@@ -144,7 +144,11 @@ def signal_score(cfg: ClientConfig, site: SiteCrawl | None, evidence: list[Evide
         if key in bonuses:
             continue
         if key == "headcount_growth":
-            if key in labels or (site and len(site.job_titles) >= 5):
+            # Optional (scoring.yaml growth_min_roles, default 5; 0 = off): a careers page listing this
+            # many titles counts as growth. The count is noisy (navigation links, duplicates), so a
+            # client can rely on explicit growth evidence only (The Marble Jar, audit C3).
+            min_roles = cfg.scoring.get("growth_min_roles", 5)
+            if key in labels or (min_roles and site and len(set(site.job_titles)) >= min_roles):
                 parts[key] = weight
         elif key in labels:
             parts[key] = weight
@@ -177,6 +181,17 @@ def tier_for(cfg: ClientConfig, fit: int, signal: int, lookalike: float | None =
     return "rejected_l2"
 
 
+TIER_ORDER = ["tier_1", "tier_2", "tier_3"]
+
+
+def is_local_arm(cfg: ClientConfig, account: dict) -> bool:
+    """Optional (scoring.yaml subsidiary_name_words): a whole word such as "Benelux" in the company name
+    marks the local arm of a larger group."""
+    words = cfg.scoring.get("subsidiary_name_words") or []
+    name = account.get("name") or ""
+    return any(re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", name, re.I) for w in words)
+
+
 def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None,
                   jev: dict | None = None) -> tuple[Score, list[Evidence]]:
     found = checked_evidence(cfg, extract(site, rules_for(cfg.scoring)) if site else [], jev)
@@ -188,9 +203,14 @@ def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None,
         flags.append("no_website")
     elif site and not site.home.ok:
         flags.append(f"unreachable:{site.home.error or site.home.status}")
-    if any(e.signal == "subsidiary_of_large_group" for e in evidence):
+    if any(e.signal == "subsidiary_of_large_group" for e in evidence) or is_local_arm(cfg, account):
         flags.append("subsidiary")
     tier, reason = tier_for(cfg, fit, signal, (jev or {}).get("lookalike"), (jev or {}).get("icp_fit")), None
+    # Optional (scoring.yaml tiers.subsidiary_max_tier): local arms of international groups buy software
+    # at group level, so they are not worth an early email (The Marble Jar, audit H5).
+    cap = cfg.scoring["tiers"].get("subsidiary_max_tier")
+    if cap and "subsidiary" in flags and tier in TIER_ORDER and TIER_ORDER.index(tier) < TIER_ORDER.index(cap):
+        tier = cap
     if tier == "rejected_l2":
         reason = f"fit {fit} below tier 3"
     if jev:

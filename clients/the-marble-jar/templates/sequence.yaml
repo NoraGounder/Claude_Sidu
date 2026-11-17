@@ -7,7 +7,8 @@
 # Dutch B2B), the GDPR notice at the end of email 1. Placeholders in {curly_braces}.
 # A hook is only used when its fact exists; otherwise the next one in `hook_priority` applies.
 
-hook_priority: [admin_job_ad, growth, erp_mention, generic]
+# growth is off: the open-roles count is not reliable enough to quote (audit C3, 2026-11-17)
+hook_priority: [admin_job_ad, erp_mention, generic]
 greetings:
   nl: ["Hoi", "Hallo", "Goedemorgen"]
   en: ["Hi", "Hello"]
