@@ -49,7 +49,8 @@ signals:
   manual_process_language: 10 # Excel, handmatig, papieren, dubbel invoeren, overtypen in an ad or on the site.
                               # A plain word match ("Excel" is in most job ads), so it cannot make Tier 2 alone (audit H4)
   erp_mention: 10             # Exact, AFAS, SAP Business One, Navision, Twinfield: tells us what to integrate with
-  new_ops_or_finance_leader: 15   # joined in the last 90 days (from Layer 3 people search)
+  # new_ops_or_finance_leader was listed here at 15 points but nothing detects it yet (audit M10):
+  # removed until Layer 3 records start dates. brain.yaml keeps it as a hypothesis.
   headcount_growth: 10        # explicit growth evidence only (new site or warehouse); see growth_min_roles
 
 tiers:

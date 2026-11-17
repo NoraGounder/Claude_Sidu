@@ -1,58 +1,66 @@
-# The Marble Jar: launch plan (2026-11-09)
+# The Marble Jar: launch plan (updated 2026-11-17)
 
 Goal: new paying clients for The Marble Jar at the lowest cost. Measured in conversations,
 proposals and won revenue, not emails sent. One won project pays for a year of tools, so the
 plan optimises for **speed to real conversations with the right companies**, not for volume.
+Decisions behind every line are in `decisions.md` (D1-D24); the fixes from the audit of 16 November
+are in `work-order-2026-11-17.md`.
 
-## Phase 0: set up sending (this week)
+## Where it stands (17 November)
 
-Quailworks decides; Mithun is not asked questions (`decisions.md`).
+| Step | Count |
+|---|---|
+| Companies found (Harvest 6 Nov, BlitzAPI by admin vacancy 17 Nov) | about 1,260 |
+| Tier 1 / Tier 2 (every one has a Jev-confirmed admin vacancy) | 48 / 44 (84 NL, 7 BE) |
+| Tier 1-2 companies with someone to email | 78 |
+| Contacts with a work email (Tier 1-2) | 121, all held until the MillionVerifier re-check (D17) |
+| Approved drafts (Tier 1-2) | 118: identity and opt-out in every email |
+| Mailboxes | 6 in Mithun's name: getmarblejar.com (Google) 3, marblejarhub.com (Outlook) 3 |
+| Spend this month (data and AI) | about $23: Apify $4.80, FullEnrich $17.85, Jev $0.35; BlitzAPI on the Quailworks plan |
 
-- Buy Smartlead Pro ($94; the engine needs its API and webhooks) and 2-3 sending domains with 4-5
-  mailboxes through SmartSenders. Pre-warmed mailboxes ($9 instead of $4.50 a month each) skip the
-  2-3 week warm-up, so the first emails can go out as soon as the drafts are approved. Keep warm-up on
-  and start at 10 a day per mailbox, rising to 15 over the first week.
-- Excluded already: every client shown on themarblejar.io and The Marble Jar itself (`private/exclusions.csv`).
-- Prepare the data processing agreement (GDPR Art. 28) for Mithun to sign. This and a booking link are
-  the only things we need from him, in one message at launch.
+## Launch sequence
 
-## Phase 1: prepare the first leads (week 1)
+1. **Backups on** (D23): Sidarth creates the private repository `quailworks-vault` and saves
+   `GTM_BACKUP_KEY` and `GTM_BACKUP_REMOTE` in the cloud environment. `push --live` and `start`
+   refuse to run until the database is backed up off-site.
+2. **Rehearsal** (audit C5): a test campaign to two seed inboxes Sidarth owns (one Gmail, one Outlook):
+   four steps, a reply, a "stop", a bounce. Check line breaks, threading, sender name, `sync`, `handoff`.
+3. **Launch day** (about 25 November, after Sidarth's "go"): warm-up check (D15: 14 days and 95%),
+   `gate --recheck` (about $0.80), `gate`, `push` dry run, then `push --live` and
+   `start --region nl --i-confirm`. Belgium rides in the NL campaign (D20).
+4. **One message to Mithun**: booking link, the list of companies for information (D11), the DPA
+   notice (Annex 2 update and BlitzAPI as sub-processor; `dpa-annex-2-update.md`).
 
-- Re-score with the brain: `jev --redo` (about $0.10), then `prefilter --rescore` (free).
-- Contacts and emails for Tier 1-2 only: `contacts` (about $6), `gate`, `draft`; Quailworks reviews.
-- Lookalikes come later from our own won deals (`decisions.md` D10), not from Mithun.
+## Running (from launch)
 
-## Phase 2: narrow outbound (weeks 2-8)
+- **Volume:** at most 40 emails a day (`limits.yaml`), Monday to Thursday, 09:00-16:30 Amsterdam.
+  About 10 new companies a day; one contact per company at a time, the second 21 days later.
+  Best companies first (D16).
+- **Every working day:** `sync` (replies, bounces, stops), `handoff` (briefs for replies that need a
+  person; Sidarth forwards them to Mithun within 4 working hours), `backup`.
+- **Pause at once** on any spam complaint, or above 3% bounces in a day (D18 conditions).
+- **December:** no new companies uploaded after 12 December; follow-ups to people already in the
+  sequence run until 18 December; everything pauses 19 December to 5 January.
+- **Monthly:** `discover-hiring` and `discover-hiring --postings` (BlitzAPI, flat plan) for companies
+  with a fresh admin vacancy, then `prefilter`, `jev`, `contacts`, `gate`, `draft`, `approve`.
 
-- **Who:** Tier 1 (companies hiring admin staff now) first, then Tier 2. About 115 Dutch companies, up to 2 contacts each.
-- **Angle:** before you hire another admin, look at automating the work.
-- **Volume:** at most 40 emails a day (`limits.yaml`), Tuesday to Thursday, 4-5 warmed mailboxes at
-  15 a day or fewer. One contact per company at a time.
-- **Parked:** Tier 3 (711 companies with fit but no signal). `scoring.yaml` gives it 0 contacts and
-  `sending.yaml` sends only Tier 1-2.
+## Scale or change (D19)
 
-## Phase 3: scale what earns money
+- **Scale** after the first booked meeting or three positive replies: a paid Apify plan or deeper
+  BlitzAPI searches, Tier 3 with a vacancy, then the US, UK and Ireland.
+- **Change the message, not the volume** if every first-batch contact has had emails 1 and 2 with no
+  positive reply. The weekly `learn` report shows conversations per opening, tier, persona and region.
 
-Weekly `learn` report: conversations per signal, opening, tier, persona and region.
-
-- Fewer than 2 conversations after the first 100 contacts: change the message or the offer, not the volume.
-- A signal or opening that clearly works: give it more weight (`scoring.yaml`, `hook_priority`).
-- Only after the Dutch Tier 1-2 results show a working message: add Tier 3, then the US, UK and
-  Ireland, then possibly LinkedIn messages to Tier 1 (only if Mithun agrees, since they would use his account).
-
-## Monthly cost (public list prices, USD)
+## Monthly cost (USD)
 
 | Item | Plan | Per month |
 |---|---|---|
-| Smartlead | Pro (needed for the API) | 94 |
-| Mailboxes | 4-5 SmartSenders mailboxes on 2-3 domains (pre-warmed $9 each, fresh $4.50) | about 25-45 |
-| Domains | 2-3 sending domains | about 3 |
-| FullEnrich | Pro, 1,000 credits (the Tier 1-2 launch uses about 300) | 55 |
-| Apify (Harvest API) | free plan; no new discovery needed for the launch | 0 |
+| Smartlead | Pro, shared with Quailworks | 94 (shared) |
+| Mailboxes | 6 SmartSenders mailboxes, fresh, $4.50 each | 27 |
+| Domains | 2 sending domains | about 2 |
+| BlitzAPI | Quailworks' Start plan, The Marble Jar capped at 5,000 records | 0 extra |
+| FullEnrich | credits as used (this month about $18) | under 55 (cap) |
+| Apify | free plan | 0 |
+| MillionVerifier | re-checks at launch | about 1 |
 | TypeSafe Jev 1.14 | per request | under 1 |
-| HubSpot | free | 0 |
-| **Total** | | **about 175-195** |
-
-The earlier plan (10 mailboxes, 100-120 emails a day, all tiers) was about $200 a month. The
-saving is small; the main gain is spending Mithun's name and the sending domains only on the
-companies most likely to buy.
+| **Total for The Marble Jar** | | **about 30-85, plus the shared Smartlead** |

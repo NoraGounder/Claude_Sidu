@@ -119,6 +119,27 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
   Quailworks' tool and Quailworks' cost, not a reuse of either client's data. Change if: the
   Quailworks chat needs the records, or the found emails bounce more than FullEnrich's.
 
+## Implementation of the audit (2026-11-17, Sidarth: "whatever achieves the outcome, go ahead")
+
+- **D25. Only companies with a confirmed admin vacancy are Tier 1-2.** The careers-page title count
+  no longer counts as growth, manual-process words alone cannot make Tier 2 (10 points, was 20),
+  Tier 1 needs 45 signal points (two admin vacancies), and local arms of international groups
+  (Nederland, Benelux, Europe in the name, or "part of ... Group" on the site) are parked in Tier 3.
+  Job postings from BlitzAPI count as vacancies once Jev 1.14 confirms the title. Result: 48 Tier 1 and
+  44 Tier 2, every one with an admin vacancy; 78 have a contact. Change if: `learn` shows a parked
+  group converting.
+- **D26. Every email carries Mithun's full name, title and an opt-out**; `approve` refuses a draft
+  without "'stop'" in every step. Email 3 no longer states a salary figure. A confirmed vacancy whose
+  title cannot be quoted cleanly opens with "is hiring for admin work".
+- **D27. Sending Monday to Thursday** (was Tuesday to Thursday, which stretched the sequence to about
+  four weeks), no new companies after 12 December, pause 19 December to 5 January.
+- **D28. Automatic pause.** `sync` pauses an active campaign on any complaint, or when more than 3% of
+  uploaded leads bounced (from 20 on). Restarting needs Sidarth's OK.
+- **Left open (needs Sidarth or a later run):** the backup vault repository and key; the rehearsal
+  with seed inboxes; Smartlead's reply notification to Sidarth; a DMARC report address away from the
+  sending mailboxes (audit M12); a different first email for the second contact at a company (M11);
+  BlitzAPI as first email source once Mithun has had the sub-processor notice (D24).
+
 ## Needed from Mithun (only what we cannot do for him)
 
 One message, at launch, a few minutes:

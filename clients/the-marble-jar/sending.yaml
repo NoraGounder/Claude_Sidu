@@ -13,7 +13,7 @@ regions:
   us:    {countries: [US],     timezone: America/New_York}
 
 schedule:
-  days_of_the_week: [2, 3, 4]      # Tuesday-Thursday
+  days_of_the_week: [1, 2, 3, 4]   # Monday-Thursday: Tuesday-Thursday alone stretched the 14-day sequence to about 4 weeks (audit M6)
   start_hour: "09:00"
   end_hour: "16:30"
   min_time_btw_emails: 8           # minutes between sends per mailbox
@@ -44,3 +44,7 @@ send_order: best_first
 
 # push --live and start refuse while the database is not backed up off-site (decisions.md D23).
 require_backup: true
+
+# `sync` pauses an active campaign on any complaint, or when more than 3% of uploaded leads bounced
+# (from 20 leads on). Starting again needs `start --i-confirm` (decisions.md D18 conditions).
+auto_pause: {on_complaint: true, max_bounce_rate: 0.03, min_sent: 20}

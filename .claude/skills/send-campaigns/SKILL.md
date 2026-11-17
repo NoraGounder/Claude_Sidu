@@ -5,8 +5,11 @@ description: Run Layer 6 of the Quailworks lead engine. Uploads approved, gate-r
 
 # Layer 6: Smartlead
 
-Smartlead takes its API key in the URL, so the cloud proxy cannot add it. Run these commands where
-`SMARTLEAD_API_KEY` is set for real (a laptop with `.env`). The key is scrubbed from all errors.
+Smartlead takes its API key in the URL, so the cloud proxy cannot add it: `SMARTLEAD_API_KEY` must be
+set for real, as an environment variable of the cloud environment (works since 2026-11-11) or in a
+laptop's `.env`. The key is scrubbed from all errors. With sending.yaml `require_backup: true`,
+`push --live` and `start` refuse until `backup` has stored the current database off-site.
+`sync` pauses an active campaign on a complaint or too many bounces (sending.yaml `auto_pause`).
 
 1. `python -m gtm --client <client> push` is a dry run: eligible leads per region and why others are held.
 2. `push --live` creates (or reuses) one campaign per region in `sending.yaml`, checks mailboxes (at most

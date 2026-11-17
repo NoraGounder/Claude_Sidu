@@ -70,7 +70,7 @@ class StubJev:
     def post(self, url, json=None, timeout=None):
         self.bodies.append(json)
         text = json["state"]["reply_to_a_sales_email"].lower()
-        cat = "unsubscribe" if "remove me" in text else "interested"
+        cat = "unsubscribe" if "remove me" in text else "complaint" if "spam" in text else "interested"
         return Resp(200, {"model": "typesafe/jev-1.14-20261014",
                           "answers": {"category": {"type": "choice", "choice": cat, "probabilities": {cat: 0.9}}},
                           "usage": {"input_tokens": 100, "output_tokens": 5, "cost": 0.000004}})
@@ -176,7 +176,7 @@ def test_push_creates_paused_campaign_with_checked_mailboxes_and_never_starts(en
     assert settings["track_settings"] == {"track_open": False, "track_click": False}
     assert settings["stop_lead_settings"]["stop_on_reply"] is True
     schedule = next(j for m, p, _, j in stub.calls if p.endswith("/schedule"))
-    assert schedule["timezone"] == "Europe/Amsterdam" and schedule["days_of_the_week"] == [2, 3, 4]
+    assert schedule["timezone"] == "Europe/Amsterdam" and schedule["days_of_the_week"] == [1, 2, 3, 4]
     assert "_contact_id" not in stub.leads_added[0]              # internal fields never leave the engine
     assert l6_send.plan_push(cfg, conn).eligible == {}           # never uploaded twice
 
@@ -256,3 +256,20 @@ def test_mailboxes_still_warming_up_are_held_back_when_the_client_sets_a_minimum
     cfg.limits.sending["max_per_mailbox_per_day"] = 5
     assert l6_send.check_mailboxes(cfg, sending, boxes[:1], now)[0] == []
     assert l6_send.check_mailboxes(cfg, {**sending, "spread_daily_cap": True}, boxes[:1], now)[0] == [1]
+
+
+def test_sync_pauses_an_active_campaign_on_a_complaint(env):
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    _approved(conn, "Groothandel BV", "NL", "Anna", "anna@groothandel.example")
+    sl_stub = StubSmartlead()
+    sl = SmartleadClient(api_key="test-key", session=sl_stub)
+    l6_send.push(cfg, conn, sl=sl)
+    conn.execute("UPDATE campaigns SET status='ACTIVE'")
+    conn.commit()
+    sl_stub.replies = {"anna@groothandel.example": "This is spam. I will report you to the ACM."}
+    jev_stub = StubJev()
+    t = l6_send.sync(cfg, conn, sl=sl, jev=JevClient(cfg.ai, session=jev_stub))
+    assert len(t["paused"]) == 1 and "complaint" in t["paused"][0]
+    assert conn.execute("SELECT status FROM campaigns").fetchone()[0] == "PAUSED"
+    assert "anna@groothandel.example" in db.suppressed_values(conn, CLIENT, "email")

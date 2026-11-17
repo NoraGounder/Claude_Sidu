@@ -315,6 +315,8 @@ def cmd_sync(args) -> int:
     cats = ", ".join(f"{k} {v}" for k, v in sorted(t["categories"].items())) or "none"
     print(f"Sync: {t['replies']} new replies ({cats}); {t['needs_human']} need a human reply now; "
           f"{t['bounced']} bounced and {t['unsubscribed']} unsubscribed (all suppressed).")
+    for p in t.get("paused", []):
+        print(f"PAUSED campaign {p}. Tell Sidarth; restart only with `start --i-confirm` after his OK.")
     return 0
 
 

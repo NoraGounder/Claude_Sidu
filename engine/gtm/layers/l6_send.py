@@ -38,9 +38,10 @@ REPLY_CATEGORIES = {
     "wrong_person": "Says they are not the right person and names no one",
     "out_of_office": "Automatic out-of-office or holiday reply",
     "unsubscribe": "Asks to stop emailing, unsubscribe or remove their address",
+    "complaint": "Angry or hostile: calls it spam, threatens to report or complain, or mentions the law",
 }
-NEEDS_HUMAN = {"interested", "question", "referral"}
-SUPPRESS = {"unsubscribe"}
+NEEDS_HUMAN = {"interested", "question", "referral", "complaint"}
+SUPPRESS = {"unsubscribe", "complaint"}
 
 
 def load_sending(cfg: ClientConfig) -> dict:
@@ -295,8 +296,10 @@ def sync(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, jev: JevCli
     sl = sl or SmartleadClient()
     jev = jev or JevClient(cfg.ai)
     sender, _ = load_sender(cfg)
-    totals = {"replies": 0, "needs_human": 0, "bounced": 0, "unsubscribed": 0, "categories": {}}
+    totals = {"replies": 0, "needs_human": 0, "bounced": 0, "unsubscribed": 0, "categories": {}, "paused": []}
+    rule = load_sending(cfg).get("auto_pause") or {}
     for camp in conn.execute("SELECT * FROM campaigns WHERE client=?", (cfg.slug,)).fetchall():
+        complaints = 0
         by_email = {r["email"].lower(): dict(r) for r in conn.execute(
             "SELECT o.*, c.email, c.first_name, c.last_name FROM outbound o JOIN contacts c ON c.id=o.contact_id"
             " WHERE o.campaign_id=?", (camp["id"],))}
@@ -343,5 +346,22 @@ def sync(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, jev: JevCli
             totals["replies"] += 1
             totals["needs_human"] += category in NEEDS_HUMAN
             totals["categories"][category] = totals["categories"].get(category, 0) + 1
+            complaints += category == "complaint"
         conn.commit()
+        # Optional (sending.yaml auto_pause): stop an active campaign on a complaint or too many bounces.
+        # Pausing only stops sending; starting again still needs `start --i-confirm` (The Marble Jar D18).
+        if rule and camp["status"] == "ACTIVE":
+            sent = conn.execute("SELECT COUNT(*) FROM outbound WHERE campaign_id=?", (camp["id"],)).fetchone()[0]
+            bounced = conn.execute("SELECT COUNT(*) FROM outbound WHERE campaign_id=? AND status='bounced'",
+                                   (camp["id"],)).fetchone()[0]
+            why = None
+            if rule.get("on_complaint", True) and complaints:
+                why = f"{complaints} complaint(s)"
+            elif sent >= rule.get("min_sent", 20) and bounced / sent > rule.get("max_bounce_rate", 0.03):
+                why = f"bounce rate {bounced}/{sent}"
+            if why:
+                sl.set_status(camp["smartlead_id"], "PAUSED")
+                conn.execute("UPDATE campaigns SET status='PAUSED' WHERE id=?", (camp["id"],))
+                conn.commit()
+                totals["paused"].append(f"{camp['name']}: {why}")
     return totals
