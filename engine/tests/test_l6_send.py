@@ -173,8 +173,8 @@ def test_push_creates_paused_campaign_with_checked_mailboxes_and_never_starts(en
     assert link == {"email_account_ids": [1]}                    # not 4: another client's domain
     assert not any(p.endswith("/status") for _, p in paths)      # push never starts a campaign
     settings = next(j for m, p, _, j in stub.calls if p.endswith("/settings") and m == "POST")   # PATCH->POST fallback
-    assert settings["track_settings"] == {"track_open": False, "track_click": False}
-    assert settings["stop_lead_settings"]["stop_on_reply"] is True
+    assert settings["track_settings"] == ["DONT_TRACK_EMAIL_OPEN", "DONT_TRACK_LINK_CLICK"]   # Smartlead's format
+    assert settings["stop_lead_settings"] == "REPLY_TO_AN_EMAIL" and settings["send_as_plain_text"] is True
     schedule = next(j for m, p, _, j in stub.calls if p.endswith("/schedule"))
     assert schedule["timezone"] == "Europe/Amsterdam" and schedule["days_of_the_week"] == [1, 2, 3, 4]
     assert "_contact_id" not in stub.leads_added[0]              # internal fields never leave the engine

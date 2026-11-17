@@ -68,6 +68,31 @@ def sequence_payload(steps_days: list[int]) -> list[dict]:
     return out
 
 
+def settings_payload(s: dict) -> dict:
+    """Campaign settings in Smartlead's format (api-reference/campaigns/update-settings, checked
+    2026-11-17 after the rehearsal got a 400): track_settings is a list of what NOT to track."""
+    track = []
+    if not s.get("track_open"):
+        track.append("DONT_TRACK_EMAIL_OPEN")
+    if not s.get("track_click"):
+        track.append("DONT_TRACK_LINK_CLICK")
+    body = {"track_settings": track, "send_as_plain_text": bool(s.get("send_as_plain_text")),
+            "follow_up_percentage": 100,
+            # Auto-replies (out of office) do not count as replies and do not stop the sequence.
+            "out_of_office_detection_settings": {"ignoreOOOasReply": not s.get("stop_on_auto_reply", False),
+                                                 "autoCategorizeOOO": True}}
+    if s.get("stop_on_reply", True):
+        body["stop_lead_settings"] = "REPLY_TO_AN_EMAIL"
+    return body
+
+
+def setup_campaign(sl: SmartleadClient, campaign_id, days: list[int], sending: dict, schedule: dict) -> None:
+    """Sequence, settings and schedule for a new campaign. Safe to repeat on a half-set-up campaign."""
+    sl.save_sequences(campaign_id, sequence_payload(days))
+    sl.update_settings(campaign_id, settings_payload(sending["settings"]))
+    sl.set_schedule(campaign_id, schedule)
+
+
 @dataclass
 class PushPlan:
     eligible: dict[str, list[dict]] = field(default_factory=dict)     # region -> leads
@@ -219,30 +244,27 @@ def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushP
         daily = min(daily, len(mailbox_ids) * cfg.limits.sending.get("max_per_mailbox_per_day", 18))
     for region, leads in plan.eligible.items():
         row = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?", (cfg.slug, region)).fetchone()
+        r = sending["regions"][region]
         if row:
             campaign_db_id, campaign_id = row["id"], row["smartlead_id"]
         else:
-            r = sending["regions"][region]
             name = f"{sending['campaign_prefix']} | {region.upper()} | {ts[:7]}"
             campaign_id = sl.create_campaign(name)
-            sl.save_sequences(campaign_id, sequence_payload(leads[0]["_days"]))
-            s = sending["settings"]
-            # Format from Smartlead's current docs (guides/campaign-setup). Verify in the Smartlead UI
-            # after the first push, while the campaign is still paused.
-            sl.update_settings(campaign_id, {
-                "track_settings": {"track_open": bool(s["track_open"]), "track_click": bool(s["track_click"])},
-                "stop_lead_settings": {"stop_on_reply": s["stop_on_reply"],
-                                       "stop_on_auto_reply": s["stop_on_auto_reply"], "stop_on_click": False},
-                "send_as_plain_text": s["send_as_plain_text"]})
+            # Recorded at once, so a failure further on never leaves a campaign the database does not know.
+            cur = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"
+                               " VALUES (?,?,?,?,?,?,?)", (cfg.slug, region, campaign_id, name, r["timezone"],
+                                                           "SETUP", ts))
+            conn.commit()
+            campaign_db_id = cur.lastrowid
+            row = {"status": "SETUP"}
+        if row["status"] == "SETUP":
             # Each new lead gets up to 4 emails; share the daily cap across the regions that have
             # leads to send now. Regions only defined in sending.yaml take no share (audit C2).
             per_region = max(1, daily // 4 // max(1, len(plan.eligible)))
-            sl.set_schedule(campaign_id, {"timezone": r["timezone"], **{k: v for k, v in sending["schedule"].items()},
-                                          "max_new_leads_per_day": per_region})
-            cur = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"
-                               " VALUES (?,?,?,?,?,?,?)", (cfg.slug, region, campaign_id, name, r["timezone"],
-                                                           "DRAFTED", ts))
-            campaign_db_id = cur.lastrowid
+            setup_campaign(sl, campaign_id, leads[0]["_days"], sending,
+                           {"timezone": r["timezone"], **dict(sending["schedule"]), "max_new_leads_per_day": per_region})
+            conn.execute("UPDATE campaigns SET status='DRAFTED' WHERE id=?", (campaign_db_id,))
+            conn.commit()
         # Every upload links the mailboxes that are ready now, so a mailbox that finished warming up
         # after the campaign was created joins it (Smartlead keeps mailboxes already linked).
         sl.link_email_accounts(campaign_id, mailbox_ids)
@@ -381,7 +403,9 @@ def rehearse(cfg: ClientConfig, conn, seeds: list[str], sl: SmartleadClient | No
     which `push` never uses; `rehearse --cleanup` pauses it and removes the local test rows."""
     if not seeds or any("@" not in s for s in seeds):
         raise RuntimeError("Give the seed inboxes as email addresses.")
-    if conn.execute("SELECT 1 FROM campaigns WHERE client=? AND region=?", (cfg.slug, REHEARSAL_REGION)).fetchone():
+    existing = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?",
+                            (cfg.slug, REHEARSAL_REGION)).fetchone()
+    if existing and existing["status"] != "SETUP":
         raise RuntimeError("A rehearsal campaign exists already: run `rehearse --cleanup` first.")
     sending = load_sending(cfg)
     row = conn.execute(
@@ -407,23 +431,19 @@ def rehearse(cfg: ClientConfig, conn, seeds: list[str], sl: SmartleadClient | No
     steps = json.loads(row["steps_json"])
     original = clean_first_name(row["first_name"] or "")
     days = [n * delay_days for n in range(len(steps))]
-    name = f"{sending['campaign_prefix']} | REHEARSAL | {ts[:10]}"
-    campaign_id = sl.create_campaign(name)
-    sl.save_sequences(campaign_id, sequence_payload(days))
-    s = sending["settings"]
-    sl.update_settings(campaign_id, {
-        "track_settings": {"track_open": bool(s["track_open"]), "track_click": bool(s["track_click"])},
-        "stop_lead_settings": {"stop_on_reply": s["stop_on_reply"], "stop_on_auto_reply": s["stop_on_auto_reply"],
-                               "stop_on_click": False},
-        "send_as_plain_text": s["send_as_plain_text"]})
-    sl.set_schedule(campaign_id, {"timezone": "Europe/Amsterdam", "days_of_the_week": [0, 1, 2, 3, 4, 5, 6],
-                                  "start_hour": "00:00", "end_hour": "23:59", "min_time_btw_emails": 3,
-                                  "max_new_leads_per_day": max(10, len(seeds))})
+    if existing:
+        name, campaign_id, camp_db = existing["name"], existing["smartlead_id"], existing["id"]
+    else:
+        name = f"{sending['campaign_prefix']} | REHEARSAL | {ts[:10]}"
+        campaign_id = sl.create_campaign(name)
+        camp_db = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"
+                               " VALUES (?,?,?,?,?,?,?)", (cfg.slug, REHEARSAL_REGION, campaign_id, name,
+                                                           "Europe/Amsterdam", "SETUP", ts)).lastrowid
+        conn.commit()
+    setup_campaign(sl, campaign_id, days, sending,
+                   {"timezone": "Europe/Amsterdam", "days_of_the_week": [0, 1, 2, 3, 4, 5, 6], "start_hour": "00:00",
+                    "end_hour": "23:59", "min_time_btw_emails": 3, "max_new_leads_per_day": max(10, len(seeds))})
     sl.link_email_accounts(campaign_id, list(chosen.values()))
-    cur = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"
-                       " VALUES (?,?,?,?,?,?,?)", (cfg.slug, REHEARSAL_REGION, campaign_id, name, "Europe/Amsterdam",
-                                                   "DRAFTED", ts))
-    camp_db = cur.lastrowid
     acc = conn.execute("INSERT INTO accounts(client, name, segments, source, status, first_seen, last_seen)"
                        " VALUES (?,?,?,?,?,?,?)", (cfg.slug, "Rehearsal (seed inboxes)", "[]", "rehearsal",
                                                    "rehearsal", ts, ts)).lastrowid
