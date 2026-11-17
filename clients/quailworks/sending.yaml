@@ -48,3 +48,7 @@ min_warmup_reputation: 95
 # The ramp (limits.yaml) is kept by the campaign's daily total, capped at ready mailboxes x the per-mailbox
 # cap, so a mailbox whose own Smartlead ceiling is higher (15 a day) can still be used (Q46).
 spread_daily_cap: true
+
+# `sync` pauses an active campaign on any spam complaint, or when more than 3% of uploaded leads bounced
+# (from 20 leads on). Starting again needs `start --i-confirm` with the user's approval (Q47).
+auto_pause: {on_complaint: true, max_bounce_rate: 0.03, min_sent: 20}

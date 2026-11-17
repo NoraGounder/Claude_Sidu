@@ -452,6 +452,13 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   kinder to new domains. Raising the ramp needs the user's say-so. Would change: bounces over 2% or a
   spam complaint (hold the ramp), or a mailbox's reputation dropping under 95% (it drops out by itself).
 
+- **Q47. Auto-pause on, backup guard not yet (2026-11-17).** From The Marble Jar's engine work: `sync` now
+  pauses a Quailworks campaign on any spam complaint or more than 3% bounces (from 20 leads on), so a bad
+  day cannot burn the new domains while nobody is watching. The backup guard (`require_backup`) stays off:
+  it needs an off-site vault and key (GTM_BACKUP_KEY, GTM_BACKUP_REMOTE) that this environment does not
+  have yet, and switching it on now would block the launch upload. Would change: the vault being set up
+  (then turn it on and back up before `push --live`).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):
