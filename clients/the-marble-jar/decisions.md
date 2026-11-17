@@ -61,8 +61,8 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
 - **Not adopted from the Quailworks build (2026-11-16):** naming hiring companies in the prospect's
   market (conflicts with D5, no names in emails); a free sample list as the ask (conflicts with D4, no
   free work promised); job-board feeds (Greenhouse, Lever and Ashby rarely cover Dutch companies;
-  a Recruitee feed could, later); BlitzAPI for discovery and emails (coverage of Dutch SMEs untested).
-  Revisit after the first 100 contacts.
+  a Recruitee feed could, later). Revisit after the first 100 contacts. (BlitzAPI was adopted
+  on 2026-11-17: D24.)
 
 ## Legal basis in the Netherlands (2026-11-17)
 
@@ -81,7 +81,7 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
 - **D19. Proof first, then scale.** No new discovery spend until the first batch has run. The
   first batch is everything already paid for: Tier 1-2 contacts with approved drafts, the Tier 1
   companies still without a contact (found with FullEnrich credits already bought, audit H3), the
-  Belgian companies (D20), and December's free Apify credit for one more discovery run. Because the
+  Belgian companies (D20), and BlitzAPI's flat plan for discovery by admin vacancy (D24). Because the
   fixed costs (Smartlead, mailboxes) run every month whatever we send, speed beats extra volume:
   the throttle fix (audit C2) comes first. Scale (a paid Apify plan, a monthly discovery run) as
   soon as there is one booked meeting or three positive replies. If every first-batch contact has
@@ -106,6 +106,18 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
   old copy at once. A weekly encrypted copy also goes to Sidarth's own device. `push --live` and
   `start` refuse to run when the last backup is older than the last change. Change if: Sidarth
   prefers an EU storage provider, or the DPA annex (audit H9) needs one.
+
+- **D24. BlitzAPI for The Marble Jar.** Quailworks pays a flat BlitzAPI plan (200,000 records a
+  month) and uses a small part of it, so The Marble Jar uses it too, at no extra cost: (1) discovery
+  by the signal itself, companies in our sectors with an admin vacancy posted in the last 30 days,
+  and (2) work emails first through BlitzAPI, FullEnrich for the misses. Test on 2026-11-17: 68
+  companies in the Netherlands and Belgium (50-500 employees, our sectors) with such a vacancy; 47
+  were new to us and 10 of the ones we had were parked in Tier 3 because our crawl missed the
+  vacancy. Layer 2 still confirms every vacancy on the company's own site. The Marble Jar's own
+  monthly records cap goes in `limits.yaml`; the Quailworks chat is told. Before BlitzAPI sees any
+  person's data, Mithun gets the sub-processor notice (DPA 5.2) in the launch message. This is
+  Quailworks' tool and Quailworks' cost, not a reuse of either client's data. Change if: the
+  Quailworks chat needs the records, or the found emails bounce more than FullEnrich's.
 
 ## Needed from Mithun (only what we cannot do for him)
 
