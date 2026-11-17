@@ -76,6 +76,37 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
   any spam complaint. Scope: this first batch only; new Dutch contacts after it need a new
   decision. Change if: a complaint, a regulator letter, or legal advice says otherwise.
 
+## Launch scope (2026-11-17, Sidarth's answers to the audit of 2026-11-16)
+
+- **D19. Proof first, then scale.** No new discovery spend until the first batch has run. The
+  first batch is everything already paid for: Tier 1-2 contacts with approved drafts, the Tier 1
+  companies still without a contact (found with FullEnrich credits already bought, audit H3), the
+  Belgian companies (D20), and December's free Apify credit for one more discovery run. Because the
+  fixed costs (Smartlead, mailboxes) run every month whatever we send, speed beats extra volume:
+  the throttle fix (audit C2) comes first. Scale (a paid Apify plan, a monthly discovery run) as
+  soon as there is one booked meeting or three positive replies. If every first-batch contact has
+  had emails 1 and 2 with no positive reply, change the message, not the volume.
+- **D20. Belgium is in.** The Belgian Tier 1-2 companies already in the pipeline are sent to,
+  in English, in the Netherlands campaign (same time zone). Belgian law also asks for prior
+  consent for email to a named person's work address, so this carries the same risk as D18 and
+  the same conditions apply; Sidarth accepts it for these companies. New Belgian contacts after
+  this batch need a new decision.
+- **D21. English only.** Every email is in English: Mithun does not speak Dutch, so a Dutch
+  reply could not be handled by him on a call. Dutch job-ad titles may still be quoted as they
+  appear in the ad. Change if: replies show English costs us meetings and Mithun brings in a
+  Dutch speaker.
+- **D22. Website pointer stays.** Email 2 still points to the invoice example on themarblejar.io.
+  The website is being refreshed to show the current services (a separate project, rule 7).
+  Change if: replies mention Mendix or pebls.
+- **D23. Backups (audit C4).** An encrypted snapshot of the database and `private/` after every
+  state-changing run, kept off the container in a separate private GitHub repository (never this
+  code repository), only the latest 14 snapshots, with a tested `restore` that runs when a fresh
+  session finds no database. The encryption key lives in the cloud environment's settings and in
+  Sidarth's password manager; without it the archive is unreadable, and destroying it erases every
+  old copy at once. A weekly encrypted copy also goes to Sidarth's own device. `push --live` and
+  `start` refuse to run when the last backup is older than the last change. Change if: Sidarth
+  prefers an EU storage provider, or the DPA annex (audit H9) needs one.
+
 ## Needed from Mithun (only what we cannot do for him)
 
 One message, at launch, a few minutes:
