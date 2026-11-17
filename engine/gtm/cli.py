@@ -585,6 +585,33 @@ def cmd_learn(args) -> int:
     return 0
 
 
+def cmd_rehearse(args) -> int:
+    """Audit C5: a test campaign to the operator's own inboxes only (sends real emails to them)."""
+    from gtm.layers import l6_send
+    from gtm.sources.smartlead import SmartleadError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    try:
+        if args.cleanup:
+            r = l6_send.cleanup_rehearsal(cfg, conn)
+            print(f"Rehearsal cleaned up: campaign paused in Smartlead, {r['removed']} test rows removed.")
+            return 0
+        seeds = [s.strip() for s in (args.seeds or "").split(",") if s.strip()]
+        if not args.i_confirm:
+            print(f"Dry run: would create a rehearsal campaign sending all steps to {len(seeds)} seed inbox(es). "
+                  "Add --i-confirm to send to them.")
+            return 0
+        r = l6_send.rehearse(cfg, conn, seeds, delay_days=args.delay_days)
+    except (SmartleadError, RuntimeError) as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    print(f"Rehearsal '{r['campaign']}' is ACTIVE: {r['steps']} steps to {r['seeds']} seed inbox(es) on days "
+          f"{r['days']}, from {r['mailboxes']} mailbox(es). Reply 'stop' from one inbox, reply normally from the "
+          "other, then run sync and handoff.")
+    return 0
+
+
 def _backup_guard(client: str) -> bool:
     """With sending.yaml `require_backup: true`, push --live and start run only when the current
     database is backed up off-site (The Marble Jar D23). Without the key, nothing changes."""
@@ -797,6 +824,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("stats", help="counts by status and spend this month")
     s.set_defaults(func=cmd_stats)
+
+    rh = sub.add_parser("rehearse", help="test campaign to your own seed inboxes only (audit C5)")
+    rh.add_argument("--seeds", help="comma-separated seed inbox addresses you own")
+    rh.add_argument("--delay-days", type=int, default=1, help="days between steps (default 1)")
+    rh.add_argument("--i-confirm", action="store_true", help="really create and start it (emails the seeds)")
+    rh.add_argument("--cleanup", action="store_true", help="pause the rehearsal and remove its local rows")
+    rh.set_defaults(func=cmd_rehearse)
 
     bk = sub.add_parser("backup", help="encrypted backup of the database and private/ (off-site vault when set)")
     bk.add_argument("--keep", type=int, default=14, help="snapshots to keep (default 14)")

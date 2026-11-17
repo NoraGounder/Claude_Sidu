@@ -273,3 +273,21 @@ def test_sync_pauses_an_active_campaign_on_a_complaint(env):
     assert len(t["paused"]) == 1 and "complaint" in t["paused"][0]
     assert conn.execute("SELECT status FROM campaigns").fetchone()[0] == "PAUSED"
     assert "anna@groothandel.example" in db.suppressed_values(conn, CLIENT, "email")
+
+
+def test_rehearsal_emails_only_the_seeds_and_cleans_up(env):
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    _approved(conn, "Groothandel BV", "NL", "Anna", "anna@groothandel.example")
+    stub = StubSmartlead()
+    sl = SmartleadClient(api_key="test-key", session=stub)
+    r = l6_send.rehearse(cfg, conn, ["me@seed.example", "me2@seed.example"], sl=sl)
+    assert r["seeds"] == 2 and r["days"] == [0, 1, 2, 3]
+    assert {lead["email"] for lead in stub.leads_added} == {"me@seed.example", "me2@seed.example"}
+    assert all("Anna" not in v for lead in stub.leads_added for v in lead["custom_fields"].values())
+    assert l6_send.plan_push(cfg, conn).eligible["nl"][0]["email"] == "anna@groothandel.example"  # prospect untouched
+    with pytest.raises(RuntimeError):
+        l6_send.rehearse(cfg, conn, ["me@seed.example"], sl=sl)                        # one at a time
+    out = l6_send.cleanup_rehearsal(cfg, conn, sl=sl)
+    assert out["removed"] == 2
+    assert conn.execute("SELECT COUNT(*) FROM campaigns").fetchone()[0] == 0

@@ -25,7 +25,7 @@ import yaml
 
 from gtm import brain, db
 from gtm.config import ClientConfig
-from gtm.layers.l5_copy import load_sender
+from gtm.layers.l5_copy import clean_first_name, load_sender
 from gtm.sources.jev import JevClient, JevResult, check_policy
 from gtm.sources.smartlead import SmartleadClient
 
@@ -365,3 +365,107 @@ def sync(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, jev: JevCli
                 conn.commit()
                 totals["paused"].append(f"{camp['name']}: {why}")
     return totals
+
+
+# ---------- rehearsal (audit C5) ----------
+
+REHEARSAL_REGION = "rehearsal"
+
+
+def rehearse(cfg: ClientConfig, conn, seeds: list[str], sl: SmartleadClient | None = None,
+             delay_days: int = 1) -> dict:
+    """A test campaign that emails only `seeds` (inboxes the operator owns) with a real approved draft,
+    so layout, threading, sender name, replies, "stop" and bounces can be checked before any prospect
+    is emailed. Steps follow each other `delay_days` apart. Mailboxes still warming up may be used:
+    a handful of emails to our own inboxes does not hurt warm-up. Recorded under region 'rehearsal',
+    which `push` never uses; `rehearse --cleanup` pauses it and removes the local test rows."""
+    if not seeds or any("@" not in s for s in seeds):
+        raise RuntimeError("Give the seed inboxes as email addresses.")
+    if conn.execute("SELECT 1 FROM campaigns WHERE client=? AND region=?", (cfg.slug, REHEARSAL_REGION)).fetchone():
+        raise RuntimeError("A rehearsal campaign exists already: run `rehearse --cleanup` first.")
+    sending = load_sending(cfg)
+    row = conn.execute(
+        "SELECT d.id, d.subject, d.steps_json, c.first_name FROM drafts d JOIN contacts c ON c.id=d.contact_id"
+        " JOIN accounts a ON a.id=c.account_id WHERE d.client=? AND d.status='approved'"
+        " AND a.status IN ('tier_1','tier_2') ORDER BY CASE a.status WHEN 'tier_1' THEN 1 ELSE 2 END, d.id LIMIT 1",
+        (cfg.slug,)).fetchone()
+    if not row:
+        raise RuntimeError("No approved Tier 1-2 draft to rehearse with.")
+    sl = sl or SmartleadClient()
+    relaxed = {k: v for k, v in sending.items() if k not in ("min_warmup_days", "min_warmup_reputation")}
+    accounts = sl.email_accounts()
+    ids, problems = check_mailboxes(cfg, relaxed, accounts, datetime.now(timezone.utc))
+    by_id = {a["id"]: a for a in accounts}
+    # One mailbox per sending domain (Google and Outlook), the best warm-up reputation first.
+    chosen: dict[str, int] = {}
+    for i in sorted(ids, key=lambda i: -(_reputation(by_id[i]) or 0)):
+        dom = str(by_id[i].get("from_email", "")).split("@")[-1].lower()
+        chosen.setdefault(dom, i)
+    if not chosen:
+        raise RuntimeError("No usable mailbox: " + "; ".join(problems))
+    ts = db.now_iso()
+    steps = json.loads(row["steps_json"])
+    original = clean_first_name(row["first_name"] or "")
+    days = [n * delay_days for n in range(len(steps))]
+    name = f"{sending['campaign_prefix']} | REHEARSAL | {ts[:10]}"
+    campaign_id = sl.create_campaign(name)
+    sl.save_sequences(campaign_id, sequence_payload(days))
+    s = sending["settings"]
+    sl.update_settings(campaign_id, {
+        "track_settings": {"track_open": bool(s["track_open"]), "track_click": bool(s["track_click"])},
+        "stop_lead_settings": {"stop_on_reply": s["stop_on_reply"], "stop_on_auto_reply": s["stop_on_auto_reply"],
+                               "stop_on_click": False},
+        "send_as_plain_text": s["send_as_plain_text"]})
+    sl.set_schedule(campaign_id, {"timezone": "Europe/Amsterdam", "days_of_the_week": [0, 1, 2, 3, 4, 5, 6],
+                                  "start_hour": "00:00", "end_hour": "23:59", "min_time_btw_emails": 3,
+                                  "max_new_leads_per_day": max(10, len(seeds))})
+    sl.link_email_accounts(campaign_id, list(chosen.values()))
+    cur = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"
+                       " VALUES (?,?,?,?,?,?,?)", (cfg.slug, REHEARSAL_REGION, campaign_id, name, "Europe/Amsterdam",
+                                                   "DRAFTED", ts))
+    camp_db = cur.lastrowid
+    acc = conn.execute("INSERT INTO accounts(client, name, segments, source, status, first_seen, last_seen)"
+                       " VALUES (?,?,?,?,?,?,?)", (cfg.slug, "Rehearsal (seed inboxes)", "[]", "rehearsal",
+                                                   "rehearsal", ts, ts)).lastrowid
+    leads = []
+    for n, email in enumerate(seeds, start=1):
+        first = "Test"
+        bodies = {f"tmj_email_{k}": (re.sub(rf"\b{re.escape(original)}\b", first, st["body"]) if original else st["body"])
+                  for k, st in enumerate(steps, start=1)}
+        cid = conn.execute("INSERT INTO contacts(client, account_id, person_id, first_name, last_name, status, email,"
+                           " email_status, data_source, rank, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                           (cfg.slug, acc, f"rehearsal-{n}", first, f"Seed{n}", "rehearsal", email, "OWNED",
+                            "operator's own inbox", n, ts, ts)).lastrowid
+        conn.execute("INSERT INTO outbound(contact_id, client, account_id, draft_id, campaign_id, status, pushed_at)"
+                     " VALUES (?,?,?,?,?,?,?)", (cid, cfg.slug, acc, row["id"], camp_db, "pushed", ts))
+        leads.append({"email": email, "first_name": first, "last_name": f"Seed{n}", "company_name": "Rehearsal",
+                      "custom_fields": {"tmj_subject": re.sub(rf"\b{re.escape(original)}\b", first, row["subject"])
+                                        if original else row["subject"], **bodies}})
+    sl.add_leads(campaign_id, leads)
+    sl.set_status(campaign_id, "ACTIVE")
+    conn.execute("UPDATE campaigns SET status='ACTIVE' WHERE id=?", (camp_db,))
+    conn.commit()
+    return {"campaign": name, "smartlead_id": campaign_id, "mailboxes": len(chosen), "seeds": len(seeds),
+            "steps": len(steps), "days": days}
+
+
+def cleanup_rehearsal(cfg: ClientConfig, conn, sl: SmartleadClient | None = None) -> dict:
+    """Pause the rehearsal campaign in Smartlead (nothing is deleted there) and remove its local rows."""
+    camp = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?", (cfg.slug, REHEARSAL_REGION)).fetchone()
+    if not camp:
+        return {"removed": 0}
+    (sl or SmartleadClient()).set_status(camp["smartlead_id"], "PAUSED")
+    acc_ids = [r[0] for r in conn.execute("SELECT id FROM accounts WHERE client=? AND status='rehearsal'", (cfg.slug,))]
+    marks = ",".join("?" * len(acc_ids)) or "NULL"
+    cids = [r[0] for r in conn.execute(f"SELECT id FROM contacts WHERE account_id IN ({marks})", acc_ids)]
+    cm = ",".join("?" * len(cids)) or "NULL"
+    seeds = [r[0].lower() for r in conn.execute(f"SELECT email FROM contacts WHERE id IN ({cm})", cids)]
+    sm = ",".join("?" * len(seeds)) or "NULL"
+    conn.execute(f"DELETE FROM suppression WHERE client=? AND kind='email' AND value IN ({sm})", (cfg.slug, *seeds))
+    for sql in (f"DELETE FROM replies WHERE contact_id IN ({cm})", f"DELETE FROM deals WHERE contact_id IN ({cm})",
+                f"DELETE FROM outbound WHERE contact_id IN ({cm})", f"DELETE FROM contacts WHERE id IN ({cm})"):
+        conn.execute(sql, cids)
+    conn.execute(f"DELETE FROM accounts WHERE id IN ({marks})", acc_ids)
+    conn.execute("DELETE FROM campaigns WHERE id=?", (camp["id"],))
+    conn.commit()
+    return {"removed": len(cids), "campaign": camp["name"]}
