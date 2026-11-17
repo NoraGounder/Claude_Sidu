@@ -659,7 +659,7 @@ def test_discovery_by_hiring_signal_stores_accounts_within_the_record_allowance(
     # the month's record allowance is a hard stop (limits.yaml blitzapi_records: 20000)
     with pytest.raises(budget.BudgetExceeded, match="blitzapi"):
         l1_hiring.run(cfg, conn, l1_hiring.plan(cfg, ["hiring_robotics_us"], 19998), client=BlitzClient(api_key="k", session=session))
-    assert not (env / TMJ / "hiring.yaml").exists()                         # The Marble Jar: not set up
+    assert "NL" in (env / TMJ / "hiring.yaml").read_text()                 # The Marble Jar: its own searches (D24)
 
 
 def test_blitzapi_is_tried_first_for_emails_only_when_the_client_asks(env):

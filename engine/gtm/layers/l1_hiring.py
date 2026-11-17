@@ -157,3 +157,70 @@ def run(cfg: ClientConfig, conn, plans: list[HiringPlan], client: BlitzClient | 
                       f"records remaining on the plan: {api.records_remaining}")
         results.append(res)
     return results
+
+
+# ---------- job postings as evidence (opt-in: hiring.yaml `postings`) ----------
+
+POSTING_SIGNAL = "job_posting"
+
+
+def fetch_postings(cfg: ClientConfig, conn, max_postings: int | None = None,
+                   client: BlitzClient | None = None) -> dict:
+    """The live job postings behind the hiring searches (BlitzAPI jobs search, one record per posting),
+    stored as Layer 1 evidence on the accounts we already have: title, posting URL, date and place.
+    Layer 2 adds these titles to the ones it reads on the company's own site (scoring.yaml
+    `posted_jobs: true`), so a vacancy listed only on a job board still counts once Jev 1.14 has
+    confirmed the title is the kind of role the offer replaces."""
+    conf = load_config(cfg)
+    limit = max_postings or int(conf.get("postings", {}).get("max_postings", 300))
+    plans = plan(cfg)
+    industries = sorted({i for p in plans for i in (p.company.get("industry") or {}).get("include", [])})
+    countries = sorted({c for p in plans for c in p.company["hq"]["country_code"]["include"]})
+    job = plans[0].job if plans else {}
+    company = {"employee_count": plans[0].company["employee_count"], "hq": {"country_code": {"include": countries}}}
+    if industries:
+        company["industry"] = {"include": industries}
+    check_records(conn, cfg, limit)
+    api = client or BlitzClient()
+    run_id = db.start_run(conn, cfg.slug, "L1-hiring", VENDOR, "postings", 0.0, {"job": job, "company": company})
+    postings, cursor = [], None
+    try:
+        while len(postings) < limit:
+            data = api.jobs(job, company, min(PAGE, limit - len(postings)), cursor)
+            page = data.get("results") or []
+            postings.extend(page)
+            cursor = data.get("cursor")
+            if not page or not cursor:
+                break
+    except Exception as exc:
+        db.finish_run(conn, run_id, "failed", len(postings), 0.0, str(exc)[:300])
+        raise
+    by_url = {normalize_linkedin_company_url(r["linkedin_url"]): r["id"] for r in conn.execute(
+        "SELECT id, linkedin_url FROM accounts WHERE client=? AND linkedin_url IS NOT NULL", (cfg.slug,))}
+    ts = db.now_iso()
+    matched: dict[int, int] = {}
+    for p in postings:
+        acc_id = by_url.get(normalize_linkedin_company_url(p.get("company_linkedin_url")))
+        title = str(p.get("title") or "").strip()
+        if not acc_id or not title:
+            continue
+        loc = p.get("location") or {}
+        place = loc.get("city") or loc.get("country_code") or "" if isinstance(loc, dict) else str(loc)
+        if matched.get(acc_id) == 0 or acc_id not in matched:
+            conn.execute("DELETE FROM evidence WHERE account_id=? AND layer='L1' AND signal=?", (acc_id, POSTING_SIGNAL))
+            matched[acc_id] = 0
+        matched[acc_id] += 1
+        conn.execute("INSERT INTO evidence(account_id, layer, signal, label, url, quote, found_at) VALUES (?,?,?,?,?,?,?)",
+                     (acc_id, "L1", POSTING_SIGNAL, title[:200], p.get("url") or "",
+                      f"{title} (posted {str(p.get('date_posted') or '')[:10]}{', ' + place if place else ''})", ts))
+    conn.commit()
+    db.finish_run(conn, run_id, "succeeded", len(postings), 0.0,
+                  f"{len(matched)} known accounts with postings; records remaining {api.records_remaining}")
+    return {"postings": len(postings), "accounts": len(matched), "account_ids": sorted(matched)}
+
+
+def posted_jobs(conn, account_id: int) -> dict[str, str]:
+    """Posting titles stored for an account, with the posting URL: {title: url}."""
+    rows = conn.execute("SELECT label, url FROM evidence WHERE account_id=? AND layer='L1' AND signal=?"
+                        " ORDER BY id", (account_id, POSTING_SIGNAL))
+    return {r["label"]: r["url"] for r in rows}

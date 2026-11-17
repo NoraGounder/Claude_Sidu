@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from gtm import db
 from gtm.config import ClientConfig
 from gtm.crawl import Page, SiteCrawl, crawl_site, default_fetcher
+from gtm.layers import l1_hiring
 from gtm.layers.l1_discover import band_midpoint
 from gtm.normalize import has_keyword, size_range
 from gtm.signals import Evidence, extract, is_dutch, rules_for
@@ -87,7 +88,8 @@ def jev_evidence(cfg: ClientConfig, site: SiteCrawl | None, jev: dict | None) ->
     threshold, signal = job_threshold(cfg), job_signal(cfg)
     url = (site.careers.url if site and site.careers and site.careers.ok else
            (site.board_url or site.home.url) if site else "")
-    return [Evidence(signal, f"job title: {title}", url, f"{title} (Jev 1.14, p={p:.2f})")
+    posted = site.posted if site else {}
+    return [Evidence(signal, f"job title: {title}", posted.get(title) or url, f"{title} (Jev 1.14, p={p:.2f})")
             for title, p in jev["titles"].items() if p >= threshold]
 
 
@@ -251,11 +253,18 @@ def run(cfg: ClientConfig, conn, limit: int | None = None, rescore: bool = False
 
     boards = cfg.scoring.get("job_boards")   # optional: read hosted job boards' public feeds
 
+    # Optional (scoring.yaml posted_jobs: true): titles of live job postings stored by
+    # `discover-hiring --postings` join the titles read on the site, so Jev 1.14 judges them too.
+    posted = {a["id"]: l1_hiring.posted_jobs(conn, a["id"]) for a in accounts} if cfg.scoring.get("posted_jobs") else {}
+
     def work(acc):
         try:
             site = (crawl_site(fetcher_factory(), acc["website"], job_boards=boards)
                     if acc.get("website") else None)
-            if site and boards:
+            if site and posted.get(acc["id"]):
+                site.posted = posted[acc["id"]]
+                site.job_titles = list(dict.fromkeys([*site.posted, *site.job_titles]))
+            if site and (boards or site.posted):
                 site.job_titles = order_titles(cfg, site.job_titles)
         except Exception as exc:  # noqa: BLE001 - score the account without a site, flag it
             site = SiteCrawl(home=Page(url=acc["website"], status=0, error=f"crawl_error:{type(exc).__name__}"))

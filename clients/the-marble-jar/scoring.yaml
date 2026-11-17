@@ -30,6 +30,11 @@ fit:
   # `best-clients`), 0 not .. 2 very similar, scaled to 0-20 points. No effect until the list exists.
   jev_lookalike: 20
 
+
+# Titles of live job postings (discover-hiring --postings, BlitzAPI) join the titles read on the
+# company's own site; Jev 1.14 still decides whether each is admin work (decisions.md D24).
+posted_jobs: true
+
 signals:
   # Found on careers pages and in job ads during Layer 2.
   admin_job_ad: 30            # administratief medewerker, crediteuren-/debiteurenadministratie, orderverwerking, data entry

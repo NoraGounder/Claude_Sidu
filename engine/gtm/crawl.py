@@ -269,6 +269,7 @@ class SiteCrawl:
     job_link_count: int = 0      # vacancies linked from the careers page (we fetch at most max_jobs)
     job_titles: list[str] = field(default_factory=list)
     board_url: str = ""          # the company's hosted job board, when its feed was read (job_boards)
+    posted: dict = field(default_factory=dict)   # {title: posting URL} from job postings (posted_jobs)
 
     @property
     def pages(self) -> list[Page]:

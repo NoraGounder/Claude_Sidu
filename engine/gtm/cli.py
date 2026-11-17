@@ -412,6 +412,19 @@ def cmd_discover_hiring(args) -> int:
 
     cfg = load_client(args.client)
     conn = db.connect()
+    if args.postings:
+        if args.dry_run:
+            print("Dry run: would read up to the postings limit (hiring.yaml postings.max_postings, default 300) "
+                  "and store each posting as evidence on accounts we already have. Nothing called.")
+            return 0
+        try:
+            r = l1_hiring.fetch_postings(cfg, conn, args.max_items)
+        except (budget.BudgetExceeded, BlitzError) as exc:
+            print(f"Stopped: {exc}")
+            return 5
+        print(f"Read {r['postings']} job postings; {r['accounts']} of our accounts have at least one. "
+              "Next: prefilter --rescore (scoring.yaml posted_jobs: true), then jev for those accounts.")
+        return 0
     plans = l1_hiring.plan(cfg, args.search, args.max_items)
     if not args.force:
         recent = l1_hiring.recently_run(conn, cfg.slug)
@@ -709,6 +722,7 @@ def build_parser() -> argparse.ArgumentParser:
     dh.add_argument("--max-items", type=int, help="cap companies per search (default: hiring.yaml)")
     dh.add_argument("--dry-run", action="store_true", help="show the searches, call nothing")
     dh.add_argument("--force", action="store_true", help="repeat a search run in the last few days (uses records)")
+    dh.add_argument("--postings", action="store_true", help="store live job postings as evidence on known accounts")
     dh.set_defaults(func=cmd_discover_hiring)
 
     mk = sub.add_parser("markets", help="market lists for email 1: hiring companies per segment (markets.yaml)")

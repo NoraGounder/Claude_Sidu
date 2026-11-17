@@ -1,0 +1,31 @@
+# Layer 1 by signal (engine/gtm/layers/l1_hiring.py, decisions.md D24): companies in our sectors in the
+# Netherlands and Belgium that posted an administrative job in the last 30 days, from BlitzAPI's
+# "companies hiring" search (the Quailworks flat plan; this client's cap is in limits.yaml).
+# Layer 2 still confirms the vacancy on the company's own site, and Jev 1.14 checks that it is admin work.
+#   python -m gtm --client the-marble-jar discover-hiring --dry-run
+# Test on 2026-11-17: 68 companies across these industries, 47 new to us.
+
+job_titles: [administratief medewerker, medewerker administratie, financieel administratief medewerker,
+             medewerker financiele administratie, medewerker orderverwerking, orderverwerker, order entry,
+             medewerker binnendienst, commercieel medewerker binnendienst, logistiek administratief medewerker,
+             medewerker crediteurenadministratie, medewerker debiteurenadministratie, crediteurenadministratie,
+             debiteurenadministratie, data entry, administrative assistant, accounts payable,
+             accounts receivable, order administrator, administratief planner]
+posted_last_days: 30
+job_countries: [NL, BE]
+
+searches:
+  - {name: hiring_logistics_nlbe, segment: logistics_nl, hq_countries: [NL, BE], max_items: 150,
+     industries: ["Transportation, Logistics, Supply Chain and Storage", Truck Transportation,
+                  Freight and Package Transportation, Warehousing and Storage]}
+  - {name: hiring_wholesale_nlbe, segment: wholesale_nl, hq_countries: [NL, BE], max_items: 150,
+     industries: [Wholesale, Wholesale Import and Export, Wholesale Building Materials,
+                  Wholesale Food and Beverage, "Wholesale Hardware, Plumbing, Heating Equipment",
+                  Wholesale Machinery, Wholesale Computer Equipment, Wholesale Metals and Minerals]}
+  - {name: hiring_installation_nlbe, segment: installation_nl, hq_countries: [NL, BE], max_items: 150,
+     industries: [Construction, Building Construction, Civil Engineering, Specialty Trade Contractors,
+                  Building Equipment Contractors]}
+  - {name: hiring_manufacturing_nlbe, segment: manufacturing_nl, hq_countries: [NL, BE], max_items: 150,
+     industries: [Manufacturing, Machinery Manufacturing, Industrial Machinery Manufacturing,
+                  Fabricated Metal Products, Food and Beverage Manufacturing, Plastics Manufacturing,
+                  Packaging and Containers Manufacturing, Electrical Equipment Manufacturing]}

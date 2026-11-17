@@ -7,6 +7,8 @@ month_budget_usd:
   fullenrich: 55     # FullEnrich Pro, about 1,000 credits a month (people search + work email)
   millionverifier: 5
   openrouter: 5     # TypeSafe Jev 1.14 decisions only (see ai.yaml). Actual cost per request is logged.
+  blitzapi: 0        # the Quailworks flat Start plan, paid outside the engine: no charge per call (decisions.md D24)
+  blitzapi_records: 5000   # this client's monthly share of the plan's 200,000 records (Quailworks keeps 20,000)
 
 # Unit prices used for estimates before a run (USD per item). Apify's actual run cost
 # replaces the estimate in the ledger when the run reports it. Check vendor pages monthly.
@@ -24,6 +26,7 @@ unit_price_usd:
   "fullenrich:work_email": 0.055
   # MillionVerifier: about $37 per 10,000 checks (one-off credits). Used only to re-check stale emails.
   "millionverifier:check": 0.004
+  "blitzapi:record": 0.0      # flat plan (D24)
 
 sending:
   # Launch plan (launch-plan.md): Tier 1-2 only, about 115 companies and 200 contacts, so 40 a day is
