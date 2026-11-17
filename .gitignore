@@ -1,4 +1,4 @@
-# This repository is PUBLIC. Never commit prospect data, client-private files or keys.
+# This repository is private now, but its history was public: never commit prospect data, client-private files or keys.
 
 # Pipeline data (SQLite database, exports, crawl caches)
 data/

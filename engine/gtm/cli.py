@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import sys
 
 from gtm import budget, db
@@ -261,6 +262,8 @@ def cmd_push(args) -> int:
     if not args.live:
         print("Dry run: nothing uploaded. Add --live to upload (campaigns stay paused until `start`).")
         return 0
+    if not _backup_guard(args.client):
+        return 8
     try:
         t = l6_send.push(cfg, conn, plan=plan)
     except (SmartleadError, RuntimeError) as exc:
@@ -282,6 +285,8 @@ def cmd_start(args) -> int:
     if not args.i_confirm:
         print("Refused: starting a campaign sends real emails. Re-run with --i-confirm after approval.")
         return 7
+    if not _backup_guard(args.client):
+        return 8
     cfg = load_client(args.client)
     try:
         name = l6_send.start(cfg, db.connect(), args.region)
@@ -565,6 +570,50 @@ def cmd_learn(args) -> int:
     return 0
 
 
+def _backup_guard(client: str) -> bool:
+    """push --live and start run only when the current database is backed up off-site (D23)."""
+    from gtm import backup
+
+    if os.environ.get("GTM_BACKUP_GUARD", "on").lower() == "off":
+        return True
+    fresh, why = backup.is_fresh(client)
+    if not fresh:
+        print(f"Refused: {why}. Run `backup` first (needs GTM_BACKUP_KEY and GTM_BACKUP_REMOTE).")
+    return fresh
+
+
+def cmd_backup(args) -> int:
+    """Encrypted snapshot of the database and private/ (off-site when configured)."""
+    from gtm import backup
+
+    try:
+        r = backup.backup(args.client, keep=args.keep)
+    except backup.BackupError as exc:
+        print(f"Backup failed: {exc}")
+        return 9
+    where = "off-site vault and this machine" if r["offsite"] else "this machine only (NOT off-site)"
+    print(f"Backup {r['file']} ({r['bytes'] // 1024} KB, {'encrypted' if r['encrypted'] else 'NOT encrypted'})"
+          f" saved to {where}.")
+    if not r["encrypted"]:
+        print(f"Set {backup.KEY_ENV} to encrypt, and {backup.REMOTE_ENV} to keep copies off this machine.")
+    return 0
+
+
+def cmd_restore(args) -> int:
+    """Restore the newest backup from the vault (or --file)."""
+    from pathlib import Path
+
+    from gtm import backup
+
+    try:
+        r = backup.restore(args.client, Path(args.file) if args.file else None, force=args.force)
+    except backup.BackupError as exc:
+        print(f"Restore failed: {exc}")
+        return 9
+    print(f"Restored {r['file']}: {len(r['written'])} files written.")
+    return 0
+
+
 def cmd_export(args) -> int:
     cfg = load_client(args.client)
     conn = db.connect()
@@ -727,6 +776,15 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("stats", help="counts by status and spend this month")
     s.set_defaults(func=cmd_stats)
 
+    bk = sub.add_parser("backup", help="encrypted backup of the database and private/ (off-site vault when set)")
+    bk.add_argument("--keep", type=int, default=14, help="snapshots to keep (default 14)")
+    bk.set_defaults(func=cmd_backup)
+
+    rs = sub.add_parser("restore", help="restore the newest backup from the vault (or --file)")
+    rs.add_argument("--file", help="a backup file to restore instead of the vault's newest")
+    rs.add_argument("--force", action="store_true", help="replace an existing database and private files")
+    rs.set_defaults(func=cmd_restore)
+
     e = sub.add_parser("export", help="write accounts with a given status to CSV in data/")
     e.add_argument("--status", default="qualified_l1")
     e.add_argument("--out")
@@ -756,10 +814,31 @@ def load_env_file(path=None) -> int:
     return count
 
 
+NO_AUTO_BACKUP = {"backup", "restore"}
+
+
 def main(argv: list[str] | None = None) -> int:
     load_env_file()
     args = build_parser().parse_args(argv)
-    return args.func(args)
+    from gtm import backup
+
+    name = getattr(args, "command", None) or args.func.__name__.removeprefix("cmd_").replace("_", "-")
+    if backup.configured() and name not in NO_AUTO_BACKUP and not backup.db_file().exists():
+        # A fresh machine: bring the database back before anything writes a new, empty one.
+        try:
+            r = backup.restore(args.client)
+            print(f"Restored the database from backup {r['file']} (fresh machine).")
+        except backup.BackupError as exc:
+            print(f"Note: no automatic restore ({exc}).")
+    before = backup.file_sha256(backup.db_file()) if backup.configured() else None
+    code = args.func(args)
+    if backup.configured() and name not in NO_AUTO_BACKUP and backup.file_sha256(backup.db_file()) != before:
+        try:
+            r = backup.backup(args.client)
+            print(f"Backed up ({r['file']}).")
+        except backup.BackupError as exc:
+            print(f"WARNING: automatic backup failed: {exc}")
+    return code
 
 
 if __name__ == "__main__":
