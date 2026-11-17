@@ -229,3 +229,14 @@ def test_auto_approve_only_clean_drafts(env):
     assert l5_copy.auto_approve(cfg, conn) == {"approved": 0, "left_for_review": 1}
     conn.execute("UPDATE drafts SET status='draft', steps_json=replace(steps_json, 'FullEnrich', '')")
     assert l5_copy.auto_approve(cfg, conn) == {"approved": 0, "left_for_review": 1}
+
+
+def test_title_cleanup_and_honorifics():
+    from gtm.layers.l5_copy import clean_first_name, clean_title, usable_title
+    t = clean_title("Fulltime Administratief medewerker Transport MBO Medior Bleiswijk 32 uur", places={"bleiswijk"})
+    assert t == "administratief medewerker transport" and usable_title(t)
+    assert clean_title("ADMINISTRATIEF MEDEWERKER LOGISTIEK") == "administratief medewerker logistiek"
+    assert clean_title("Commercieel Administratief Medewerker | Amsterdam") == "commercieel administratief medewerker"
+    assert clean_title("Medewerker CommerciÃ«le Binnendienst") == "medewerker commerciële binnendienst"
+    assert clean_first_name("Ing. Jan") == "Jan" and clean_first_name("Ir Anna") == "Anna"
+    assert clean_first_name("Dr") == "Dr"            # nothing left after the honorific: keep as is

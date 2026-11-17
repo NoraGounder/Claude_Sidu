@@ -130,11 +130,22 @@ def _names_role(text: str, extra: re.Pattern | None) -> bool:
     return bool(ROLE_WORD.search(text) or (extra and extra.search(text)))
 
 
-def clean_title(title: str, extra: re.Pattern | None = None) -> str:
+# Words in a vacancy title that are not the role: contract, level, hours ("Fulltime ... MBO Medior 32 uur").
+TITLE_FILLER = re.compile(r"(?<![\w-])(full[- ]?time|part[- ]?time|mbo|hbo|wo|junior|medior|senior|"
+                          r"\d+(\s*-\s*\d+)?\s*(uur|uren|u|hours)|\d+)(?![\w-])", re.I)
+
+
+def clean_title(title: str, extra: re.Pattern | None = None, places: set[str] | None = None) -> str:
     t = re.sub(r"\(.*?\)", "", _fix_encoding(title))   # hours, locations in brackets
     parts = [p for p in re.split(r"\s+[-–|/]\s+|\s{2,}|[,?!:;/]", t) if p.strip()] or [t]
     t = next((p for p in parts if _names_role(p, extra)), parts[0])   # "Fulltime / Accounts Administrator"
+    t = TITLE_FILLER.sub(" ", t)
+    if places:                                          # "... Binnendienst Alkmaar": the city is not the role
+        t = " ".join(w for w in t.split() if w.lower() not in places)
     t = re.sub(r"\s+", " ", t).strip(" ,.-")
+    words = t.split()
+    if words and all(w.isupper() for w in words if len(w) > 1):
+        t = t.lower()                                   # "ADMINISTRATIEF MEDEWERKER" is shouting, not an acronym
     if not any(len(w) > 1 and w.isupper() for w in t.split()):
         t = t[:1].lower() + t[1:]
         t = " ".join(w if any(c.isupper() for c in w[1:]) else w.lower() for w in t.split())
@@ -148,8 +159,13 @@ def usable_title(title: str, extra: re.Pattern | None = None) -> bool:
             and (len(title.split()) > 1 or bool(PERSON_NOUN.search(title))))   # "Administratie" is a department
 
 
+HONORIFIC = re.compile(r"^(ing|ir|dr|drs|mr|mrs|ms|prof|dhr|mevr|bc|ba|msc)\.?\s+", re.I)
+
+
 def clean_first_name(name: str) -> str:
     name = (name or "").strip()
+    while HONORIFIC.match(name) and len(HONORIFIC.sub("", name, count=1).strip()) > 1:
+        name = HONORIFIC.sub("", name, count=1).strip()     # "Ing. Jan" -> "Jan"
     if name.isupper() and len(name) <= 3:
         return name                    # initials used as a first name ("TVN"): "Tvn" would read as a typo
     return name.title() if name.isupper() or name.islower() else name
@@ -198,10 +214,15 @@ def facts_for(conn, account: dict, seq: dict | None = None, rules: SignalRules =
                 facts["job_title"] = {"value": hit["label"] if hit else role, "raw": e["quote"], "source": e["url"]}
                 break
     else:
+        places = {w.lower() for w in re.findall(r"[\w'-]+", account.get("city") or "")}
+        for e in ev:                     # job postings name their place: "... (posted 2026-11-10, Breda)"
+            m = re.search(r"\(posted [\d-]*,\s*([^)]+)\)$", e["quote"] or "")
+            if m:
+                places |= {w.lower() for w in re.findall(r"[\w'-]+", m.group(1))}
         exact = next((t for t in jev_titles + rule_titles
-                      if t in titles and usable_title(clean_title(t, extra), extra)), None)
+                      if t in titles and usable_title(clean_title(t, extra, places), extra)), None)
         if exact:
-            facts["job_title"] = {"value": clean_title(exact, extra), "raw": exact, "source": careers}
+            facts["job_title"] = {"value": clean_title(exact, extra, places), "raw": exact, "source": careers}
     if "job_title" in facts and seq.get("job_title_qa"):
         facts["job_title"]["qa"] = seq["job_title_qa"]
     if len(titles) >= 5:
@@ -269,6 +290,8 @@ def render(seq: dict, lang: str, hook: str, process: str, facts: dict, contact: 
         "company": clean_company(account["name"], seq.get("company_suffixes"), seq.get("company_name_cut")),
         **fact_values(seq, facts),
         "sender_first_name": sender.get("first_name", ""),
+        "sender_full_name": sender.get("full_name") or sender.get("first_name", ""),
+        "sender_title": sender.get("title", ""),
         "gdpr_notice": gdpr,
     }
     values["greeting"] = _pick(seq["greetings"][lang], contact["id"], "greeting")
@@ -417,7 +440,12 @@ def auto_approve(cfg: ClientConfig, conn) -> dict:
     the GDPR notice is in email 1, every step is filled in, and no banned claim appears. The rest stay
     for a person (export-drafts)."""
     rules = load_rules(cfg)
-    banned = BANNED + tuple(p.lower() for p in load_sequence(cfg).get("banned_phrases", []))
+    seq = load_sequence(cfg)
+    banned = BANNED + tuple(p.lower() for p in seq.get("banned_phrases", []))
+    # Optional (sequence.yaml every_step_must_contain): text each email must carry, e.g. the opt-out
+    # ("'stop'"), so a follow-up never goes out without one (The Marble Jar, audit H1).
+    must = [m.lower() for m in ([seq["every_step_must_contain"]] if isinstance(seq.get("every_step_must_contain"), str)
+                                else seq.get("every_step_must_contain") or [])]
     threshold = cfg.ai["thresholds"]["unsupported_claim"]
     counts = {"approved": 0, "left_for_review": 0}
     ts = db.now_iso()
@@ -428,6 +456,7 @@ def auto_approve(cfg: ClientConfig, conn) -> dict:
         ok = (d["status"] == "draft" and (d["qa_unsupported_p"] or 0) < threshold
               and rules["gdpr_notice"][d["language"]] in steps[0]["body"]
               and all(s["body"].strip() and "{" not in s["body"] for s in steps)
+              and all(m in s["body"].lower() for s in steps for m in must)
               and not any(b in text for b in banned))
         if ok:
             conn.execute("UPDATE drafts SET status='approved', review_note=?, reviewed_at=?, updated_at=? WHERE id=?",

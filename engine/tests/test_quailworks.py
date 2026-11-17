@@ -83,7 +83,8 @@ def test_marble_jar_prompts_and_rules_are_unchanged(env):
     assert l2_prefilter.job_signal(cfg) == "admin_job_ad"
     seq = l5_copy.load_sequence(cfg)
     assert l5_copy.supported_hooks(seq, {"job_title": 1, "erp": 1}) == ["admin_job_ad", "erp_mention", "generic"]
-    assert l5_copy.named_facts(seq) == l5_copy.DEFAULT_NAMED_FACTS
+    facts = l5_copy.named_facts(seq)                 # TMJ adds admin_hiring (audit M5); erp is the default
+    assert facts["erp"] == l5_copy.DEFAULT_NAMED_FACTS["erp"] and facts["admin_hiring"]["signal"] == "admin_job_ad"
 
 
 # ---------- Layer 2 ----------
