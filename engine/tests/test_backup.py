@@ -96,8 +96,12 @@ def test_vault_keeps_latest_and_one_commit(env, monkeypatch):
     assert commits == "1"
 
 
-def test_cli_guard_refuses_start_without_backup(env, monkeypatch, capsys):
+def test_cli_guard_refuses_start_without_backup_only_when_required(env, monkeypatch, capsys):
     from gtm.cli import _backup_guard
     monkeypatch.delenv("GTM_BACKUP_GUARD", raising=False)
+    monkeypatch.setattr("gtm.cli.load_client", lambda c: object())
+    monkeypatch.setattr("gtm.layers.l6_send.load_sending", lambda cfg: {"require_backup": True})
     assert _backup_guard("acme") is False
     assert "Refused" in capsys.readouterr().out
+    monkeypatch.setattr("gtm.layers.l6_send.load_sending", lambda cfg: {})
+    assert _backup_guard("acme") is True          # opt-in: clients without the key are unchanged

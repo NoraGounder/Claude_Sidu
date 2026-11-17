@@ -181,6 +181,19 @@ def test_push_creates_paused_campaign_with_checked_mailboxes_and_never_starts(en
     assert l6_send.plan_push(cfg, conn).eligible == {}           # never uploaded twice
 
 
+def test_daily_new_leads_shared_only_by_regions_with_leads(env):
+    # Audit C2: three regions are defined, but only nl has leads; nl gets the whole daily share.
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    _approved(conn, "Groothandel BV", "NL", "Anna", "anna@groothandel.example")
+    stub = StubSmartlead()
+    l6_send.push(cfg, conn, sl=SmartleadClient(api_key="test-key", session=stub))
+    schedule = next(j for m, p, _, j in stub.calls if p.endswith("/schedule"))
+    daily = cfg.limits.sending.get("max_emails_per_day", 120)
+    assert len(l6_send.load_sending(cfg)["regions"]) >= 3
+    assert schedule["max_new_leads_per_day"] == daily // 4
+
+
 def test_sync_classifies_masked_replies_and_suppresses_unsubscribes(env):
     cfg = load_client(CLIENT)
     conn = db.connect()

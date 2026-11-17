@@ -66,7 +66,7 @@ segments:
   - {name: installation_nl,  enabled: true , industry_group: installation,  locations: [Netherlands],    max_items: 300}
   - {name: manufacturing_nl, enabled: true , industry_group: manufacturing, locations: [Netherlands],    max_items: 300}
 
-allowed_countries: [US, GB, IE, NL]   # B2B cold email allowed with opt-out (check NL rules with legal before launch)
+allowed_countries: [US, GB, IE, NL, BE]   # NL and BE need prior consent by law; risk accepted for the first batch (decisions.md D18, D20)
 
 exclusions:
   # Company names containing any of these are dropped in Layer 1 (case-insensitive).

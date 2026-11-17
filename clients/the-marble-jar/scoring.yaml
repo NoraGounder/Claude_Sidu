@@ -17,8 +17,8 @@ fit:
     US: 15
     GB: 15
     IE: 12
-    NL: 15      # previous market
-    BE: 10      # previous market
+    NL: 15      # first market (D7)
+    BE: 10      # sent with the NL campaign (D20)
   website_reachable: 5
   dutch_language_site: 0    # no longer relevant: English-speaking market
   # Seen in the first live Layer 1 data (e.g. "Hilti Nederland BV"): local arms of large groups

@@ -8,7 +8,7 @@ import yaml
 # Opt-in safeguards The Marble Jar turned on for its launch (decisions.md D15-D17). Tests that use its
 # config as the engine's default behaviour take them out again; test_quailworks.py checks they are set.
 LAUNCH_SAFEGUARDS = {"gate.yaml": ["verify_statuses"],
-                     "sending.yaml": ["min_warmup_days", "min_warmup_reputation", "send_order"]}
+                     "sending.yaml": ["min_warmup_days", "min_warmup_reputation", "send_order", "require_backup"]}
 
 
 def engine_defaults(client_dir: Path) -> None:

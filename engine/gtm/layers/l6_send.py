@@ -233,8 +233,9 @@ def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushP
                 "stop_lead_settings": {"stop_on_reply": s["stop_on_reply"],
                                        "stop_on_auto_reply": s["stop_on_auto_reply"], "stop_on_click": False},
                 "send_as_plain_text": s["send_as_plain_text"]})
-            # Each new lead gets up to 4 emails; share the daily cap across regions.
-            per_region = max(1, daily // 4 // max(1, len(sending["regions"])))
+            # Each new lead gets up to 4 emails; share the daily cap across the regions that have
+            # leads to send now. Regions only defined in sending.yaml take no share (audit C2).
+            per_region = max(1, daily // 4 // max(1, len(plan.eligible)))
             sl.set_schedule(campaign_id, {"timezone": r["timezone"], **{k: v for k, v in sending["schedule"].items()},
                                           "max_new_leads_per_day": per_region})
             cur = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"

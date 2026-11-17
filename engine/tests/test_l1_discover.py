@@ -137,10 +137,10 @@ def test_cli_dry_run_spends_nothing(env, capsys):
 
 
 def test_real_config_launches_in_the_netherlands_only(tmp_path, monkeypatch):
-    """Guard (decisions.md D7): Dutch segments only until the Dutch results prove the message."""
+    """Guard (decisions.md D7, D20): Dutch segments only (Belgium rides along) until the results prove the message."""
     monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path / "data"))
     cfg = load_client(CLIENT)
-    assert cfg.icp.allowed_countries == ["US", "GB", "IE", "NL"]
+    assert cfg.icp.allowed_countries == ["US", "GB", "IE", "NL", "BE"]   # BE: D20
     assert {s.name for s in cfg.icp.segments if s.enabled} == {
         "logistics_nl", "wholesale_nl", "installation_nl", "manufacturing_nl"}
     assert "Mendix is not offered" in cfg.icp.offer_summary

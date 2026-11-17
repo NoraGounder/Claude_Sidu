@@ -571,10 +571,16 @@ def cmd_learn(args) -> int:
 
 
 def _backup_guard(client: str) -> bool:
-    """push --live and start run only when the current database is backed up off-site (D23)."""
+    """With sending.yaml `require_backup: true`, push --live and start run only when the current
+    database is backed up off-site (The Marble Jar D23). Without the key, nothing changes."""
     from gtm import backup
+    from gtm.layers import l6_send
 
-    if os.environ.get("GTM_BACKUP_GUARD", "on").lower() == "off":
+    try:
+        required = bool(l6_send.load_sending(load_client(client)).get("require_backup"))
+    except (OSError, ValueError):
+        required = False
+    if not required or os.environ.get("GTM_BACKUP_GUARD", "on").lower() == "off":
         return True
     fresh, why = backup.is_fresh(client)
     if not fresh:

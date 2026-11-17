@@ -8,7 +8,7 @@ mailbox_domains: [getmarblejar.com, marblejarhub.com]
 
 # One campaign per sending region, so emails arrive in the recipient's working hours.
 regions:
-  nl:    {countries: [NL],     timezone: Europe/Amsterdam}
+  nl:    {countries: [NL, BE], timezone: Europe/Amsterdam}   # Belgium in the NL campaign (D20)
   uk_ie: {countries: [GB, IE], timezone: Europe/London}
   us:    {countries: [US],     timezone: America/New_York}
 
@@ -41,3 +41,6 @@ min_warmup_reputation: 95
 # The first weeks' small volume goes to the strongest companies first: tier, then signal and fit
 # (decisions.md D16).
 send_order: best_first
+
+# push --live and start refuse while the database is not backed up off-site (decisions.md D23).
+require_backup: true
