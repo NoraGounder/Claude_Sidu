@@ -64,6 +64,18 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
   a Recruitee feed could, later); BlitzAPI for discovery and emails (coverage of Dutch SMEs untested).
   Revisit after the first 100 contacts.
 
+## Legal basis in the Netherlands (2026-11-17)
+
+- **D18. First batch to Dutch companies by email, risk accepted by Sidarth.** The audit of
+  2026-11-16 found that article 11.7 of the Telecommunicatiewet requires prior consent for
+  commercial email to companies too (ACM), so an opt-out line alone does not make cold email to
+  Dutch addresses compliant. Sidarth decided on 2026-11-17 to send the initial, already enriched
+  batch of Dutch contacts anyway and accepts that risk knowingly. Conditions that keep the risk low:
+  low volume (limits.yaml), the sender's full identity and an opt-out line in every email (audit
+  H1), every "stop" and every unsubscribe honoured at once and suppressed for good, and a pause on
+  any spam complaint. Scope: this first batch only; new Dutch contacts after it need a new
+  decision. Change if: a complaint, a regulator letter, or legal advice says otherwise.
+
 ## Needed from Mithun (only what we cannot do for him)
 
 One message, at launch, a few minutes:
