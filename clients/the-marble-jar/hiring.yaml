@@ -29,3 +29,7 @@ searches:
      industries: [Manufacturing, Machinery Manufacturing, Industrial Machinery Manufacturing,
                   Fabricated Metal Products, Food and Beverage Manufacturing, Plastics Manufacturing,
                   Packaging and Containers Manufacturing, Electrical Equipment Manufacturing]}
+
+# `discover-hiring --postings`: live postings stored as evidence on accounts we already have. Without an
+# industry filter, so parked Tier 3 accounts whose LinkedIn label differs are matched too (2026-11-19).
+postings: {max_postings: 1000, any_industry: true}

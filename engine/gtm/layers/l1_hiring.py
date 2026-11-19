@@ -178,7 +178,9 @@ def fetch_postings(cfg: ClientConfig, conn, max_postings: int | None = None,
     countries = sorted({c for p in plans for c in p.company["hq"]["country_code"]["include"]})
     job = plans[0].job if plans else {}
     company = {"employee_count": plans[0].company["employee_count"], "hq": {"country_code": {"include": countries}}}
-    if industries:
+    # hiring.yaml postings.any_industry: match postings to accounts we already have whatever industry
+    # label BlitzAPI gives them (LinkedIn labels differ from the ones our discovery used).
+    if industries and not conf.get("postings", {}).get("any_industry"):
         company["industry"] = {"include": industries}
     check_records(conn, cfg, limit)
     api = client or BlitzClient()
