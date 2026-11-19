@@ -55,6 +55,22 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 | 6 | Upload approved, gate-ready leads (one campaign per region, checked mailboxes, one contact per company); start only with `--i-confirm` after approval; sync replies, bounces and unsubscribes (Jev 1.14 classifies masked replies) | Smartlead + SmartSenders mailboxes, TypeSafe Jev 1.14 | `gtm/layers/l6_send.py` | built (one Smartlead account for all clients; key in the URL: set `SMARTLEAD_API_KEY` as an environment variable; each client links only its own `mailbox_domains`, and push stops if a domain is listed for two clients) |
 | 7 | Handoff: replies needing a person become deals and one-page briefs with the first answer; outcomes (the client's one word, proposal, won with value) feed learning and lookalikes; HubSpot mirror (writes only with `--live` after approval) | HubSpot (free), templates/replies.yaml | `gtm/layers/l7_handoff.py` | built |
 
+## ETA search (clients/eta, added 2026-11-19)
+
+Not an outbound client: Sidarth's own search for a business to buy. Design: the whiteboard "ETA Deal Sourcing
+Pipeline"; decisions: `clients/eta/decisions.md`; buy box and sieve-1 bars: `clients/eta/eta.yaml`. Milestone 1
+reads the UK register only (Companies House, free, key in `COMPANIES_HOUSE_API_KEY`; in a cloud session it is a
+network secret for api.company-information.service.gov.uk and document-api.company-information.service.gov.uk,
+so set the variable to `proxy-injected`). Code: `engine/gtm/eta/`, `engine/gtm/ixbrl.py`,
+`engine/gtm/sources/companies_house.py`; tables `eta_*` in data/engine.db. No AI calls, no outreach yet.
+
+```bash
+python -m gtm --client eta eta-discover --dry-run              # searches per SIC code, calls nothing
+python -m gtm --client eta eta-run --code 71200 --max-per-code 100 --limit 100   # discover, enrich, screen, list
+python -m gtm --client eta eta-stats
+python -m gtm --client eta eta-evidence <company number>       # evidence ledger for one company
+```
+
 ## How to run
 
 ```bash

@@ -8,6 +8,7 @@ dependencies = [
   "pydantic>=2.6",
   "requests>=2.31",
   "cryptography>=42",
+  "beautifulsoup4>=4.12",   # used by the crawler and the iXBRL reader; was installed but not declared
 ]
 
 [project.optional-dependencies]

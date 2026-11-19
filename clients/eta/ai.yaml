@@ -1,0 +1,11 @@
+# AI policy, same as every client (engine/gtm/sources/jev.py enforces it):
+# only TypeSafe Jev 1.14 makes AI decisions, no fallback, every call logged in jev_calls.
+# Milestone 1 (registry sourcing + sieve 1) makes no AI calls. Sieve 2 (simple to understand, moat,
+# AI exposure, Stanford industry score) will use the questions below once it is built.
+
+provider: openrouter
+endpoint: https://openrouter.ai/api/alpha/decisions
+model: typesafe/jev-1.14
+api_key_env: OPENROUTER_API_KEY
+fallback: none
+workers: 4

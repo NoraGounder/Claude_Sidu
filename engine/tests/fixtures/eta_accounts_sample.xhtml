@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic iXBRL accounts for tests only. The company, its number and every figure are made up. -->
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
+      xmlns:xbrli="http://www.xbrl.org/2003/instance" xmlns:xbrldi="http://xbrl.org/2006/xbrldi"
+      xmlns:core="http://xbrl.frc.org.uk/fr/2021-01-01/core" xmlns:bus="http://xbrl.frc.org.uk/cd/2021-01-01/business"
+      xmlns:ixt2="http://www.xbrl.org/inlineXBRL/transformation/2011-07-31">
+<head><title>Example Testing Services Limited - Accounts</title></head>
+<body>
+<div style="display:none"><ix:header><ix:resources>
+  <xbrli:context id="cy"><xbrli:entity><xbrli:identifier scheme="http://www.companieshouse.gov.uk/">99999901</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:startDate>2024-04-01</xbrli:startDate><xbrli:endDate>2025-03-31</xbrli:endDate></xbrli:period></xbrli:context>
+  <xbrli:context id="py"><xbrli:entity><xbrli:identifier scheme="http://www.companieshouse.gov.uk/">99999901</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:startDate>2023-04-01</xbrli:startDate><xbrli:endDate>2024-03-31</xbrli:endDate></xbrli:period></xbrli:context>
+  <xbrli:context id="cy_i"><xbrli:entity><xbrli:identifier scheme="http://www.companieshouse.gov.uk/">99999901</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2025-03-31</xbrli:instant></xbrli:period></xbrli:context>
+  <xbrli:context id="py_i"><xbrli:entity><xbrli:identifier scheme="http://www.companieshouse.gov.uk/">99999901</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2024-03-31</xbrli:instant></xbrli:period></xbrli:context>
+  <xbrli:context id="cy_i_after"><xbrli:entity><xbrli:identifier scheme="http://www.companieshouse.gov.uk/">99999901</xbrli:identifier>
+    <xbrli:segment><xbrldi:explicitMember dimension="core:MaturitiesOrExpirationPeriodsAxis">core:AfterOneYear</xbrldi:explicitMember></xbrli:segment></xbrli:entity>
+    <xbrli:period><xbrli:instant>2025-03-31</xbrli:instant></xbrli:period></xbrli:context>
+  <xbrli:context id="cy_i_within"><xbrli:entity><xbrli:identifier scheme="http://www.companieshouse.gov.uk/">99999901</xbrli:identifier>
+    <xbrli:segment><xbrldi:explicitMember dimension="core:MaturitiesOrExpirationPeriodsAxis">core:WithinOneYear</xbrldi:explicitMember></xbrli:segment></xbrli:entity>
+    <xbrli:period><xbrli:instant>2025-03-31</xbrli:instant></xbrli:period></xbrli:context>
+  <xbrli:context id="cy_i_share"><xbrli:entity><xbrli:identifier scheme="http://www.companieshouse.gov.uk/">99999901</xbrli:identifier>
+    <xbrli:segment><xbrldi:explicitMember dimension="core:EquityClassesAxis">core:ShareCapital</xbrldi:explicitMember></xbrli:segment></xbrli:entity>
+    <xbrli:period><xbrli:instant>2025-03-31</xbrli:instant></xbrli:period></xbrli:context>
+</ix:resources></ix:header></div>
+
+<p>Company number <ix:nonNumeric name="bus:UKCompaniesHouseRegisteredNumber" contextRef="cy">99999901</ix:nonNumeric></p>
+<p><ix:nonNumeric name="bus:EntityCurrentLegalOrRegisteredName" contextRef="cy">Example Testing Services Limited</ix:nonNumeric></p>
+
+<table>
+<tr><td>Turnover</td>
+  <td><ix:nonFraction name="core:TurnoverRevenue" contextRef="cy" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">2,400,000</ix:nonFraction></td>
+  <td><ix:nonFraction name="core:TurnoverRevenue" contextRef="py" unitRef="GBP" decimals="-3" scale="3" format="ixt2:numdotdecimal">2,100</ix:nonFraction></td></tr>
+<tr><td>Operating profit</td>
+  <td><ix:nonFraction name="core:OperatingProfitLoss" contextRef="cy" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">360,000</ix:nonFraction></td>
+  <td><ix:nonFraction name="core:OperatingProfitLoss" contextRef="py" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">290,000</ix:nonFraction></td></tr>
+<tr><td>Interest payable</td>
+  <td>(<ix:nonFraction name="core:InterestPayableSimilarCharges" contextRef="cy" unitRef="GBP" decimals="0" sign="-" format="ixt2:numdotdecimal">5,000</ix:nonFraction>)</td></tr>
+<tr><td>Average employees</td>
+  <td><ix:nonFraction name="core:AverageNumberEmployeesDuringPeriod" contextRef="cy" unitRef="pure" decimals="0">24</ix:nonFraction></td>
+  <td><ix:nonFraction name="core:AverageNumberEmployeesDuringPeriod" contextRef="py" unitRef="pure" decimals="0">22</ix:nonFraction></td></tr>
+<tr><td>Cash at bank</td>
+  <td><ix:nonFraction name="core:CashBankOnHand" contextRef="cy_i" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">250,000</ix:nonFraction></td>
+  <td><ix:nonFraction name="core:CashBankOnHand" contextRef="py_i" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">180,000</ix:nonFraction></td></tr>
+<tr><td>Creditors due within one year</td>
+  <td><ix:nonFraction name="core:Creditors" contextRef="cy_i_within" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">300,000</ix:nonFraction></td></tr>
+<tr><td>Creditors due after one year</td>
+  <td><ix:nonFraction name="core:Creditors" contextRef="cy_i_after" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">100,000</ix:nonFraction></td></tr>
+<tr><td>Bank loans</td>
+  <td><ix:nonFraction name="core:BankBorrowings" contextRef="cy_i" unitRef="GBP" decimals="0" format="ixt2:zerodash">-</ix:nonFraction></td></tr>
+<tr><td>Net assets</td>
+  <td><ix:nonFraction name="core:NetAssetsLiabilities" contextRef="cy_i" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">900,000</ix:nonFraction></td>
+  <td><ix:nonFraction name="core:NetAssetsLiabilities" contextRef="py_i" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">800,000</ix:nonFraction></td></tr>
+<tr><td>Called up share capital</td>
+  <td><ix:nonFraction name="core:Equity" contextRef="cy_i_share" unitRef="GBP" decimals="0">100</ix:nonFraction></td></tr>
+<tr><td>Profit and loss reserve</td>
+  <td><ix:nonFraction name="core:RetainedEarningsAccumulatedLosses" contextRef="cy_i" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">850,000</ix:nonFraction></td>
+  <td><ix:nonFraction name="core:RetainedEarningsAccumulatedLosses" contextRef="py_i" unitRef="GBP" decimals="0" format="ixt2:numdotdecimal">750,000</ix:nonFraction></td></tr>
+</table>
+</body></html>

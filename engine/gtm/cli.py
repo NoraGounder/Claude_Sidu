@@ -849,6 +849,9 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--status", default="qualified_l1")
     e.add_argument("--out")
     e.set_defaults(func=cmd_export)
+
+    from gtm.eta import cli as eta_cli   # ETA search commands (clients/eta): eta-discover ... eta-evidence
+    eta_cli.register(sub)
     return parser
 
 

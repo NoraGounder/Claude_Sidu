@@ -1,0 +1,23 @@
+# Layer 0: the ETA search. Not an agency client: this is Sidarth's own search for a business to buy
+# (entrepreneurship through acquisition). The board "ETA Deal Sourcing Pipeline" is the design;
+# decisions.md records what was decided and what would change it.
+# Shareable repo: real names, contact details and anything about a specific target belong in ./private/ (gitignored).
+
+client: eta
+display_name: ETA search (own acquisition)
+operating_model: own_acquisition   # we are the buyer; nothing here is sold to anyone
+
+# Who does what (board, "Your part, and only yours"). Claude runs every step; Sidarth only:
+your_part:
+  - set the bars once (eta.yaml checklist thresholds)
+  - give each finished deal pack a final yes or no
+  - meet the owner
+  - sign
+
+language:
+  default: en
+  by_country: {}
+  fallback: en
+
+crm:
+  hubspot_token_env: HUBSPOT_TOKEN_ETA   # not used yet; a separate portal from Quailworks' sales pipeline

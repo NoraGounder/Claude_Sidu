@@ -1,0 +1,17 @@
+# The shared config loader (engine/gtm/config.py) expects an icp.yaml for every client. The ETA search
+# does not use LinkedIn segments or personas: its buy box and checklist live in eta.yaml. These values
+# only keep shared commands (stats, backup, restore) working for this client.
+
+version: 1
+buyer_profile: >-
+  Not used. The ETA search screens UK companies to buy, not prospects to sell to (see eta.yaml).
+offer_summary: >-
+  Not used.
+
+company:
+  employees_min: 10
+  employees_max: 250
+
+industry_groups: {}
+segments: []
+allowed_countries: [GB]

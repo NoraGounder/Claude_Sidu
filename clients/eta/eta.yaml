@@ -1,0 +1,91 @@
+# ETA search: the buy box, the search plan and the sieve-1 checklist.
+# Every number here is a starting guess from the board (investment checklist, Permanent Equity checks,
+# Stanford Primer). Sidarth sets the real bars once (board: "Your part"); decisions.md records changes.
+
+market: GB            # milestone 1: UK first (decisions.md E1). Poland next (KRS + RDF filings).
+
+# ---------- Where candidates come from (Companies House advanced search) ----------
+search:
+  company_type: ltd                # private limited companies only
+  company_status: active
+  incorporated_to: "2015-12-31"    # 10+ years old (checklist: consistent history)
+  page_size: 500                   # companies per request (API maximum 5000)
+  max_per_code_per_run: 1000       # each run continues where the last one stopped
+  # Industry-agnostic in principle (the buy box says "any industry"), but a search needs a list.
+  # These are essential, unglamorous, recurring B2B services and light industry: the "boring business"
+  # profile Permanent Equity and the board's value rules point to. Add or remove codes freely.
+  sic_codes:
+    33120: Repair of machinery
+    33130: Repair of electronic and optical equipment
+    33140: Repair of electrical equipment
+    33190: Repair of other equipment
+    33200: Installation of industrial machinery and equipment
+    37000: Sewerage
+    38110: Collection of non-hazardous waste
+    38120: Collection of hazardous waste
+    39000: Remediation and other waste management
+    43210: Electrical installation
+    43220: Plumbing, heat and air-conditioning installation
+    43290: Other construction installation
+    43910: Roofing activities
+    71121: Engineering design for industrial process and production
+    71122: Engineering-related scientific and technical consulting
+    71129: Other engineering activities
+    71200: Technical testing and analysis
+    74901: Environmental consulting
+    80200: Security systems service activities
+    81210: General cleaning of buildings
+    81222: Specialised cleaning services
+    81229: Other building and industrial cleaning
+    81291: Disinfecting and exterminating services
+    81300: Landscape service activities
+    25610: Treatment and coating of metals
+    25620: Machining
+    28290: Other general-purpose machinery
+    26511: Electronic measuring and testing equipment
+    46690: Wholesale of other machinery and equipment
+    77320: Renting of construction machinery and equipment
+    77390: Renting of other machinery and equipment
+    52290: Other transportation support activities
+
+# Dropped before any further request: holding vehicles, property, finance, dormant shells.
+exclude:
+  sic_codes: [64209, 64205, 64999, 68100, 68209, 68320, 70100, 99999, 74990]
+  name_keywords: [holdings, holding, investments, property, properties, estates, nominees,
+                  "management company", "rtm company", trustees, "pension", "(uk) branch"]
+
+# ---------- Sieve 1: public numbers only (Companies House profile, filed accounts, owners) ----------
+sieve1:
+  # Hard fails: any one drops the company (a "review" can still be forced by hand later).
+  hard:
+    min_years: 10
+    # Companies House last_accounts.type values. Left out: dormant, micro-entity (too small), initial,
+    # and the subsidiary exemptions (owned by a parent, not by an owner).
+    accounts_types_allowed: [full, medium, small, group, total-exemption-full, total-exemption-small,
+                             audited-abridged, unaudited-abridged]
+    exclude_insolvency_history: true
+    exclude_overdue_accounts: true
+    exclude_corporate_majority_owner: true     # owned by a group or fund: not an owner-run business
+    max_accounts_age_months: 24                # latest accounts must be this recent
+    min_net_assets_gbp: 1                      # negative equity: out
+    employees_min: 10                          # when the accounts disclose it
+    employees_max: 250
+    turnover_min_gbp: 1500000                  # when disclosed (small companies may omit the P&L)
+    turnover_max_gbp: 30000000
+  # Soft bars: scored, never a reason to drop on their own (board: bars trigger review, not rejection).
+  bars:
+    operating_margin_min: 0.10                 # Stanford: under 10% is thin
+    net_debt_to_net_assets_max: 1.0            # "low debt today"
+    retained_earnings_growth_years: 2          # of the last 3: a profit proxy when no P&L is filed
+    owner_age_succession: 60                   # majority owner aged 60+: strong succession signal
+    owner_age_watch: 55
+  # Weights add up to 100. Pass >= pass_score with no hard fail; review in between; below: fail.
+  weights:
+    profit_evidence: 30
+    balance_sheet: 20
+    size_fit: 15
+    succession: 20
+    history: 10
+    disclosure: 5
+  pass_score: 60
+  review_score: 40

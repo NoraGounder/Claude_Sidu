@@ -1,0 +1,16 @@
+# Layer 0: hard caps. The engine refuses any paid run that would push a vendor past its monthly budget.
+# Raise a cap only when the user asks.
+
+month_budget_usd:
+  companies_house: 0     # free API: the cap stays 0 and every call is logged at $0
+  openrouter: 2          # TypeSafe Jev 1.14 for sieve 2 (not built yet)
+
+unit_price_usd:
+  "companies_house:request": 0.0
+  "openrouter:typesafe/jev-1.14:request": 0.0001
+
+# Companies House allows 600 requests per 5 minutes per key. The client paces itself below that and
+# backs off on 429. Daily request ceiling for this client, so one run cannot eat the whole quota.
+companies_house:
+  requests_per_5_min: 550
+  max_requests_per_run: 5000
