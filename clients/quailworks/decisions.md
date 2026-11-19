@@ -457,7 +457,12 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   day cannot burn the new domains while nobody is watching. The backup guard (`require_backup`) stays off:
   it needs an off-site vault and key (GTM_BACKUP_KEY, GTM_BACKUP_REMOTE) that this environment does not
   have yet, and switching it on now would block the launch upload. Would change: the vault being set up
-  (then turn it on and back up before `push --live`).
+  (then turn it on and back up before `push --live`). Done 2026-11-19: the user approved the vault for this
+  session, the first encrypted backup is off-site, and `require_backup: true` is on.
+- **Q49. Rehearsal on 25 November (2026-11-19, the user's OK).** `rehearse` sends the real four-step sequence
+  from Quailworks' own mailboxes to two of Quailworks' own inboxes (sid@ and hello@quailworks.co), checks
+  threading, plain text and the footer, then is cleaned up. It runs once the first six mailboxes have had 14
+  days of warm-up. Nothing reaches a prospect.
 
 - **Q48. Use the flat BlitzAPI plan for signals, not volume (2026-11-19, the user: "make the best use of
   every tool we already pay for").** The limit is sending, not data: about 264 new leads can be emailed in

@@ -52,3 +52,6 @@ spread_daily_cap: true
 # `sync` pauses an active campaign on any spam complaint, or when more than 3% of uploaded leads bounced
 # (from 20 leads on). Starting again needs `start --i-confirm` with the user's approval (Q47).
 auto_pause: {on_complaint: true, max_bounce_rate: 0.03, min_sent: 20}
+
+# `push --live` and `start` run only when the current database is backed up to the off-site vault (Q47).
+require_backup: true
