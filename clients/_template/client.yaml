@@ -1,0 +1,34 @@
+# Layer 0: client identity and operating model. TEMPLATE: fill every <...>.
+# Public repo: real names, contact details and contracts belong in ./private/ (gitignored).
+
+client: <slug, same as the folder name>
+display_name: <Client name>
+website: <https://client.example>
+offices: [<city (country)>]
+
+operating_model: done_for_you   # done_for_you (we run outbound for a client) | own_outbound (Quailworks itself)
+
+language:
+  default: en
+  by_country: {}       # e.g. {NL: nl} when emails follow the contact's country
+  fallback: en
+
+sender:
+  mode: founder                  # founder | agency_rep
+  details: private/sender.yaml   # name, title, booking link (copy sender.example.yaml)
+  consent_to_send_in_name: pending   # "granted" only after the sender confirms (set as sender in Smartlead counts)
+  consent_scope: send in the sender's own name, from the client's own sending domains only
+
+handoff:
+  channel: Smartlead inbox + calendar invite
+  outcome_capture: one word after each call (qualified / not a fit / follow up)
+
+crm:
+  hubspot_token_env: HUBSPOT_TOKEN_<CLIENT>   # the client's own HubSpot portal, never another client's
+
+# Quailworks decides (decisions.md). Only these need the client, in one message at launch (CLAUDE.md rule 8):
+needed_from_client:
+  - Two sending domains with three mailboxes each in the sender's name, warm-up on (14+ days before sending)
+  - The sender's name set on the mailboxes in Smartlead (records consent) and a booking link
+  - A HubSpot private-app token, saved as an environment variable
+  - The "go" to start sending (CLAUDE.md rule 3)

@@ -1,0 +1,159 @@
+# Layer 0: ideal customer profile. Layer 1 turns segments into searches; Layer 3 uses personas.
+# Industry IDs are LinkedIn industry codes (v2), checked against
+# github.com/HarvestAPI/linkedin-industry-codes-v2 on 2026-11-10.
+
+version: 1
+
+# Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md Q8-Q10). Prospects must have budget, high
+# margins and a large market of their own, so that booked meetings are worth a lot to them (Q9).
+buyer_profile: >-
+  US and UK technology companies with 11-1,000 employees that sell high-value products (typical deals
+  of $25,000 or more) to engineering, manufacturing, aerospace, space or defense organizations:
+  industrial and engineering software, robotics and automation, test, measurement and inspection
+  equipment, and venture-backed aerospace, space and defense technology. Strong fit: software or
+  high-tech hardware margins, recent funding or clear growth, and thousands of possible customer
+  accounts. Poor fit: build-to-print machine shops and fabricators, distributors and parts suppliers
+  that compete on price, and engineering staffing or consulting firms.
+# What we offer, in one line, for Jev's contact-relevance question (decisions.md Q1).
+offer_summary: >-
+  Signal-based outbound built as a system: finds accounts showing a reason to buy, writes to the right
+  person from facts on their own website, and books first meetings; built in the client's own tools.
+
+company:
+  employees_min: 11
+  employees_max: 1000
+  # Values passed to the Harvest company-size filter (same spelling as The Marble Jar's live runs).
+  linkedin_company_sizes: ["11-50", "51-200", "201-500", "501-1000"]
+
+industry_groups:
+  industrial_software:
+    label: Industrial and engineering software
+    ids: [4]                 # Software Development, narrowed by each segment's search word
+  robotics_automation:
+    label: Robotics and automation technology
+    ids: [147, 3247, 3248]   # Automation Machinery Manufacturing; Robot Manufacturing; Robotics Engineering
+  test_measurement:
+    label: Test, measurement and inspection equipment
+    ids: [983]               # Measuring and Control Instrument Manufacturing
+  aerospace_space:
+    label: Aerospace, space and defense technology
+    ids: [1, 52]             # Defense and Space Manufacturing; Aviation and Aerospace Component Manufacturing
+  # Parked: price-sensitive buyers (decisions.md Q9).
+  automotive_suppliers:
+    label: Automotive parts suppliers
+    ids: [1042]              # Motor Vehicle Parts Manufacturing
+  engineering_services:
+    label: Engineering services
+    ids: [3242]              # Engineering Services
+  precision_parts:
+    label: Precision parts and fabrication
+    ids: [876, 840]          # Turned Products and Fastener Manufacturing; Fabricated Metal Products
+  machinery:
+    label: Industrial machinery
+    ids: [135, 55, 928]      # Industrial Machinery; Machinery; Metalworking Machinery Manufacturing
+
+# One search per segment, 300 companies each per run; the next run continues on the next page (LinkedIn
+# allows 1,000 per search). 2,400 full-mode companies = $9.60 on the paid Apify plan (decisions.md Q20).
+# search_query narrows a broad industry; confirm on the first live run (the raw response is stored).
+segments:
+  # United States: most of the volume (bigger budgets, bigger market; decisions.md Q8)
+  # One-word search words match company names ("Tulsa Truck Manufacturing" tagged as software), so the
+  # software searches use two-word phrases (first live test, 2026-11-10: 17 of 44 were software).
+  - {name: industrial_software_mfg_us, enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: manufacturing}
+  - {name: mfg_software_us,         enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 300, search_query: manufacturing software}
+  - {name: industrial_software_aero_us, enabled: true, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: aerospace software}
+  - {name: industrial_software_ind_us, enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: industrial software}   # only 4 results
+  - {name: eng_software_us,         enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: engineering software}   # matched "Software Engineering" dev shops
+  - {name: industrial_ai_us,        enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 300, search_query: industrial AI}
+  - {name: iiot_us,                 enabled: false, industry_group: industrial_software, locations: [United States], max_items: 300, search_query: IIoT}   # 1 result
+  - {name: robotics_automation_us,  enabled: true,  industry_group: robotics_automation, locations: [United States], max_items: 300}
+  - {name: test_measurement_us,     enabled: false, industry_group: test_measurement,    locations: [United States], max_items: 300}   # all 210 seen; 4% in-signal (Q29)
+  - {name: aerospace_space_us,      enabled: false, industry_group: aerospace_space,     locations: [United States], max_items: 300}   # 11,144 companies but 9% strong fit, 4% in-signal: paused (Q29)
+  # Adjacent software niches whose buyers are engineers and plant teams: 50-company tests (Q29).
+  - {name: simulation_software_us,  enabled: false,  industry_group: industrial_software, locations: [United States], max_items: 50, search_query: simulation software}   # 2 results (2026-11-11)
+  - {name: digital_twin_us,         enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 150, search_query: digital twin}   # 201 on LinkedIn
+  - {name: predictive_maint_us,     enabled: false,  industry_group: industrial_software, locations: [United States], max_items: 50, search_query: predictive maintenance}   # 1 result (2026-11-11)
+  - {name: machine_vision_us,       enabled: true,  industry_group: industrial_software, locations: [United States], max_items: 300, search_query: machine vision}   # 638 on LinkedIn
+  - {name: industrial_automation_sw_us, enabled: false, industry_group: industrial_software, locations: [United States], max_items: 50, search_query: industrial automation}   # 0 results (2026-11-11)
+  - {name: quality_software_us,     enabled: false,  industry_group: industrial_software, locations: [United States], max_items: 50, search_query: quality management software}   # 1 result (2026-11-11)
+  # United Kingdom: software and aerospace/space technology only
+  - {name: industrial_software_uk,  enabled: true,  industry_group: industrial_software, locations: [United Kingdom], max_items: 300, search_query: manufacturing software}
+  - {name: aerospace_space_uk,      enabled: false, industry_group: aerospace_space,     locations: [United Kingdom], max_items: 300}   # 1.6% in-signal, 24% fit (Q29)
+  # Parked (decisions.md Q9): price-sensitive buyers. Re-open only if the core segments run dry.
+  - {name: automotive_suppliers_us, enabled: false, industry_group: automotive_suppliers, locations: [United States], max_items: 300}
+  - {name: engineering_services_us, enabled: false, industry_group: engineering_services, locations: [United States], max_items: 300, search_query: aerospace}
+  - {name: motorsport_engineering_uk, enabled: false, industry_group: engineering_services, locations: [United Kingdom], max_items: 300, search_query: motorsport}
+  - {name: precision_parts_us,      enabled: false, industry_group: precision_parts,      locations: [United States], max_items: 300}
+  - {name: machinery_us,            enabled: false, industry_group: machinery,            locations: [United States], max_items: 300}
+
+# US CAN-SPAM and UK PECR: opt-out and postal address in every first email (gate.yaml). PECR allows
+# business email to corporate subscribers (limited companies); the 11+ employee floor keeps sole traders out.
+allowed_countries: [US, GB]
+
+exclusions:
+  # Company names containing any of these are dropped in Layer 1 (case-insensitive substring).
+  name_keywords:
+    - lead generation
+    - leadgen
+    - demand generation
+    - appointment setting
+    - sales outsourcing
+    - marketing agency
+    - digital agency
+    - growth agency
+    - staffing
+    - recruiting
+    - recruitment
+    - university
+    - college
+    - school
+    - association
+    - foundation
+  # Quailworks itself and its client (decisions.md Q14). Real do-not-contact list: private/exclusions.csv
+  # teamviewer.com: LinkedIn's "Upskill" page points to its large parent (2026-11-10 run).
+  domains: [quailworks.co, quailworks.xyz, themarblejar.io, teamviewer.com]
+
+# Layer 3: who we contact, in priority order. Max 2 per account (scoring.yaml enrichment_policy).
+personas:
+  sales_leader:
+    - Chief Revenue Officer
+    - CRO
+    - VP Sales
+    - VP of Sales
+    - Vice President of Sales
+    - Vice President Sales
+    - Head of Sales
+    - Sales Director
+    - Director of Sales
+    - VP Business Development
+    - Head of Business Development
+    - Director of Business Development
+    - Business Development Director
+    - Business Development Manager   # often the senior seller at aerospace and space companies (Q11)
+    - Commercial Director            # the usual UK title for the head of sales
+    - Head of Commercial
+    - VP Growth
+    - Head of Growth
+    - VP Revenue Operations
+    - Head of Revenue Operations
+    - Director of Revenue Operations
+    - Head of Sales Operations
+  marketing_leader:
+    - CMO
+    - Chief Marketing Officer
+    - VP Marketing
+    - VP of Marketing
+    - Head of Marketing
+    - Marketing Director
+    - Director of Marketing
+  owner_led:          # used only for companies under about 150 employees (Layer 3)
+    - CEO
+    - Chief Executive Officer
+    - Founder
+    - Co-Founder
+    - Owner
+    - President
+    - Managing Director
+    - General Manager
+  # An entry matches at a word end but not inside a longer word ("Intern" keeps "International Sales Director").
+  exclude_titles: [Intern, Internship, Student, Trainee, Traineeship, Assistant, Coordinator, Representative, Product Owner]

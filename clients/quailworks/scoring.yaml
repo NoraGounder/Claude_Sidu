@@ -1,0 +1,151 @@
+# Layer 0 rules, applied in Layer 2. Two separate scores (0-100), then a tier (decisions.md Q9-Q12).
+# Calibrate on the first 20 scored accounts: Quailworks reads them itself (it is the client) and
+# moves weights so the companies it would most like to meet land in Tier 1.
+
+fit:
+  employees:
+    in_range: 30          # 11-1,000
+    sweet_spot: [50, 500] # big enough to fund a retainer, small enough to decide fast
+    sweet_spot_bonus: 10
+  industry_group:
+    industrial_software: 25
+    robotics_automation: 25
+    test_measurement: 25
+    aerospace_space: 20   # mixed: venture-backed tech plus build-to-print shops; Jev's ICP fit sorts them
+    automotive_suppliers: 5   # parked: price-sensitive (decisions.md Q9)
+    engineering_services: 5
+    precision_parts: 5
+    machinery: 10
+  country:
+    US: 15                # bigger budgets and the bigger market
+    GB: 10
+  website_reachable: 5
+  dutch_language_site: 0
+  # A division of a large group usually buys services at group level.
+  subsidiary_of_large_group: -15
+  # TypeSafe Jev 1.14's ICP score (0 poor .. 2 strong), scaled to 0-15 points.
+  jev_icp_fit: 15
+  # Similarity to Quailworks' own won clients (private/best_clients.csv). No effect until it exists (Q13).
+  jev_lookalike: 20
+
+signals:
+  sales_job_ad: 35        # hiring SDR / BDR / inside sales / business development / AE: the work we take over
+  multiple_sales_ads: 15  # two or more such roles open at once
+  trade_show: 15          # exhibits at trade shows: pipeline depends on events
+  sales_stack: 10         # a CRM or sales tool named in a job ad: already invests in outbound
+  channel_sales: 10       # find-a-rep, distributor or request-a-quote selling
+  supplier_certification: 10   # AS9100, IATF 16949, NADCAP, ITAR: proof they sell into aerospace or automotive
+  venture_backed: 15      # named investors or a Series round on the site: budget to spend and a board asking for pipeline
+  headcount_growth: 10    # several open roles, growth language, new facility or new machines
+
+signal_bonuses:
+  multiple_sales_ads: {signal: sales_job_ad, min_labels: 2}
+
+# Evidence rules for this client (they replace the engine's default Dutch admin rules).
+# Patterns are case-insensitive unless the signal is listed in case_sensitive_signals.
+detect:
+  sales_job_ad:
+    # No bare "SDR": in electronics it also means software-defined radio. Jev 1.14 classifies short titles.
+    - {label: "sales development representative", pattern: 'sales\s+development\s+rep\w*'}
+    - {label: "business development representative", pattern: 'business\s+development\s+rep\w*'}
+    - {label: "inside sales", pattern: 'inside\s+sales'}
+    - {label: "business development manager", pattern: 'business\s+development\s+(manager|executive|associate|specialist)'}
+    - {label: "account executive", pattern: 'account\s+executive'}
+    - {label: "sales engineer", pattern: 'sales\s+engineer'}
+    - {label: "lead generation", pattern: 'lead\s+generation\s+(specialist|manager|representative|rep)'}
+  sales_stack:
+    - {label: "HubSpot", pattern: '\bhubspot\b'}
+    - {label: "Salesforce", pattern: '\bsalesforce\b'}
+    - {label: "Pipedrive", pattern: '\bpipedrive\b'}
+    - {label: "Zoho CRM", pattern: 'zoho\s+crm'}
+    - {label: "Apollo", pattern: '\bapollo\.io\b'}
+    - {label: "ZoomInfo", pattern: '\bzoominfo\b'}
+    - {label: "Salesloft", pattern: '\bsalesloft\b'}
+    - {label: "Outreach", pattern: 'outreach\.io'}
+  trade_show:
+    - {label: "IMTS", pattern: '\bIMTS\b'}
+    - {label: "FABTECH", pattern: '\bfabtech\b'}
+    - {label: "ProMat", pattern: '\bpromat\b'}
+    - {label: "MODEX", pattern: '\bmodex\b'}
+    - {label: "Automate", pattern: '\bautomate\s+20\d\d\b'}
+    - {label: "PACK EXPO", pattern: '\bpack\s?expo\b'}
+    - {label: "Hannover Messe", pattern: 'hannover\s+messe'}
+    - {label: "SEMICON", pattern: '\bsemicon\s+(west|east|taiwan|europa|china|japan|korea)\b'}
+    - {label: "The Assembly Show", pattern: 'the\s+assembly\s+show'}
+    - {label: "Paris Air Show", pattern: 'paris\s+air\s+show'}
+    - {label: "Farnborough", pattern: 'farnborough\s+(international\s+)?airshow|\bfarnborough\s+20\d\d\b'}
+    - {label: "MRO Americas", pattern: 'mro\s+americas'}
+    - {label: "Space Symposium", pattern: 'space\s+symposium'}
+    - {label: "AeroDef", pattern: '\baerodef\b'}
+    - {label: "SAE WCX", pattern: '\bsae\s+wcx\b|\bwcx\s+20\d\d\b'}
+    - {label: "The Battery Show", pattern: 'the\s+battery\s+show'}
+    - {label: "CAMX", pattern: '\bcamx\b'}
+    - {label: "JEC World", pattern: 'jec\s+world'}
+    - {label: "RAPID + TCT", pattern: 'rapid\s*\+\s*tct'}
+    - {label: "Formnext", pattern: '\bformnext\b'}
+    - {label: "Autosport International", pattern: 'autosport\s+international'}
+    - {label: "Advanced Engineering", pattern: 'advanced\s+engineering\s+(show|20\d\d)'}
+    - {label: "MACH", pattern: '\bMACH\s+20\d\d\b'}
+    - {label: "Space-Comm Expo", pattern: 'space[\s-]comm\s+expo'}
+    - {label: "Engineering Design Show", pattern: 'engineering\s+design\s+show'}
+    - {label: "visit us at our booth", pattern: 'visit\s+us\s+at\s+(our\s+)?(booth|stand)|booth\s*#\s*\d+'}
+  supplier_certification:
+    - {label: "AS9100", pattern: '\bAS\s?9100\w*'}
+    - {label: "IATF 16949", pattern: '\bIATF\s?16949\b'}
+    - {label: "NADCAP", pattern: '\bnadcap\b'}
+    - {label: "ITAR registered", pattern: '\bITAR[\s-]+(registered|compliant|certified)'}
+  venture_backed:
+    # The investor name must be capitalised (case-sensitive part), so "backed by a warranty" does not count.
+    - {label: "backed by investors", pattern: '\bbacked\s+by\s+(leading\s+|top\s+)?(investors|VCs?|(?-i:[A-Z][\w&]+))'}
+    - {label: "Series round", pattern: '\bseries\s+[A-D]\s+(round|funding|financing|investment)\b|\b(raised|raises|closes|closed)\s+(a\s+)?\$\s?\d+(\.\d+)?\s*(M|million|B|billion)\b'}
+    - {label: "seed round", pattern: '\bseed\s+(round|funding|financing)\b'}
+  channel_sales:
+    - {label: "find a rep", pattern: 'find\s+(a|your)\s+(local\s+)?(sales\s+)?(rep|representative|distributor)\b'}
+    - {label: "distributor network", pattern: 'become\s+a\s+distributor|distributor\s+locator|our\s+distributors'}
+    - {label: "request a quote", pattern: 'request\s+a\s+quote|request\s+for\s+quot\w*'}
+  headcount_growth:
+    - {label: "growing team", pattern: "we're\\s+hiring|we\\s+are\\s+hiring|join\\s+our\\s+growing\\s+team|fast[\\s-]growing|rapidly\\s+growing"}
+    - {label: "new facility", pattern: 'new\s+(facility|headquarters|production\s+facility|manufacturing\s+facility)'}
+    - {label: "new capacity", pattern: 'new\s+(5|five)[\s-]axis|expanded\s+(our\s+)?(capacity|facility|production)|additional\s+capacity'}
+  subsidiary_of_large_group:
+    # Keywords in any case, group name capitalised (1-3 words), e.g. "a division of Acme Industrial Group".
+    - {label: "part of (EN)", pattern: '(?i:(part|member|subsidiary)\s+of\s+(the\s+)?)[A-Z][\w&\-]+(\s+[A-Z][\w&\-]+){0,2}\s+(?i:group)'}
+    - {label: "division of", pattern: '(?i:\ba\s+(division|subsidiary)\s+of\s+)[A-Z][\w&\-]+'}
+
+# Job-ad words describe products on a homepage, so these count only on careers or vacancy pages.
+job_page_signals: [sales_job_ad, sales_stack]
+# Jev 1.14 checks every sales-job match (ai.yaml job_evidence): give it enough text to judge, and up
+# to three matches per role, because the first one on a page may be a testimonial.
+quote_width: 160
+matches_per_label: 3
+# Read the open jobs of hosted job boards (Greenhouse, Lever, Ashby) from their public feeds: most
+# venture-backed companies list vacancies there, where a plain crawl sees no titles. Jobs the board
+# places outside these countries are left out.
+job_boards: {countries: [US, GB]}
+case_sensitive_signals: [subsidiary_of_large_group]
+
+tiers:
+  # A US company in range with a working site scores 70-100 on fit alone, so Tier 1 and 2 need a signal.
+  tier_1: {fit_min: 60, signal_min: 35}    # hiring for sales roles
+  tier_2: {fit_min: 60, signal_min: 20}    # e.g. a certified supplier at a trade show, or a sales tool plus growth
+  tier_3: {fit_min: 50}
+  tier_2_lookalike: {lookalike_min: 1.5, fit_min: 60}
+  # Jev 1.14 must rate the company at least a possible fit (1 of 2) for Tier 1-2: signals alone do not
+  # make a poor-fit company worth enriching and emailing (decisions.md Q9, highest return per dollar).
+  min_jev_icp: 1.0
+  # Anything below tier_3 is dropped before we pay for contacts.
+
+enrichment_policy:
+  # Layer 3. FullEnrich is itself a waterfall over 20+ providers, so there is no second provider.
+  # People based outside gate.yaml's contact countries (US, GB) are never selected or paid for: the
+  # first live test picked directors in Poland, Greece and Hong Kong that the gate would hold back.
+  only_sendable_countries: true
+  # Work emails: BlitzAPI first (flat plan), FullEnrich for the ones it does not find (decisions.md Q39).
+  email_first: blitzapi
+  tier_1: {max_contacts: 2}
+  tier_2: {max_contacts: 2}
+  tier_3: {max_contacts: 0}   # parked until Tier 1-2 replies show a message that works
+
+# Titles of live job postings stored by `discover-hiring --postings` count as careers-page titles;
+# Jev still checks each one (Q48).
+posted_jobs: true

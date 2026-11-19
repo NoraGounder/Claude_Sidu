@@ -1,0 +1,503 @@
+"""Layer 6: Smartlead campaigns, a guarded upload, an explicit start, and reply sync.
+
+Nothing here sends by itself:
+- `push` creates (or reuses) one PAUSED-by-default campaign per region, links checked mailboxes,
+  sets sequence, schedule and settings, and uploads eligible leads. Smartlead's own block and
+  unsubscribe lists stay on.
+- `start` is the only call that makes Smartlead send. The CLI requires --i-confirm, and Claude Code
+  runs it only after the user says so in the conversation (CLAUDE.md rule 3).
+- `sync` pulls replies, bounces and unsubscribes back. TypeSafe Jev 1.14 classifies replies after
+  emails, phone numbers and names are masked. Bounces and unsubscribes are suppressed everywhere.
+
+Eligible = approved draft + contact `ready` in Layer 4 + sender consent granted + real sender file,
+not suppressed, and no other contact of the same account active in the last `stagger_days_same_account`.
+"""
+
+from __future__ import annotations
+
+import html
+import json
+import re
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import yaml
+
+from gtm import brain, db
+from gtm.config import ClientConfig
+from gtm.layers.l5_copy import clean_first_name, load_sender
+from gtm.sources.jev import JevClient, JevResult, check_policy
+from gtm.sources.smartlead import SmartleadClient, SmartleadError
+
+REPLY_CATEGORIES = {
+    "interested": "Wants to talk, asks for a call or a time, or says yes to the offer",
+    "question": "Asks a question about the offer, price or how it works, without saying yes or no",
+    "not_now": "Not now or later: timing, budget cycle, ask again in some months",
+    "not_interested": "Clearly not interested, but no request to stop emailing",
+    "referral": "Points to another person who handles this",
+    "wrong_person": "Says they are not the right person and names no one",
+    "out_of_office": "Automatic out-of-office or holiday reply",
+    "unsubscribe": "Asks to stop emailing, unsubscribe or remove their address",
+    "complaint": "Angry or hostile: calls it spam, threatens to report or complain, or mentions the law",
+}
+NEEDS_HUMAN = {"interested", "question", "referral", "complaint"}
+SUPPRESS = {"unsubscribe", "complaint"}
+
+
+def load_sending(cfg: ClientConfig) -> dict:
+    with (Path(cfg.root) / "sending.yaml").open(encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+def region_for(sending: dict, country: str | None) -> str | None:
+    for name, r in sending["regions"].items():
+        if (country or "").upper() in r["countries"]:
+            return name
+    return None
+
+
+def sequence_payload(steps_days: list[int]) -> list[dict]:
+    """Template steps: everything personal comes in as custom fields. Smartlead delays are
+    relative to the previous step; follow-ups have an empty subject so they thread under email 1."""
+    out, prev = [], 0
+    for n, day in enumerate(steps_days, start=1):
+        out.append({"seq_number": n, "seq_delay_details": {"delay_in_days": day - prev},
+                    "subject": "{{tmj_subject}}" if n == 1 else "",
+                    "email_body": "{{tmj_email_%d}}" % n})
+        prev = day
+    return out
+
+
+def settings_payload(s: dict) -> dict:
+    """Campaign settings in Smartlead's format (api-reference/campaigns/update-settings, checked
+    2026-11-17 after the rehearsal got a 400): track_settings is a list of what NOT to track."""
+    track = []
+    if not s.get("track_open"):
+        track.append("DONT_TRACK_EMAIL_OPEN")
+    if not s.get("track_click"):
+        track.append("DONT_TRACK_LINK_CLICK")
+    body = {"track_settings": track, "send_as_plain_text": bool(s.get("send_as_plain_text")),
+            "follow_up_percentage": 100,
+            # Auto-replies (out of office) do not count as replies and do not stop the sequence.
+            "out_of_office_detection_settings": {"ignoreOOOasReply": not s.get("stop_on_auto_reply", False),
+                                                 "autoCategorizeOOO": True}}
+    if s.get("stop_on_reply", True):
+        body["stop_lead_settings"] = "REPLY_TO_AN_EMAIL"
+    return body
+
+
+def setup_campaign(sl: SmartleadClient, campaign_id, days: list[int], sending: dict, schedule: dict) -> None:
+    """Sequence, settings and schedule for a new campaign. Safe to repeat on a half-set-up campaign."""
+    sl.save_sequences(campaign_id, sequence_payload(days))
+    sl.update_settings(campaign_id, settings_payload(sending["settings"]))
+    sl.set_schedule(campaign_id, schedule)
+
+
+@dataclass
+class PushPlan:
+    eligible: dict[str, list[dict]] = field(default_factory=dict)     # region -> leads
+    held: dict[str, int] = field(default_factory=dict)                # reason -> count
+
+
+def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
+    now = now or datetime.now(timezone.utc)
+    sending = load_sending(cfg)
+    plan = PushPlan()
+
+    def hold(reason):
+        plan.held[reason] = plan.held.get(reason, 0) + 1
+
+    consent = str(cfg.client.get("sender", {}).get("consent_to_send_in_name")).lower() == "granted"
+    sender, sender_real = load_sender(cfg)
+    from gtm.layers.l1_discover import sync_exclusions
+    sync_exclusions(conn, cfg)          # last check before upload: the do-not-contact list is current
+    suppressed = {k: db.suppressed_values(conn, cfg.slug, k) for k in ("email", "domain", "company")}
+    # Smartlead sends in upload order. Optional (sending.yaml send_order: best_first): the strongest
+    # companies go first (tier, then signal and fit scores), so a small daily volume is spent on them.
+    order = ("CASE a.status WHEN 'tier_1' THEN 1 WHEN 'tier_2' THEN 2 ELSE 3 END, s.signal DESC, s.fit DESC, c.rank, c.id"
+             if sending.get("send_order") == "best_first" else "c.rank, c.id")
+    rows = [dict(r) for r in conn.execute(
+        "SELECT d.id AS draft_id, d.subject, d.steps_json, c.*, a.name AS company, a.domain AS account_domain,"
+        " a.country AS account_country, a.status AS account_tier FROM drafts d JOIN contacts c ON c.id=d.contact_id"
+        " JOIN accounts a ON a.id=c.account_id LEFT JOIN l2_scores s ON s.account_id=a.id"
+        " WHERE d.client=? AND d.status='approved'"
+        f" AND c.id NOT IN (SELECT contact_id FROM outbound) ORDER BY {order}", (cfg.slug,)).fetchall()]
+    window = (now - timedelta(days=sending["stagger_days_same_account"])).isoformat()
+    active_accounts = {r[0] for r in conn.execute(
+        "SELECT account_id FROM outbound WHERE client=? AND (pushed_at >= ? OR status='replied')",
+        (cfg.slug, window))}
+    for r in rows:
+        if not consent:
+            hold("sender_consent_not_granted"); continue
+        if not sender_real or not sender.get("first_name") or "<" in str(sender.get("first_name")):
+            hold("sender_details_missing"); continue
+        if r["status"] != "ready":
+            hold(f"contact_not_ready:{r['status']}"); continue
+        tiers = sending.get("send_tiers")
+        if tiers and r["account_tier"] not in tiers:
+            hold(f"tier_not_in_send_plan:{r['account_tier']}"); continue
+        email = (r["email"] or "").lower()
+        if email in suppressed["email"] or email.split("@")[-1] in suppressed["domain"] \
+                or (r["account_domain"] or "") in suppressed["domain"] or r["company"].lower() in suppressed["company"]:
+            hold("suppressed"); continue
+        if r["account_id"] in active_accounts:
+            hold("another_contact_at_this_company_is_active"); continue
+        region = region_for(sending, r["account_country"])
+        if not region:
+            hold(f"no_region_for_country:{r['account_country']}"); continue
+        steps = json.loads(r["steps_json"])
+        lead = {"email": r["email"], "first_name": r["first_name"], "last_name": r["last_name"],
+                "company_name": r["company"],
+                "custom_fields": {"tmj_subject": r["subject"],
+                                  **{f"tmj_email_{n}": s["body"] for n, s in enumerate(steps, start=1)}},
+                "_contact_id": r["id"], "_account_id": r["account_id"], "_draft_id": r["draft_id"],
+                "_days": [s["day"] for s in steps]}
+        plan.eligible.setdefault(region, []).append(lead)
+        active_accounts.add(r["account_id"])     # one contact per company per upload
+    return plan
+
+
+def _warm_days(account: dict, now: datetime) -> int | None:
+    """Days since the mailbox was added to Smartlead (warm-up starts then); None when unknown."""
+    raw = str(account.get("created_at") or "")[:19]
+    try:
+        return (now.replace(tzinfo=None) - datetime.fromisoformat(raw)).days
+    except ValueError:
+        return None
+
+
+def _reputation(account: dict) -> float | None:
+    raw = str((account.get("warmup_details") or {}).get("warmup_reputation") or "").rstrip("%").strip()
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def check_mailboxes(cfg: ClientConfig, sending: dict, accounts: list[dict],
+                    now: datetime | None = None) -> tuple[list[int], list[str]]:
+    """Mailboxes this client may link. Optional sending.yaml keys hold back mailboxes that are still
+    warming up: `min_warmup_days` (days since the mailbox was added) and `min_warmup_reputation` (%)."""
+    cap = cfg.limits.sending.get("max_per_mailbox_per_day", 18)
+    now = now or datetime.utcnow()
+    min_days, min_rep = sending.get("min_warmup_days"), sending.get("min_warmup_reputation")
+    # One Smartlead account serves several clients: a campaign may only use this client's own
+    # sending domains (sending.yaml mailbox_domains). No list means no mailbox, never all of them.
+    domains = {d.lower() for d in sending.get("mailbox_domains") or []}
+    ok, problems = [], []
+    for a in accounts:
+        name = a.get("from_email") or a.get("email") or a.get("id")
+        if str(name).rsplit("@", 1)[-1].lower() not in domains:
+            continue                                   # another client's mailbox: not ours to use
+        per_day = a.get("message_per_day") or a.get("max_email_per_day")
+        warmup = a.get("warmup_details") or {}
+        warm = a.get("warmup_enabled", warmup.get("status") == "ACTIVE")
+        if a.get("is_smtp_success") is False or a.get("is_imap_success") is False:
+            problems.append(f"{name}: SMTP or IMAP connection failed")
+        elif warmup.get("blocked_reason"):
+            problems.append(f"{name}: warm-up blocked ({warmup['blocked_reason']})")
+        elif per_day and int(per_day) > cap and not sending.get("spread_daily_cap"):
+            problems.append(f"{name}: sends up to {per_day}/day, cap is {cap}")
+        elif sending.get("require_warmup", True) and not warm:
+            problems.append(f"{name}: warm-up is off")
+        elif min_days and (_warm_days(a, now) is None or _warm_days(a, now) < int(min_days)):
+            problems.append(f"{name}: still warming up ({_warm_days(a, now)} of {min_days} days)")
+        elif min_rep and (_reputation(a) is None or _reputation(a) < float(min_rep)):
+            problems.append(f"{name}: warm-up reputation {_reputation(a)}% is below {min_rep}%")
+        else:
+            ok.append(int(a["id"]))
+    return ok, problems
+
+
+def shared_domains(cfg: ClientConfig) -> list[str]:
+    """This client's sending domains that another client also lists (clients/*/sending.yaml). One
+    Smartlead account serves several clients, so a domain must belong to exactly one of them."""
+    own = {d.lower() for d in load_sending(cfg).get("mailbox_domains") or []}
+    clash = set()
+    for f in Path(cfg.root).parent.glob("*/sending.yaml"):
+        if f.parent.name != Path(cfg.root).name:
+            other = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+            clash |= own & {d.lower() for d in other.get("mailbox_domains") or []}
+    return sorted(clash)
+
+
+def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushPlan | None = None,
+         now: datetime | None = None) -> dict:
+    sending = load_sending(cfg)
+    if clash := shared_domains(cfg):
+        raise RuntimeError(f"Sending domains listed for another client too: {', '.join(clash)}. "
+                           "Each domain belongs to one client (sending.yaml mailbox_domains).")
+    plan = plan or plan_push(cfg, conn, now)
+    if not plan.eligible:
+        return {"pushed": 0, "held": plan.held, "campaigns": {}}
+    sl = sl or SmartleadClient()
+    mailbox_ids, problems = check_mailboxes(cfg, sending, sl.email_accounts(), now)
+    if not mailbox_ids:
+        raise RuntimeError("No usable mailboxes: " + ("; ".join(problems) or "none on this client's mailbox_domains "
+                                                       "(sending.yaml) in Smartlead"))
+    ts = db.now_iso()
+    totals = {"pushed": 0, "held": plan.held, "campaigns": {}, "mailbox_problems": problems}
+    daily = cfg.limits.sending.get("max_emails_per_day", 120)
+    if sending.get("spread_daily_cap"):
+        # The per-mailbox cap is kept by the campaign total, not by each mailbox's own Smartlead ceiling:
+        # Smartlead rotates sends across the linked mailboxes (sending.yaml spread_daily_cap, Q46).
+        daily = min(daily, len(mailbox_ids) * cfg.limits.sending.get("max_per_mailbox_per_day", 18))
+    for region, leads in plan.eligible.items():
+        row = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?", (cfg.slug, region)).fetchone()
+        r = sending["regions"][region]
+        if row:
+            campaign_db_id, campaign_id = row["id"], row["smartlead_id"]
+        else:
+            name = f"{sending['campaign_prefix']} | {region.upper()} | {ts[:7]}"
+            campaign_id = sl.create_campaign(name)
+            # Recorded at once, so a failure further on never leaves a campaign the database does not know.
+            cur = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"
+                               " VALUES (?,?,?,?,?,?,?)", (cfg.slug, region, campaign_id, name, r["timezone"],
+                                                           "SETUP", ts))
+            conn.commit()
+            campaign_db_id = cur.lastrowid
+            row = {"status": "SETUP"}
+        if row["status"] == "SETUP":
+            # Each new lead gets up to 4 emails; share the daily cap across the regions that have
+            # leads to send now. Regions only defined in sending.yaml take no share (audit C2).
+            per_region = max(1, daily // 4 // max(1, len(plan.eligible)))
+            setup_campaign(sl, campaign_id, leads[0]["_days"], sending,
+                           {"timezone": r["timezone"], **dict(sending["schedule"]), "max_new_leads_per_day": per_region})
+            conn.execute("UPDATE campaigns SET status='DRAFTED' WHERE id=?", (campaign_db_id,))
+            conn.commit()
+        # Every upload links the mailboxes that are ready now, so a mailbox that finished warming up
+        # after the campaign was created joins it (Smartlead keeps mailboxes already linked).
+        sl.link_email_accounts(campaign_id, mailbox_ids)
+        for start in range(0, len(leads), 400):
+            batch = leads[start:start + 400]
+            sl.add_leads(campaign_id, [{k: v for k, v in lead.items() if not k.startswith("_")} for lead in batch])
+            for lead in batch:
+                conn.execute("INSERT INTO outbound(contact_id, client, account_id, draft_id, campaign_id, status,"
+                             " pushed_at) VALUES (?,?,?,?,?,?,?)",
+                             (lead["_contact_id"], cfg.slug, lead["_account_id"], lead["_draft_id"],
+                              campaign_db_id, "pushed", ts))
+            conn.commit()
+        totals["pushed"] += len(leads)
+        totals["campaigns"][region] = campaign_id
+    return totals
+
+
+def start(cfg: ClientConfig, conn, region: str, sl: SmartleadClient | None = None) -> str:
+    row = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?", (cfg.slug, region)).fetchone()
+    if not row:
+        raise RuntimeError(f"No campaign for region '{region}'. Run push first.")
+    (sl or SmartleadClient()).set_status(row["smartlead_id"], "ACTIVE")
+    conn.execute("UPDATE campaigns SET status='ACTIVE' WHERE id=?", (row["id"],))
+    conn.commit()
+    return row["name"]
+
+
+def mask(text: str, names: list[str]) -> str:
+    text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[email]", text)
+    text = re.sub(r"\+?\d[\d\s().-]{7,}\d", "[phone]", text)
+    for n in names:
+        if n:
+            text = re.sub(rf"\b{re.escape(n)}\b", "[name]", text, flags=re.I)
+    return text
+
+
+def latest_reply(history: list[dict]) -> tuple[str | None, str | None]:
+    replies = [h for h in history if str(h.get("type", h.get("message_type", ""))).upper() in
+               {"REPLY", "REPLIED", "EMAIL_REPLY", "RECEIVED"}]
+    if not replies:
+        return None, None
+    last = replies[-1]
+    body = last.get("email_body") or last.get("body") or last.get("text") or ""
+    body = re.sub(r"<br\s*/?>|</p>|</div>", "\n", body, flags=re.I)
+    body = html.unescape(re.sub(r"<[^>]+>", " ", body))
+    # Cut the quoted thread. HTML replies often arrive without a line break before "On ... wrote:"
+    # (Gmail), so the quote marker is matched anywhere, shortest first (found in the rehearsal).
+    body = re.split(r"(?:^|\s)(?:On [^\n]{5,200}? wrote:|Op [^\n]{5,200}? (?:schreef|het volgende geschreven)[^\n]{0,40}:|"
+                    r"Am [^\n]{5,200}? schrieb[^\n]{0,40}:|-----Original Message-----|-----Oorspronkelijk bericht-----|"
+                    r"\nFrom: |\nVan: )", body, maxsplit=1)[0]
+    return re.sub(r"\s+", " ", body).strip()[:3000], last.get("time") or last.get("sent_time") or last.get("timestamp")
+
+
+def sync(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, jev: JevClient | None = None) -> dict:
+    check_policy(cfg.ai)
+    sl = sl or SmartleadClient()
+    jev = jev or JevClient(cfg.ai)
+    sender, _ = load_sender(cfg)
+    totals = {"replies": 0, "needs_human": 0, "bounced": 0, "unsubscribed": 0, "categories": {}, "paused": []}
+    rule = load_sending(cfg).get("auto_pause") or {}
+    for camp in conn.execute("SELECT * FROM campaigns WHERE client=?", (cfg.slug,)).fetchall():
+        complaints = 0
+        by_email = {r["email"].lower(): dict(r) for r in conn.execute(
+            "SELECT o.*, c.email, c.first_name, c.last_name FROM outbound o JOIN contacts c ON c.id=o.contact_id"
+            " WHERE o.campaign_id=?", (camp["id"],))}
+        for status_filter, label in (("is_bounced", "bounced"), ("is_unsubscribed", "unsubscribed")):
+            for lead in sl.leads(camp["smartlead_id"], emailStatus=status_filter):
+                o = by_email.get(str(lead.get("email") or (lead.get("lead") or {}).get("email", "")).lower())
+                if o and o["status"] != label:
+                    conn.execute("UPDATE outbound SET status=?, last_sync_at=? WHERE contact_id=?",
+                                 (label, db.now_iso(), o["contact_id"]))
+                    db.add_suppression(conn, cfg.slug, "email", o["email"], f"smartlead:{label}")
+                    totals[label] += 1
+        for lead in sl.leads(camp["smartlead_id"], emailStatus="is_replied"):
+            lead_obj = lead.get("lead") or lead
+            o = by_email.get(str(lead_obj.get("email", "")).lower())
+            if not o:
+                continue
+            lead_id = lead_obj.get("id") or lead.get("lead_id")
+            text, when = latest_reply(sl.message_history(camp["smartlead_id"], lead_id))
+            if not text or conn.execute("SELECT 1 FROM replies WHERE client=? AND contact_id=? AND received_at IS ?",
+                                        (cfg.slug, o["contact_id"], when)).fetchone():
+                continue
+            masked = mask(text, [o["first_name"], o["last_name"], sender.get("first_name"), sender.get("full_name")])
+            result: JevResult = jev.decide(
+                {"reply_to_a_sales_email": masked, "seller_context": brain.jev_context(cfg, "reply")},
+                {"category": {"type": "choice", "instructions": "What kind of reply is this?",
+                              "criteria": REPLY_CATEGORIES}})
+            conn.execute(
+                "INSERT INTO jev_calls(client, account_id, requested_model, model_id, input_tokens, output_tokens,"
+                " cost_usd, latency_ms, request_id, status, error, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (cfg.slug, o["account_id"], cfg.ai["model"], result.model_id, result.input_tokens,
+                 result.output_tokens, result.cost_usd, result.latency_ms, result.request_id, "succeeded", None,
+                 db.now_iso()))
+            category = result.answers["category"]["choice"]
+            p = (result.answers["category"].get("probabilities") or {}).get(category)
+            conn.execute("INSERT OR IGNORE INTO replies(client, contact_id, received_at, text, category, category_p,"
+                         " model_id, created_at) VALUES (?,?,?,?,?,?,?,?)",
+                         (cfg.slug, o["contact_id"], when, text, category, p, result.model_id, db.now_iso()))
+            conn.execute("UPDATE outbound SET status='replied', smartlead_lead_id=?, last_sync_at=? WHERE contact_id=?",
+                         (lead_id, db.now_iso(), o["contact_id"]))
+            if category in SUPPRESS:
+                db.add_suppression(conn, cfg.slug, "email", o["email"], "replied: unsubscribe")
+                conn.commit()        # the opt-out is kept even if Smartlead's call below fails
+                try:
+                    if lead_id:
+                        sl.unsubscribe_lead(lead_id)
+                except SmartleadError as exc:
+                    totals.setdefault("warnings", []).append(f"Smartlead unsubscribe failed ({exc}); "
+                                                             "suppressed locally, the reply already stopped the sequence")
+                totals["unsubscribed"] += 1
+            totals["replies"] += 1
+            totals["needs_human"] += category in NEEDS_HUMAN
+            totals["categories"][category] = totals["categories"].get(category, 0) + 1
+            complaints += category == "complaint"
+        conn.commit()
+        # Optional (sending.yaml auto_pause): stop an active campaign on a complaint or too many bounces.
+        # Pausing only stops sending; starting again still needs `start --i-confirm` (The Marble Jar D18).
+        if rule and camp["status"] == "ACTIVE":
+            sent = conn.execute("SELECT COUNT(*) FROM outbound WHERE campaign_id=?", (camp["id"],)).fetchone()[0]
+            bounced = conn.execute("SELECT COUNT(*) FROM outbound WHERE campaign_id=? AND status='bounced'",
+                                   (camp["id"],)).fetchone()[0]
+            why = None
+            if rule.get("on_complaint", True) and complaints:
+                why = f"{complaints} complaint(s)"
+            elif sent >= rule.get("min_sent", 20) and bounced / sent > rule.get("max_bounce_rate", 0.03):
+                why = f"bounce rate {bounced}/{sent}"
+            if why:
+                sl.set_status(camp["smartlead_id"], "PAUSED")
+                conn.execute("UPDATE campaigns SET status='PAUSED' WHERE id=?", (camp["id"],))
+                conn.commit()
+                totals["paused"].append(f"{camp['name']}: {why}")
+    return totals
+
+
+# ---------- rehearsal (audit C5) ----------
+
+REHEARSAL_REGION = "rehearsal"
+
+
+def rehearse(cfg: ClientConfig, conn, seeds: list[str], sl: SmartleadClient | None = None,
+             delay_days: int = 1) -> dict:
+    """A test campaign that emails only `seeds` (inboxes the operator owns) with a real approved draft,
+    so layout, threading, sender name, replies, "stop" and bounces can be checked before any prospect
+    is emailed. Steps follow each other `delay_days` apart. Mailboxes still warming up may be used:
+    a handful of emails to our own inboxes does not hurt warm-up. Recorded under region 'rehearsal',
+    which `push` never uses; `rehearse --cleanup` pauses it and removes the local test rows."""
+    if not seeds or any("@" not in s for s in seeds):
+        raise RuntimeError("Give the seed inboxes as email addresses.")
+    existing = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?",
+                            (cfg.slug, REHEARSAL_REGION)).fetchone()
+    if existing and existing["status"] != "SETUP":
+        raise RuntimeError("A rehearsal campaign exists already: run `rehearse --cleanup` first.")
+    sending = load_sending(cfg)
+    row = conn.execute(
+        "SELECT d.id, d.subject, d.steps_json, c.first_name FROM drafts d JOIN contacts c ON c.id=d.contact_id"
+        " JOIN accounts a ON a.id=c.account_id WHERE d.client=? AND d.status='approved'"
+        " AND a.status IN ('tier_1','tier_2') ORDER BY CASE a.status WHEN 'tier_1' THEN 1 ELSE 2 END, d.id LIMIT 1",
+        (cfg.slug,)).fetchone()
+    if not row:
+        raise RuntimeError("No approved Tier 1-2 draft to rehearse with.")
+    sl = sl or SmartleadClient()
+    relaxed = {k: v for k, v in sending.items() if k not in ("min_warmup_days", "min_warmup_reputation")}
+    accounts = sl.email_accounts()
+    ids, problems = check_mailboxes(cfg, relaxed, accounts, datetime.now(timezone.utc))
+    by_id = {a["id"]: a for a in accounts}
+    # One mailbox per sending domain (Google and Outlook), the best warm-up reputation first.
+    chosen: dict[str, int] = {}
+    for i in sorted(ids, key=lambda i: -(_reputation(by_id[i]) or 0)):
+        dom = str(by_id[i].get("from_email", "")).split("@")[-1].lower()
+        chosen.setdefault(dom, i)
+    if not chosen:
+        raise RuntimeError("No usable mailbox: " + "; ".join(problems))
+    ts = db.now_iso()
+    steps = json.loads(row["steps_json"])
+    original = clean_first_name(row["first_name"] or "")
+    days = [n * delay_days for n in range(len(steps))]
+    if existing:
+        name, campaign_id, camp_db = existing["name"], existing["smartlead_id"], existing["id"]
+    else:
+        name = f"{sending['campaign_prefix']} | REHEARSAL | {ts[:10]}"
+        campaign_id = sl.create_campaign(name)
+        camp_db = conn.execute("INSERT INTO campaigns(client, region, smartlead_id, name, timezone, status, created_at)"
+                               " VALUES (?,?,?,?,?,?,?)", (cfg.slug, REHEARSAL_REGION, campaign_id, name,
+                                                           "Europe/Amsterdam", "SETUP", ts)).lastrowid
+        conn.commit()
+    setup_campaign(sl, campaign_id, days, sending,
+                   {"timezone": "Europe/Amsterdam", "days_of_the_week": [0, 1, 2, 3, 4, 5, 6], "start_hour": "00:00",
+                    "end_hour": "23:59", "min_time_btw_emails": 3, "max_new_leads_per_day": max(10, len(seeds))})
+    sl.link_email_accounts(campaign_id, list(chosen.values()))
+    acc = conn.execute("INSERT INTO accounts(client, name, segments, source, status, first_seen, last_seen)"
+                       " VALUES (?,?,?,?,?,?,?)", (cfg.slug, "Rehearsal (seed inboxes)", "[]", "rehearsal",
+                                                   "rehearsal", ts, ts)).lastrowid
+    leads = []
+    for n, email in enumerate(seeds, start=1):
+        first = "Test"
+        bodies = {f"tmj_email_{k}": (re.sub(rf"\b{re.escape(original)}\b", first, st["body"]) if original else st["body"])
+                  for k, st in enumerate(steps, start=1)}
+        cid = conn.execute("INSERT INTO contacts(client, account_id, person_id, first_name, last_name, status, email,"
+                           " email_status, data_source, rank, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                           (cfg.slug, acc, f"rehearsal-{n}", first, f"Seed{n}", "rehearsal", email, "OWNED",
+                            "operator's own inbox", n, ts, ts)).lastrowid
+        conn.execute("INSERT INTO outbound(contact_id, client, account_id, draft_id, campaign_id, status, pushed_at)"
+                     " VALUES (?,?,?,?,?,?,?)", (cid, cfg.slug, acc, row["id"], camp_db, "pushed", ts))
+        leads.append({"email": email, "first_name": first, "last_name": f"Seed{n}", "company_name": "Rehearsal",
+                      "custom_fields": {"tmj_subject": re.sub(rf"\b{re.escape(original)}\b", first, row["subject"])
+                                        if original else row["subject"], **bodies}})
+    sl.add_leads(campaign_id, leads)
+    sl.set_status(campaign_id, "ACTIVE")
+    conn.execute("UPDATE campaigns SET status='ACTIVE' WHERE id=?", (camp_db,))
+    conn.commit()
+    return {"campaign": name, "smartlead_id": campaign_id, "mailboxes": len(chosen), "seeds": len(seeds),
+            "steps": len(steps), "days": days}
+
+
+def cleanup_rehearsal(cfg: ClientConfig, conn, sl: SmartleadClient | None = None) -> dict:
+    """Pause the rehearsal campaign in Smartlead (nothing is deleted there) and remove its local rows."""
+    camp = conn.execute("SELECT * FROM campaigns WHERE client=? AND region=?", (cfg.slug, REHEARSAL_REGION)).fetchone()
+    if not camp:
+        return {"removed": 0}
+    (sl or SmartleadClient()).set_status(camp["smartlead_id"], "PAUSED")
+    acc_ids = [r[0] for r in conn.execute("SELECT id FROM accounts WHERE client=? AND status='rehearsal'", (cfg.slug,))]
+    marks = ",".join("?" * len(acc_ids)) or "NULL"
+    cids = [r[0] for r in conn.execute(f"SELECT id FROM contacts WHERE account_id IN ({marks})", acc_ids)]
+    cm = ",".join("?" * len(cids)) or "NULL"
+    seeds = [r[0].lower() for r in conn.execute(f"SELECT email FROM contacts WHERE id IN ({cm})", cids)]
+    sm = ",".join("?" * len(seeds)) or "NULL"
+    conn.execute(f"DELETE FROM suppression WHERE client=? AND kind='email' AND value IN ({sm})", (cfg.slug, *seeds))
+    for sql in (f"DELETE FROM replies WHERE contact_id IN ({cm})", f"DELETE FROM deals WHERE contact_id IN ({cm})",
+                f"DELETE FROM outbound WHERE contact_id IN ({cm})", f"DELETE FROM contacts WHERE id IN ({cm})"):
+        conn.execute(sql, cids)
+    conn.execute(f"DELETE FROM accounts WHERE id IN ({marks})", acc_ids)
+    conn.execute("DELETE FROM campaigns WHERE id=?", (camp["id"],))
+    conn.commit()
+    return {"removed": len(cids), "campaign": camp["name"]}

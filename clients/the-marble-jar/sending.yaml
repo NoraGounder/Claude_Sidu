@@ -1,0 +1,50 @@
+# Layer 6: Smartlead sending settings (engine/gtm/layers/l6_send.py).
+# Mailbox limits come from limits.yaml (sending: max_per_mailbox_per_day, max_emails_per_day).
+
+campaign_prefix: "TMJ"
+
+# Only mailboxes on these domains are linked to The Marble Jar's campaigns (decisions.md D13).
+mailbox_domains: [getmarblejar.com, marblejarhub.com]
+
+# One campaign per sending region, so emails arrive in the recipient's working hours.
+regions:
+  nl:    {countries: [NL, BE], timezone: Europe/Amsterdam}   # Belgium in the NL campaign (D20)
+  uk_ie: {countries: [GB, IE], timezone: Europe/London}
+  us:    {countries: [US],     timezone: America/New_York}
+
+schedule:
+  days_of_the_week: [1, 2, 3, 4]   # Monday-Thursday: Tuesday-Thursday alone stretched the 14-day sequence to about 4 weeks (audit M6)
+  start_hour: "09:00"
+  end_hour: "16:30"
+  min_time_btw_emails: 8           # minutes between sends per mailbox
+
+settings:
+  track_open: false                # pixels hurt deliverability and are unreliable
+  track_click: false
+  stop_on_reply: true
+  stop_on_auto_reply: false
+  send_as_plain_text: true
+
+# Launch plan: only these tiers are uploaded. Add tier_3 once Tier 1-2 results prove the message.
+send_tiers: [tier_1, tier_2]
+
+# A second contact at the same company waits until the first one's sequence is over.
+stagger_days_same_account: 21
+
+# Mailboxes must have warm-up on before they are linked to a campaign.
+require_warmup: true
+# A mailbox joins a campaign only after 14 days of warm-up with a reputation of 95% or more
+# (decisions.md D15). On 2026-11-16 the Outlook mailboxes on marblejarhub.com were at 86-96%.
+min_warmup_days: 14
+min_warmup_reputation: 95
+
+# The first weeks' small volume goes to the strongest companies first: tier, then signal and fit
+# (decisions.md D16).
+send_order: best_first
+
+# push --live and start refuse while the database is not backed up off-site (decisions.md D23).
+require_backup: true
+
+# `sync` pauses an active campaign on any complaint, or when more than 3% of uploaded leads bounced
+# (from 20 leads on). Starting again needs `start --i-confirm` (decisions.md D18 conditions).
+auto_pause: {on_complaint: true, max_bounce_rate: 0.03, min_sent: 20}

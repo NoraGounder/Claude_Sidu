@@ -1,0 +1,29 @@
+# Layer 0: client identity and operating model.
+# Public repo: real names, contact details and contracts belong in ./private/ (gitignored).
+
+client: the-marble-jar
+display_name: The Marble Jar
+website: https://themarblejar.io
+offices: [Breda (NL), Kochi (IN)]
+
+operating_model: done_for_you   # Quailworks runs everything; the client only takes meetings
+
+language:
+  default: en        # all outreach in English, Dutch companies included (2026-11-06)
+  by_country: {}     # optional per-country override for a later test, e.g. {NL: nl}
+  fallback: en
+
+sender:
+  mode: founder                  # founder | agency_rep
+  details: private/sender.yaml   # name, title, signature, booking link
+  consent_to_send_in_name: granted   # written consent held by Quailworks, confirmed 2026-11-06
+  consent_scope: send in the founder's name and on his behalf
+
+handoff:
+  channel: email + calendar invite   # client never logs into our tools
+  outcome_capture: one-word reply (qualified / not a fit / follow up)
+
+# Quailworks decides (decisions.md). Only these need The Marble Jar, in one message at launch:
+needed_from_client:
+  - DONE 2026-11-11: data processing agreement accepted by Mithun in writing (GDPR Art. 28)
+  - A booking link or weekly time slots for meetings (until then Quailworks proposes times)

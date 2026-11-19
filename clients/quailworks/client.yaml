@@ -1,0 +1,36 @@
+# Layer 0: client identity and operating model. Quailworks is its own client (2026-11-10).
+# Public repo: real names, contact details and contracts belong in ./private/ (gitignored).
+
+client: quailworks
+display_name: Quailworks
+website: https://quailworks.co    # the live site (quailworks.xyz is the older index.html in this repo)
+offices: [Gowarczów (PL)]   # Quailworks sp. z o.o., public company register (KRS 0001108506)
+
+operating_model: own_outbound   # Quailworks runs its own outbound; the founder takes the meetings
+
+language:
+  default: en        # US and UK (decisions.md Q8)
+  by_country: {}
+  fallback: en
+
+sender:
+  mode: founder                  # founder | agency_rep
+  details: private/sender.yaml   # name, title, signature, booking link
+  consent_to_send_in_name: granted   # 2026-11-16: the founder set his own name as sender on the Quailworks mailboxes (Q45)
+  consent_scope: send in the founder's own name, from Quailworks' own sending domains only
+
+handoff:
+  channel: Smartlead inbox + calendar invite
+  outcome_capture: one word after each call (qualified / not a fit / follow up)
+
+crm:
+  hubspot_token_env: HUBSPOT_TOKEN_QUAILWORKS   # Quailworks' own HubSpot portal, never a client's (Q21)
+
+# Quailworks decides (decisions.md). Only these need the user, in one message at launch:
+needed_from_client:
+  - DONE 2026-11-11: two brand sending domains and six fresh SmartSenders mailboxes, warm-up on (decisions.md Q18)
+  - DONE 2026-11-11: Apify on a paid plan, FullEnrich credits topped up (decisions.md Q20)
+  - DONE 2026-11-16: the founder sends in his own name; private/sender.yaml filled (decisions.md Q45)
+  - DONE 2026-11-16: HubSpot token saved (HUBSPOT_TOKEN_QUAILWORKS)
+  - Connect a calendar in HubSpot so a meetings link exists (only the founder can; replies offer times until then)
+  - The "go" to start sending (CLAUDE.md rule 3)

@@ -1,0 +1,37 @@
+# Layer 1 by signal (engine/gtm/layers/l1_hiring.py, decisions.md Q39): companies that posted a sales
+# job in the last 30 days, found with BlitzAPI's "companies hiring" search. Each search names the
+# icp.yaml segment its companies count towards, so the fit score works as for any other account.
+# Layer 2 still confirms the open role on the company's own site before it is scored or quoted.
+#   python -m gtm --client quailworks discover-hiring --dry-run
+
+# 2026-11-19 (Q48): wider while the mailboxes warm up. The flat BlitzAPI plan makes records free, so the
+# searches cover every enabled segment, the UK and more new-business titles; Jev still decides per title
+# whether it is a new-business role (ai.yaml job_titles), so a wider search does not loosen the signal.
+job_titles: [Account Executive, Sales Development Representative, Business Development Representative,
+             Sales Engineer, Inside Sales, Business Development Manager, Regional Sales Manager,
+             Territory Sales Manager, Sales Representative, Outside Sales, Field Sales Engineer,
+             New Business Sales, Enterprise Account Executive]
+posted_last_days: 30
+job_countries: [US, GB]
+
+# `discover-hiring --postings`: the live postings themselves, stored as evidence on accounts we already
+# have (Tier 3 included), so a company that started hiring since its first crawl can move up (Q48).
+postings: {max_postings: 3000}
+
+searches:
+  - {name: hiring_robotics_us, segment: robotics_automation_us, max_items: 300, hq_countries: [US],
+     industries: [Automation Machinery Manufacturing, Robotics Engineering, Robot Manufacturing, Industrial Automation]}
+  - {name: hiring_mfg_software_us, segment: mfg_software_us, max_items: 300, hq_countries: [US],
+     industries: [Software Development], keywords: [manufacturing software, MES, industrial software, factory]}
+  - {name: hiring_industrial_ai_us, segment: industrial_ai_us, max_items: 200, hq_countries: [US],
+     industries: [Software Development], keywords: [industrial AI, predictive maintenance, IIoT, asset performance]}
+  - {name: hiring_machine_vision_us, segment: machine_vision_us, max_items: 200, hq_countries: [US],
+     industries: [Software Development, Industrial Automation, Automation Machinery Manufacturing],
+     keywords: [machine vision, computer vision inspection, visual inspection]}
+  - {name: hiring_digital_twin_us, segment: digital_twin_us, max_items: 150, hq_countries: [US],
+     industries: [Software Development], keywords: [digital twin, simulation software]}
+  - {name: hiring_aero_software_us, segment: industrial_software_aero_us, max_items: 150, hq_countries: [US],
+     industries: [Software Development], keywords: [aerospace software, MBSE, PLM, model-based systems engineering]}
+  - {name: hiring_industrial_software_uk, segment: industrial_software_uk, max_items: 200, hq_countries: [GB],
+     industries: [Software Development, Industrial Automation, Automation Machinery Manufacturing],
+     keywords: [manufacturing software, industrial software, MES, industrial AI, robotics, machine vision]}

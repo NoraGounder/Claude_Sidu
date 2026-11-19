@@ -1,0 +1,905 @@
+"""Command line for the lead engine. Claude Code (or a person) runs layers from here."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import sys
+
+from gtm import budget, db
+from gtm.config import data_dir, load_client
+from gtm.layers import l1_discover
+
+
+def cmd_discover(args) -> int:
+    cfg = load_client(args.client)
+    conn = db.connect()
+    plans = l1_discover.plan(cfg, args.segment, args.max_items, args.mode, conn=conn)
+    for name in l1_discover.exhausted_segments(cfg, conn):
+        print(f"Segment {name} has used all 20 LinkedIn search pages. Split it (for example by "
+              f"size band or region) in icp.yaml to find more companies.")
+    if not plans:
+        print("Nothing to run: no enabled segments with pages left.")
+        return 1
+
+    total = sum(p.est_cost for p in plans)
+    print(f"Layer 1 plan for {cfg.slug}: {len(plans)} search(es), up to "
+          f"{sum(p.max_items for p in plans)} companies, estimated ${total:.2f}")
+    for p in plans:
+        print(f"  - {p.segment.name}: pages {p.start_page}-{p.start_page + p.pages - 1}, "
+              f"up to {p.max_items} companies, est. ${p.est_cost:.2f}")
+        if args.verbose or args.dry_run:
+            print("    input:", json.dumps(p.actor_input, ensure_ascii=False))
+
+    if args.dry_run:
+        try:
+            info = budget.check(conn, cfg, l1_discover.VENDOR, total)
+            print(f"Budget OK: ${info['remaining']:.2f} of ${info['cap']:.2f} left this month for apify.")
+        except budget.BudgetExceeded as exc:
+            print(f"Budget warning: {exc}")
+        print("Dry run: nothing was called or spent.")
+        return 0
+
+    try:
+        results = l1_discover.run(cfg, conn, plans, fixture=args.fixture)
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+
+    for r in results:
+        rejected = ", ".join(f"{k} {v}" for k, v in sorted(r.rejected.items())) or "none"
+        cost = f"${r.cost_usd:.3f}" if r.cost_usd is not None else "unknown"
+        print(f"{r.segment}: fetched {r.fetched}, new {r.new}, duplicates {r.duplicates}, "
+              f"qualified {r.qualified}, rejected: {rejected}. Cost {cost}.")
+    return 0
+
+
+def cmd_prefilter(args) -> int:
+    from gtm.crawl import default_fetcher
+    from gtm.layers import l2_prefilter
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    print(f"Layer 2 for {cfg.slug}: crawling and scoring (free, uses time only)...")
+    factory = (lambda: default_fetcher(use_cache=False)) if args.refresh else None
+    summary = l2_prefilter.run(cfg, conn, limit=args.limit, rescore=args.rescore, workers=args.workers,
+                               fetcher_factory=factory)
+    print(f"Scored {summary['accounts']} accounts: Tier 1 {summary['tier_1']}, Tier 2 {summary['tier_2']}, "
+          f"Tier 3 {summary['tier_3']}, dropped {summary['rejected_l2']}. "
+          f"Unreachable sites {summary['unreachable']}; with Jev 1.14 decisions {summary['jev_decided']}.")
+    return 0
+
+
+def cmd_tiers(args) -> int:
+    cfg = load_client(args.client)
+    conn = db.connect()
+    rows = conn.execute(
+        "SELECT a.id, a.name, a.domain, s.tier, s.fit, s.signal, s.flags, s.job_titles FROM accounts a"
+        " JOIN l2_scores s ON s.account_id=a.id WHERE a.client=? AND s.tier=?"
+        " ORDER BY s.signal DESC, s.fit DESC LIMIT ?", (cfg.slug, args.tier, args.top)).fetchall()
+    for r in rows:
+        ev = conn.execute("SELECT signal, label, url FROM evidence WHERE account_id=?", (r["id"],)).fetchall()
+        labels = "; ".join(f"{e['label']}" for e in ev) or "no signals"
+        print(f"[{r['tier']}] {r['name']} ({r['domain']}) fit {r['fit']} signal {r['signal']} | {labels}")
+        if args.verbose:
+            for e in ev:
+                print(f"      {e['signal']}: {e['label']} <{e['url']}>")
+    return 0
+
+
+def cmd_jev(args) -> int:
+    """Layer 2 AI decisions with TypeSafe Jev 1.14 only (see clients/<client>/ai.yaml)."""
+    from gtm.layers import l2_jev
+    from gtm.sources.jev import JevPolicyError, JevUnavailable
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    if args.purge_legacy:
+        counts = l2_jev.purge_legacy_ai(conn, cfg.slug)
+        print(f"Removed pre-policy AI verdicts: {counts['evidence_removed']} evidence rows, "
+              f"{counts['drops_undone']} drops undone. Re-score with: prefilter --rescore")
+        return 0
+    try:
+        jp = l2_jev.plan(cfg, conn, limit=args.limit, redo=args.redo, new_titles=args.new_titles)
+    except JevPolicyError as exc:
+        print(f"Refused by the AI policy: {exc}")
+        return 3
+    print(f"Jev decisions with {jp.model}: {len(jp.items)} accounts, estimated ${jp.est_cost:.4f}"
+          + (f"; lookalike check against {len(jp.best_clients)} best clients" if jp.best_clients else ""))
+    if args.dry_run:
+        if jp.items:
+            state, questions, _ = l2_jev.build_request(cfg, jp.items[0], jp.best_clients)
+            print("First request (state and questions):")
+            print(json.dumps({"state": state, "questions": list(questions)}, ensure_ascii=False, indent=1)[:2500])
+        print("Dry run: nothing was called or spent.")
+        return 0
+    if not jp.items:
+        return 0
+    try:
+        t = l2_jev.run(cfg, conn, jp)
+    except (JevUnavailable, JevPolicyError) as exc:
+        print(f"Stopped: {exc}")
+        print("No other model was used. Fix the cause and run the same command again; decided accounts are kept.")
+        return 4
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    r = t.get("rescored", {})
+    print(f"Jev decided {t['decided']} accounts. Model IDs reported: {', '.join(t['models'])}. "
+          f"Tokens in/out: {t['input_tokens']}/{t['output_tokens']}. Cost ${t['cost_usd']:.6f}.")
+    if r:
+        print(f"Re-scored: Tier 1 {r['tier_1']}, Tier 2 {r['tier_2']}, Tier 3 {r['tier_3']}, dropped {r['rejected_l2']}.")
+    return 0
+
+
+def cmd_contacts(args) -> int:
+    """Layer 3: decision-makers and work emails (FullEnrich), ranked by Jev 1.14."""
+    from gtm.layers import l3_contacts
+    from gtm.sources.fullenrich import FullEnrichError
+    from gtm.sources.jev import JevPolicyError, JevUnavailable
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    cp = l3_contacts.plan(cfg, conn, limit=args.limit, search_limit=args.search_limit)
+    selected = conn.execute("SELECT COUNT(*) FROM contacts WHERE client=? AND status='selected'",
+                            (cfg.slug,)).fetchone()[0]
+    print(f"Layer 3 plan: people search for {len(cp.accounts)} accounts (up to {cp.search_limit} people each), "
+          f"estimated ${cp.est_search_cost:.2f}; {selected} selected contacts already waiting for an email.")
+    if args.dry_run:
+        for acc in cp.accounts[:10]:
+            print(f"  - [{acc['tier']}] {acc['name']} ({acc['domain']}) fit {acc['fit']} signal {acc['signal']}")
+        print("Dry run: nothing was called or spent.")
+        return 0
+    try:
+        if not args.emails_only and cp.accounts:
+            t = l3_contacts.find_people(cfg, conn, cp)
+            print(f"People search: {t['accounts']} accounts, {t['people_returned']} people returned, "
+                  f"{t['candidates']} passed the checks, {t['selected']} selected. Cost ${t['cost_usd']:.2f}.")
+        if not args.skip_emails:
+            e = l3_contacts.find_emails(cfg, conn, limit=args.limit)
+            print(f"Work emails: {e['requested']} requested, {e['found']} found, {e['catch_all']} catch-all, "
+                  f"{e['not_found']} not found. Cost ${e['cost_usd']:.2f}."
+                  + (f" {e['pending']} still being processed by FullEnrich: run the same command again later "
+                     "(nothing is bought twice)." if e.get("pending") else ""))
+    except (JevUnavailable, JevPolicyError) as exc:
+        print(f"Stopped by Jev: {exc}. No other model was used; run again to continue.")
+        return 4
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    except FullEnrichError as exc:
+        print(f"Stopped by FullEnrich: {exc}")
+        return 5
+    return 0
+
+
+def cmd_gate(args) -> int:
+    """Layer 4: send gate (deterministic)."""
+    from gtm.layers import l4_gate
+    from gtm.sources.millionverifier import MillionVerifierError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    try:
+        res = l4_gate.run(cfg, conn, recheck=args.recheck)
+    except MillionVerifierError as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    counts = ", ".join(f"{k} {v}" for k, v in sorted(res.counts.items())) or "no contacts with an email"
+    reasons = ", ".join(f"{k} {v}" for k, v in sorted(res.reasons.items())) or "none"
+    print(f"Layer 4 gate: {counts}. Reasons: {reasons}.")
+    return 0
+
+
+def cmd_draft(args) -> int:
+    """Layer 5: fact-based drafts from approved templates; Jev 1.14 picks the angle and fact-checks."""
+    from gtm.layers import l5_copy
+    from gtm.sources.jev import JevPolicyError, JevUnavailable
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    try:
+        t = l5_copy.draft(cfg, conn, redo=args.redo, limit=args.limit)
+    except (JevUnavailable, JevPolicyError) as exc:
+        print(f"Stopped by Jev: {exc}. No other model was used; run again to continue.")
+        return 4
+    hooks = ", ".join(f"{k} {v}" for k, v in sorted(t["hooks"].items())) or "none"
+    print(f"Drafted {t['drafted']} contacts ({t['preview']} preview only, {t['needs_review']} flagged by "
+          f"Jev's fact check). Openings used: {hooks}.")
+    if t["preview"]:
+        print("Preview only: add clients/<client>/private/sender.yaml (see sender.example.yaml) and re-draft.")
+    return 0
+
+
+def cmd_export_drafts(args) -> int:
+    from gtm.layers import l5_copy
+
+    cfg = load_client(args.client)
+    path, n = l5_copy.export_review(cfg, db.connect(), args.out)
+    print(f"Wrote {n} drafts to {path}. Import it into Google Sheets, set decision to approve or reject, "
+          f"then download as CSV and run import-review. Delete the sheet afterwards (personal data).")
+    return 0
+
+
+def cmd_import_review(args) -> int:
+    from gtm.layers import l5_copy
+
+    cfg = load_client(args.client)
+    c = l5_copy.import_review(cfg, db.connect(), args.file)
+    print(f"Approved {c['approved']}, rejected {c['rejected']}, unchanged {c['unchanged']}.")
+    for err in c["errors"]:
+        print(f"  not approved: {err}")
+    return 0 if not c["errors"] else 6
+
+
+def cmd_approve(args) -> int:
+    from gtm.layers import l5_copy
+
+    cfg = load_client(args.client)
+    c = l5_copy.auto_approve(cfg, db.connect())
+    print(f"Approved {c['approved']} drafts that passed every check; {c['left_for_review']} left for a person "
+          "(export-drafts).")
+    return 0
+
+
+def cmd_push(args) -> int:
+    """Layer 6: upload eligible leads to Smartlead. Campaigns are not started."""
+    from gtm.layers import l6_send
+    from gtm.sources.smartlead import SmartleadError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    plan = l6_send.plan_push(cfg, conn)
+    eligible = sum(len(v) for v in plan.eligible.values())
+    regions = ", ".join(f"{k} {len(v)}" for k, v in plan.eligible.items()) or "none"
+    held = ", ".join(f"{k} {v}" for k, v in sorted(plan.held.items())) or "none"
+    print(f"Layer 6 plan: {eligible} leads eligible ({regions}). Held: {held}.")
+    if not args.live:
+        print("Dry run: nothing uploaded. Add --live to upload (campaigns stay paused until `start`).")
+        return 0
+    if not _backup_guard(args.client):
+        return 8
+    try:
+        t = l6_send.push(cfg, conn, plan=plan)
+    except (SmartleadError, RuntimeError) as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    print(f"Uploaded {t['pushed']} leads to campaigns {t['campaigns']}. Nothing is sending yet.")
+    for p in t.get("mailbox_problems", []):
+        print(f"  mailbox not linked: {p}")
+    print("Check each campaign in Smartlead (sequence, settings, mailboxes), then start it with:"
+          " python -m gtm --client <client> start --region <region> --i-confirm")
+    return 0
+
+
+def cmd_start(args) -> int:
+    """Layer 6: the only command that makes Smartlead send."""
+    from gtm.layers import l6_send
+    from gtm.sources.smartlead import SmartleadError
+
+    if not args.i_confirm:
+        print("Refused: starting a campaign sends real emails. Re-run with --i-confirm after approval.")
+        return 7
+    if not _backup_guard(args.client):
+        return 8
+    cfg = load_client(args.client)
+    try:
+        name = l6_send.start(cfg, db.connect(), args.region)
+    except (SmartleadError, RuntimeError) as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    print(f"Campaign '{name}' is ACTIVE. Smartlead now sends on its schedule.")
+    return 0
+
+
+def cmd_sync(args) -> int:
+    """Layer 6: pull replies, bounces and unsubscribes; Jev 1.14 classifies replies."""
+    from gtm.layers import l6_send
+    from gtm.sources.jev import JevPolicyError, JevUnavailable
+    from gtm.sources.smartlead import SmartleadError
+
+    cfg = load_client(args.client)
+    try:
+        t = l6_send.sync(cfg, db.connect())
+    except (JevUnavailable, JevPolicyError) as exc:
+        print(f"Stopped by Jev: {exc}. No other model was used.")
+        return 4
+    except SmartleadError as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    cats = ", ".join(f"{k} {v}" for k, v in sorted(t["categories"].items())) or "none"
+    print(f"Sync: {t['replies']} new replies ({cats}); {t['needs_human']} need a human reply now; "
+          f"{t['bounced']} bounced and {t['unsubscribed']} unsubscribed (all suppressed).")
+    for w in t.get("warnings", []):
+        print(f"WARNING: {w}")
+    for p in t.get("paused", []):
+        print(f"PAUSED campaign {p}. Tell Sidarth; restart only with `start --i-confirm` after his OK.")
+    return 0
+
+
+def cmd_stats(args) -> int:
+    cfg = load_client(args.client)
+    conn = db.connect()
+    print(f"Accounts for {cfg.slug}:")
+    for row in conn.execute(
+        "SELECT status, COUNT(*) n FROM accounts WHERE client=? GROUP BY status ORDER BY n DESC", (cfg.slug,)
+    ):
+        print(f"  {row['status']}: {row['n']}")
+    print("Rejections in Layer 1:")
+    for row in conn.execute(
+        "SELECT status_reason, COUNT(*) n FROM accounts WHERE client=? AND status='rejected_l1'"
+        " GROUP BY status_reason ORDER BY n DESC", (cfg.slug,)
+    ):
+        print(f"  {row['status_reason']}: {row['n']}")
+    print("Spend this month:")
+    for vendor in cfg.limits.month_budget_usd:
+        spent = db.month_spend(conn, cfg.slug, vendor)
+        print(f"  {vendor}: ${spent:.2f} of ${cfg.limits.month_budget_usd[vendor]:.2f}")
+    return 0
+
+
+def cmd_best_clients(args) -> int:
+    from gtm import best_clients
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    path = cfg.private_dir / "best_clients.csv"
+    if not path.exists():
+        print(f"No list yet. Put the best clients in {path} (columns as in best_clients.example.csv).")
+        return 1
+    s = best_clients.import_best_clients(cfg, conn)
+    print(f"Imported {s['clients']} best clients: {s['suppressed']} domains added to the do-not-contact list, "
+          f"{s['crawled']} websites read, {s['in_prospect_list']} were already in the prospect list "
+          "(now excluded).")
+    print("Next: jev --redo (lookalike check, costs cents), then prefilter --rescore (free).")
+    return 0
+
+
+def cmd_markets(args) -> int:
+    """Market lists for email 1: hiring companies per segment, from job postings (markets.yaml)."""
+    from gtm import markets
+    from gtm.sources.blitz import BlitzError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    if not markets.load_config(cfg):
+        print(f"No markets.yaml for {cfg.slug}.")
+        return 1
+    if args.refresh:
+        try:
+            out = markets.refresh(cfg, conn, force=args.force)
+        except (budget.BudgetExceeded, BlitzError) as exc:
+            print(f"Stopped: {exc}")
+            return 2
+        print("Refreshed: " + ", ".join(f"{k} {v}" for k, v in out.items()))
+    for segment in (markets.load_config(cfg).get("segments") or {}):
+        lst = markets.load_list(cfg, segment)
+        print(f"  {segment}: " + (f"{len(lst['companies'])} hiring companies, refreshed {lst['refreshed_at'][:10]}" if lst else "no list yet"))
+    return 0
+
+
+def cmd_linkedin(args) -> int:
+    """People emailed on a given day (default yesterday) at Tier 1 companies, for manual LinkedIn requests."""
+    from datetime import date, timedelta
+
+    cfg = load_client(args.client)
+    day = args.day or (date.today() - timedelta(days=1)).isoformat()
+    rows = db.connect().execute(
+        "SELECT c.first_name, c.last_name, c.title, a.name AS company, c.linkedin_url FROM outbound o"
+        " JOIN contacts c ON c.id=o.contact_id JOIN accounts a ON a.id=o.account_id"
+        " WHERE o.client=? AND a.status='tier_1' AND substr(o.pushed_at, 1, 10)=? ORDER BY a.name",
+        (cfg.slug, day)).fetchall()
+    print(f"Tier 1 contacts emailed on {day}: {len(rows)}. Send a plain connection request, no note needed.")
+    for r in rows:
+        print(f"  {r['first_name']} {r['last_name']}, {r['title']} at {r['company']}: {r['linkedin_url'] or 'no profile link'}")
+    return 0
+
+
+def cmd_funnel(args) -> int:
+    """Funnel and cost per step for one client (free, local data only)."""
+    from gtm import funnel
+
+    cfg = load_client(args.client)
+    print("\n".join(funnel.format_report(cfg, funnel.report(cfg, db.connect()))))
+    return 0
+
+
+def cmd_discover_hiring(args) -> int:
+    """Layer 1 by signal: companies with an open job for the role the offer replaces (BlitzAPI)."""
+    from gtm.layers import l1_hiring
+    from gtm.sources.blitz import BlitzError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    if args.postings:
+        if args.dry_run:
+            print("Dry run: would read up to the postings limit (hiring.yaml postings.max_postings, default 300) "
+                  "and store each posting as evidence on accounts we already have. Nothing called.")
+            return 0
+        try:
+            r = l1_hiring.fetch_postings(cfg, conn, args.max_items)
+        except (budget.BudgetExceeded, BlitzError) as exc:
+            print(f"Stopped: {exc}")
+            return 5
+        print(f"Read {r['postings']} job postings; {r['accounts']} of our accounts have at least one. "
+              "Next: prefilter --rescore (scoring.yaml posted_jobs: true), then jev for those accounts.")
+        return 0
+    plans = l1_hiring.plan(cfg, args.search, args.max_items)
+    if not args.force:
+        recent = l1_hiring.recently_run(conn, cfg.slug)
+        skipped = [p.name for p in plans if p.name in recent]
+        plans = [p for p in plans if p.name not in recent]
+        if skipped:
+            print(f"Skipped (run in the last {l1_hiring.RERUN_DAYS} days, same results; --force to repeat): {', '.join(skipped)}")
+    used = l1_hiring.records_used(conn, cfg.slug)
+    cap = int(cfg.limits.month_budget_usd.get("blitzapi_records", 0))
+    print(f"Discovery by hiring signal for {cfg.slug}: {len(plans)} searches, up to {sum(p.max_items for p in plans)} "
+          f"records; {used} of {cap} BlitzAPI records used this month.")
+    for p in plans:
+        print(f"  - {p.name} (counts towards {p.segment}): up to {p.max_items} companies")
+        print(f"    job: {json.dumps(p.job)}\n    company: {json.dumps(p.company)}")
+    if args.dry_run:
+        print("Dry run: nothing was called or spent.")
+        return 0
+    try:
+        results = l1_hiring.run(cfg, conn, plans)
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    except BlitzError as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    for r in results:
+        rejected = ", ".join(f"{k} {v}" for k, v in sorted(r.rejected.items())) or "none"
+        print(f"{r.segment}: fetched {r.fetched}, new {r.new}, duplicates {r.duplicates}, qualified {r.qualified}, "
+              f"rejected: {rejected}.")
+    print("Next: prefilter, then jev (they confirm each open role on the company's own site).")
+    return 0
+
+
+def cmd_sample(args) -> int:
+    """The Signal Sample: companies in a prospect's market with a buying signal, for a person to send."""
+    from gtm import sample
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    ids = [i.strip() for i in (args.industry_ids or "").split(",") if i.strip()]
+    roles = [r.strip() for r in (args.roles or "").split(",") if r.strip()]
+    if args.source == "jobs":
+        from gtm.sources.blitz import BlitzError
+        if not roles:
+            print("Give --roles: the job titles that mean a company needs the prospect's product.")
+            return 2
+        keywords = [k.strip() for k in (args.search or "").split(",") if k.strip()]
+        try:
+            r = sample.run_jobs(cfg, conn, args.name, roles, keywords or None, None,
+                                [c.strip().upper() for c in (args.countries or "US").split(",")], args.top,
+                                exclude_companies=[e.strip() for e in (args.exclude or "").split(",") if e.strip()])
+        except (budget.BudgetExceeded, BlitzError) as exc:
+            print(f"Stopped: {exc}")
+            return 2
+        print(f"Read {r['postings']} postings at {r['companies']} companies; {r['listed']} listed. Check it, then send it: {r['path']}")
+        return 0
+    actor_input, est = sample.plan(cfg, args.search, ids, args.location or ["United States"], args.max_items)
+    print(f"Signal Sample '{args.name}': up to {actor_input['maxItems']} companies, estimated ${est:.2f}.")
+    print(f"  search: {json.dumps(actor_input)}")
+    if args.dry_run:
+        print("Dry run: nothing was called or spent.")
+        return 0
+    try:
+        r = sample.run(cfg, conn, args.name, actor_input, est, roles=roles, top=args.top)
+    except budget.BudgetExceeded as exc:
+        print(f"Stopped: {exc}")
+        return 2
+    print(f"Read {r['read']} of {r['fetched']} companies; {r['with_signal']} show a signal; {r['listed']} listed. "
+          f"Cost ${r['cost_usd']:.2f}.")
+    print(f"Check it, then send it: {r['path']}")
+    return 0
+
+
+def cmd_handoff(args) -> int:
+    from gtm.layers import l7_handoff
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    t = l7_handoff.handoff(cfg, conn)
+    print(f"Handoff: {t['briefs']} meeting briefs written (data/briefs/), {t['later']} 'not now' kept for later, "
+          f"{t['closed']} other replies closed. Answer each brief's reply from the Smartlead inbox within "
+          f"4 working hours, then send {l7_handoff.sender_name(cfg)} the brief with the calendar invite.")
+    return 0
+
+
+def cmd_outcome(args) -> int:
+    from gtm.layers import l7_handoff
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    try:
+        deal = l7_handoff.record_outcome(cfg, conn, args.contact_id, " ".join(args.stage), args.value, args.note)
+    except ValueError as exc:
+        print(exc)
+        return 2
+    extra = " Added to best clients (excluded from outreach, used as a lookalike)." if deal["stage"] == "won" else ""
+    print(f"Deal for contact {args.contact_id}: stage {deal['stage']}"
+          + (f", value EUR {deal['value_eur']:,.0f}" if deal["value_eur"] else "") + "." + extra)
+    return 0
+
+
+def cmd_deals(args) -> int:
+    from gtm.layers import l7_handoff
+
+    cfg = load_client(args.client)
+    p = l7_handoff.pipeline(cfg, db.connect())
+    stages = ", ".join(f"{s} {n}" for s, n in sorted(p["by_stage"].items())) or "none yet"
+    print(f"Deals by stage: {stages}.")
+    print(f"Meetings held {p['meetings_held']}; open pipeline EUR {p['open_pipeline_eur']:,.0f}; "
+          f"won {p['won']} for EUR {p['won_eur']:,.0f}.")
+    return 0
+
+
+def cmd_crm(args) -> int:
+    from gtm.layers import l7_handoff
+    from gtm.sources.hubspot import HubSpotClient, HubSpotError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    plan = l7_handoff.plan_crm(cfg, conn)
+    print(f"HubSpot: {len(plan.creates)} deals to create (with company and contact), {len(plan.updates)} to update.")
+    if not args.live:
+        print("Dry run: nothing written. Add --live once CRM writes are approved.")
+        return 0
+    try:
+        # Each client mirrors into its own HubSpot portal: client.yaml crm.hubspot_token_env names the variable.
+        token_env = (cfg.client.get("crm") or {}).get("hubspot_token_env", "HUBSPOT_TOKEN")
+        t = l7_handoff.sync_crm(cfg, conn, plan, HubSpotClient(token_env=token_env))
+    except HubSpotError as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    print(f"HubSpot: created {t['created']}, updated {t['updated']}. Nothing was deleted.")
+    return 0
+
+
+def cmd_retention(args) -> int:
+    from gtm import retention
+
+    cfg = load_client(args.client)
+    s = retention.run(cfg, db.connect(), apply=args.apply)
+    verb = "Deleted" if s["applied"] else "Would delete"
+    print(f"{verb}: {s['not_emailed']} people never emailed (older than 90 days), {s['no_reply']} people emailed "
+          f"without reply (older than 12 months), and the text of {s['reply_texts']} replies older than "
+          "12 months. Deals and the do-not-contact list are kept."
+          + ("" if s["applied"] else " Add --apply to delete."))
+    return 0
+
+
+def cmd_learn(args) -> int:
+    from gtm import learn
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    for line in learn.format_report(learn.outcomes(cfg, conn), args.min_contacted):
+        print(line)
+    return 0
+
+
+def cmd_rehearse(args) -> int:
+    """Audit C5: a test campaign to the operator's own inboxes only (sends real emails to them)."""
+    from gtm.layers import l6_send
+    from gtm.sources.smartlead import SmartleadError
+
+    cfg = load_client(args.client)
+    conn = db.connect()
+    try:
+        if args.cleanup:
+            r = l6_send.cleanup_rehearsal(cfg, conn)
+            print(f"Rehearsal cleaned up: campaign paused in Smartlead, {r['removed']} test rows removed.")
+            return 0
+        seeds = [s.strip() for s in (args.seeds or "").split(",") if s.strip()]
+        if not args.i_confirm:
+            print(f"Dry run: would create a rehearsal campaign sending all steps to {len(seeds)} seed inbox(es). "
+                  "Add --i-confirm to send to them.")
+            return 0
+        r = l6_send.rehearse(cfg, conn, seeds, delay_days=args.delay_days)
+    except (SmartleadError, RuntimeError) as exc:
+        print(f"Stopped: {exc}")
+        return 5
+    print(f"Rehearsal '{r['campaign']}' is ACTIVE: {r['steps']} steps to {r['seeds']} seed inbox(es) on days "
+          f"{r['days']}, from {r['mailboxes']} mailbox(es). Reply 'stop' from one inbox, reply normally from the "
+          "other, then run sync and handoff.")
+    return 0
+
+
+def _backup_guard(client: str) -> bool:
+    """With sending.yaml `require_backup: true`, push --live and start run only when the current
+    database is backed up off-site (The Marble Jar D23). Without the key, nothing changes."""
+    from gtm import backup
+    from gtm.layers import l6_send
+
+    try:
+        required = bool(l6_send.load_sending(load_client(client)).get("require_backup"))
+    except (OSError, ValueError):
+        required = False
+    if not required or os.environ.get("GTM_BACKUP_GUARD", "on").lower() == "off":
+        return True
+    fresh, why = backup.is_fresh(client)
+    if not fresh:
+        print(f"Refused: {why}. Run `backup` first (needs GTM_BACKUP_KEY and GTM_BACKUP_REMOTE).")
+    return fresh
+
+
+def cmd_backup(args) -> int:
+    """Encrypted snapshot of the database and private/ (off-site when configured)."""
+    from gtm import backup
+
+    try:
+        r = backup.backup(args.client, keep=args.keep)
+    except backup.BackupError as exc:
+        print(f"Backup failed: {exc}")
+        return 9
+    where = "off-site vault and this machine" if r["offsite"] else "this machine only (NOT off-site)"
+    print(f"Backup {r['file']} ({r['bytes'] // 1024} KB, {'encrypted' if r['encrypted'] else 'NOT encrypted'})"
+          f" saved to {where}.")
+    if not r["encrypted"]:
+        print(f"Set {backup.KEY_ENV} to encrypt, and {backup.REMOTE_ENV} to keep copies off this machine.")
+    return 0
+
+
+def cmd_restore(args) -> int:
+    """Restore the newest backup from the vault (or --file)."""
+    from pathlib import Path
+
+    from gtm import backup
+
+    try:
+        r = backup.restore(args.client, Path(args.file) if args.file else None, force=args.force)
+    except backup.BackupError as exc:
+        print(f"Restore failed: {exc}")
+        return 9
+    print(f"Restored {r['file']}: {len(r['written'])} files written.")
+    return 0
+
+
+def cmd_export(args) -> int:
+    cfg = load_client(args.client)
+    conn = db.connect()
+    out = args.out or str(data_dir() / f"{cfg.slug}-{args.status}.csv")
+    cols = ["name", "domain", "website", "country", "city", "industry", "employee_count",
+            "employee_range", "linkedin_url", "segments", "status", "status_reason", "first_seen"]
+    rows = conn.execute(
+        f"SELECT {', '.join(cols)} FROM accounts WHERE client=? AND status=? ORDER BY name",
+        (cfg.slug, args.status),
+    ).fetchall()
+    with open(out, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(cols)
+        writer.writerows([tuple(r) for r in rows])
+    print(f"Wrote {len(rows)} accounts to {out}")
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="gtm", description="Quailworks lead engine")
+    parser.add_argument("--client", required=True, help="client folder name, e.g. the-marble-jar")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    d = sub.add_parser("discover", help="Layer 1: find target accounts")
+    d.add_argument("--segment", action="append", help="segment name from icp.yaml (repeatable)")
+    d.add_argument("--max-items", type=int, help="cap companies per segment (default: icp.yaml)")
+    d.add_argument("--mode", choices=["short", "full"], default="full",
+                   help="Harvest scraper mode. 'full' (default) includes website, size and HQ; "
+                        "'short' is half the price but lacks them")
+    d.add_argument("--dry-run", action="store_true", help="show searches and cost, call nothing")
+    d.add_argument("--fixture", help="read saved actor output from a JSON file instead of Apify")
+    d.add_argument("--verbose", action="store_true")
+    d.set_defaults(func=cmd_discover)
+
+    p = sub.add_parser("prefilter", help="Layer 2: crawl sites, find signals, score and tier")
+    p.add_argument("--limit", type=int, help="only the first N unscored accounts (for testing)")
+    p.add_argument("--rescore", action="store_true", help="re-score accounts already scored (uses the cache)")
+    p.add_argument("--refresh", action="store_true",
+                   help="read every site again instead of the cache (before a launch: open jobs go stale)")
+    p.add_argument("--workers", type=int, default=8)
+    p.set_defaults(func=cmd_prefilter)
+
+    t = sub.add_parser("tiers", help="show the top accounts in a tier with their evidence")
+    t.add_argument("--tier", default="tier_1", choices=["tier_1", "tier_2", "tier_3", "rejected_l2"])
+    t.add_argument("--top", type=int, default=20)
+    t.add_argument("--verbose", action="store_true")
+    t.set_defaults(func=cmd_tiers)
+
+    j = sub.add_parser("jev", help="Layer 2 AI decisions with TypeSafe Jev 1.14 (no other model)")
+    j.add_argument("--limit", type=int)
+    j.add_argument("--redo", action="store_true", help="decide again accounts Jev already decided")
+    j.add_argument("--new-titles", action="store_true",
+                   help="also decide again accounts with job titles Jev has not judged (after --postings)")
+    j.add_argument("--dry-run", action="store_true", help="show the first request and cost, call nothing")
+    j.add_argument("--purge-legacy", action="store_true",
+                   help="remove AI verdicts made before the Jev 1.14 policy (Jev Router)")
+    j.set_defaults(func=cmd_jev)
+
+    c = sub.add_parser("contacts", help="Layer 3: decision-makers and work emails (FullEnrich + Jev 1.14)")
+    c.add_argument("--limit", type=int, help="only the first N accounts / contacts")
+    c.add_argument("--search-limit", type=int, default=4, help="people returned per account (0.25 credit each)")
+    c.add_argument("--emails-only", action="store_true", help="skip people search; find emails for selected contacts")
+    c.add_argument("--skip-emails", action="store_true", help="people search and selection only")
+    c.add_argument("--dry-run", action="store_true")
+    c.set_defaults(func=cmd_contacts)
+
+    g = sub.add_parser("gate", help="Layer 4: send gate (suppression, email quality, consent, GDPR)")
+    g.add_argument("--recheck", action="store_true", help="re-check stale emails with MillionVerifier first")
+    g.set_defaults(func=cmd_gate)
+
+    dr = sub.add_parser("draft", help="Layer 5: write fact-based email drafts (templates + Jev 1.14 checks)")
+    dr.add_argument("--limit", type=int)
+    dr.add_argument("--redo", action="store_true", help="re-draft contacts that already have a draft")
+    dr.set_defaults(func=cmd_draft)
+
+    ex = sub.add_parser("export-drafts", help="Layer 5: CSV of drafts for review in Google Sheets")
+    ex.add_argument("--out")
+    ex.set_defaults(func=cmd_export_drafts)
+
+    ir = sub.add_parser("import-review", help="Layer 5: apply approve/reject decisions and edits from the CSV")
+    ir.add_argument("--file", required=True)
+    ir.set_defaults(func=cmd_import_review)
+
+    ap = sub.add_parser("approve", help="Layer 5: approve drafts that passed every automatic check")
+    ap.set_defaults(func=cmd_approve)
+
+    dh = sub.add_parser("discover-hiring", help="Layer 1 by signal: companies hiring for the role (BlitzAPI, hiring.yaml)")
+    dh.add_argument("--search", action="append", help="search name from hiring.yaml (repeatable)")
+    dh.add_argument("--max-items", type=int, help="cap companies per search (default: hiring.yaml)")
+    dh.add_argument("--dry-run", action="store_true", help="show the searches, call nothing")
+    dh.add_argument("--force", action="store_true", help="repeat a search run in the last few days (uses records)")
+    dh.add_argument("--postings", action="store_true", help="store live job postings as evidence on known accounts")
+    dh.set_defaults(func=cmd_discover_hiring)
+
+    mk = sub.add_parser("markets", help="market lists for email 1: hiring companies per segment (markets.yaml)")
+    mk.add_argument("--refresh", action="store_true", help="fetch job postings for lists older than a week (BlitzAPI)")
+    mk.add_argument("--force", action="store_true", help="refresh even lists newer than a week")
+    mk.set_defaults(func=cmd_markets)
+
+    li = sub.add_parser("linkedin", help="Tier 1 contacts emailed on a day (default yesterday), for manual LinkedIn requests")
+    li.add_argument("--day", help="YYYY-MM-DD (default: yesterday)")
+    li.set_defaults(func=cmd_linkedin)
+
+    fu = sub.add_parser("funnel", help="funnel and cost per step for this client (free)")
+    fu.set_defaults(func=cmd_funnel)
+
+    sm = sub.add_parser("sample", help="Signal Sample: companies in a prospect's market with a buying signal")
+    sm.add_argument("--name", required=True, help="the prospect the sample is for (names the output file)")
+    sm.add_argument("--search", help="search phrase for the prospect's market, e.g. 'contract manufacturing'")
+    sm.add_argument("--industry-ids", help="LinkedIn industry IDs, comma-separated")
+    sm.add_argument("--location", action="append", help="country (repeatable; default United States)")
+    sm.add_argument("--roles", help="open job titles that mean a company needs the prospect's product, comma-separated")
+    sm.add_argument("--max-items", type=int, help="companies to read (default: sample.yaml)")
+    sm.add_argument("--top", type=int, default=10)
+    sm.add_argument("--source", choices=["jobs", "sites"], default="jobs",
+                    help="jobs: live job postings via BlitzAPI (default); sites: company websites via Harvest")
+    sm.add_argument("--countries", help="with --source jobs: HQ countries, comma-separated (default US)")
+    sm.add_argument("--exclude", help="company names to leave out: the prospect, its competitors and customers")
+    sm.add_argument("--dry-run", action="store_true", help="show the search and cost, call nothing")
+    sm.set_defaults(func=cmd_sample)
+
+    pu = sub.add_parser("push", help="Layer 6: upload eligible leads to Smartlead (dry run unless --live)")
+    pu.add_argument("--live", action="store_true")
+    pu.set_defaults(func=cmd_push)
+
+    st = sub.add_parser("start", help="Layer 6: start a Smartlead campaign (sends real emails)")
+    st.add_argument("--region", required=True, help="region from sending.yaml, e.g. nl, uk_ie, us")
+    st.add_argument("--i-confirm", action="store_true", help="required: confirms sending was approved")
+    st.set_defaults(func=cmd_start)
+
+    sy = sub.add_parser("sync", help="Layer 6: pull replies, bounces, unsubscribes; classify replies")
+    sy.set_defaults(func=cmd_sync)
+
+    bc = sub.add_parser("best-clients", help="import private/best_clients.csv: exclude them, crawl, use as lookalikes")
+    bc.set_defaults(func=cmd_best_clients)
+
+    ho = sub.add_parser("handoff", help="Layer 7: replies that need a person become deals and meeting briefs")
+    ho.set_defaults(func=cmd_handoff)
+
+    oc = sub.add_parser("outcome", help="Layer 7: record a deal stage, e.g. outcome 42 qualified / won --value 25000")
+    oc.add_argument("contact_id", type=int)
+    oc.add_argument("stage", nargs="+", help="interested, booked, held, qualified, not a fit, follow up, no show, "
+                    "proposal, won, lost, later")
+    oc.add_argument("--value", type=float, help="deal value in EUR (proposal or won)")
+    oc.add_argument("--note")
+    oc.set_defaults(func=cmd_outcome)
+
+    dl = sub.add_parser("deals", help="Layer 7: deals by stage, meetings held, pipeline and won revenue")
+    dl.set_defaults(func=cmd_deals)
+
+    cr = sub.add_parser("crm", help="Layer 7: mirror deals to HubSpot (dry run unless --live)")
+    cr.add_argument("--live", action="store_true")
+    cr.set_defaults(func=cmd_crm)
+
+    rt = sub.add_parser("retention", help="delete local data on the DPA schedule (dry run unless --apply)")
+    rt.add_argument("--apply", action="store_true")
+    rt.set_defaults(func=cmd_retention)
+
+    le = sub.add_parser("learn", help="conversations started per signal, opening, tier, persona, region (free)")
+    le.add_argument("--min-contacted", type=int, default=1, help="hide groups with fewer contacted leads")
+    le.set_defaults(func=cmd_learn)
+
+    s = sub.add_parser("stats", help="counts by status and spend this month")
+    s.set_defaults(func=cmd_stats)
+
+    rh = sub.add_parser("rehearse", help="test campaign to your own seed inboxes only (audit C5)")
+    rh.add_argument("--seeds", help="comma-separated seed inbox addresses you own")
+    rh.add_argument("--delay-days", type=int, default=1, help="days between steps (default 1)")
+    rh.add_argument("--i-confirm", action="store_true", help="really create and start it (emails the seeds)")
+    rh.add_argument("--cleanup", action="store_true", help="pause the rehearsal and remove its local rows")
+    rh.set_defaults(func=cmd_rehearse)
+
+    bk = sub.add_parser("backup", help="encrypted backup of the database and private/ (off-site vault when set)")
+    bk.add_argument("--keep", type=int, default=14, help="snapshots to keep (default 14)")
+    bk.set_defaults(func=cmd_backup)
+
+    rs = sub.add_parser("restore", help="restore the newest backup from the vault (or --file)")
+    rs.add_argument("--file", help="a backup file to restore instead of the vault's newest")
+    rs.add_argument("--force", action="store_true", help="replace an existing database and private files")
+    rs.set_defaults(func=cmd_restore)
+
+    e = sub.add_parser("export", help="write accounts with a given status to CSV in data/")
+    e.add_argument("--status", default="qualified_l1")
+    e.add_argument("--out")
+    e.set_defaults(func=cmd_export)
+    return parser
+
+
+def load_env_file(path=None) -> int:
+    """Read KEY=value lines from the repository's .env (never committed) into the environment, without
+    overriding variables that are already set. Values are never printed. Returns how many were set."""
+    import os
+    from gtm.config import REPO_ROOT
+
+    path = path or REPO_ROOT / ".env"
+    if not path.exists():
+        return 0
+    count = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.split(" #", 1)[0].strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (part.strip() for part in line.split("=", 1))
+        value = value.strip("'\"")
+        if key and value and key not in os.environ:
+            os.environ[key] = value
+            count += 1
+    return count
+
+
+NO_AUTO_BACKUP = {"backup", "restore"}
+
+
+def main(argv: list[str] | None = None) -> int:
+    load_env_file()
+    args = build_parser().parse_args(argv)
+    from gtm import backup
+
+    name = getattr(args, "command", None) or args.func.__name__.removeprefix("cmd_").replace("_", "-")
+    if backup.configured() and name not in NO_AUTO_BACKUP and not backup.db_file().exists():
+        # A fresh machine: bring the database back before anything writes a new, empty one.
+        try:
+            r = backup.restore(args.client)
+            print(f"Restored the database from backup {r['file']} (fresh machine).")
+        except backup.BackupError as exc:
+            print(f"Note: no automatic restore ({exc}).")
+    before = backup.file_sha256(backup.db_file()) if backup.configured() else None
+    code = args.func(args)
+    if backup.configured() and name not in NO_AUTO_BACKUP and backup.file_sha256(backup.db_file()) != before:
+        try:
+            r = backup.backup(args.client)
+            print(f"Backed up ({r['file']}).")
+        except backup.BackupError as exc:
+            print(f"WARNING: automatic backup failed: {exc}")
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

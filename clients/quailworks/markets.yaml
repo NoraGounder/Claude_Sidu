@@ -1,0 +1,39 @@
+# Market lists for email 1 (engine/gtm/markets.py, decisions.md Q42): per segment, the roles that mean
+# a company is about to buy what our prospects sell. `markets --refresh` (weekly, BlitzAPI job postings)
+# keeps the hiring companies; email 1 names three of them. role_label is how the email says the role.
+
+posted_last_days: 30
+# Weekly, 50 postings per segment (about 350 records): well inside the Start plan (decisions.md Q44).
+refresh_days: 7
+postings_per_segment: 50
+min_employees: 51
+exclude_industries: [Staffing and Recruiting, Human Resources Services, IT Services and IT Consulting]
+exclude_title_words: [software, test automation, QA, marketing automation, recruiter, intern]
+
+# Never named in an email: robot makers, integrators and software vendors (they compete with or sell
+# alongside our prospects rather than buy from them) and recruiters. Matched as part of the name.
+never_name: [automation, robotic, fanuc, abb, kuka, yaskawa, audubon, symphonyai, recruit, staffing, talent,
+             dsj global, search, consulting]
+
+segments:
+  robotics_automation_us: {role_label: "automation and controls engineers",
+                           roles: [Controls Engineer, Automation Engineer, Robotics Engineer],
+                           keywords: [manufacturing, packaging, warehouse, food production, distribution]}
+  mfg_software_us:        {role_label: "manufacturing and production engineers",
+                           roles: [Manufacturing Engineer, Production Engineer, Continuous Improvement Engineer],
+                           keywords: [manufacturing, factory, plant]}
+  industrial_ai_us:       {role_label: "reliability and process engineers",
+                           roles: [Reliability Engineer, Process Engineer, Maintenance Manager],
+                           keywords: [manufacturing, plant, energy, chemicals]}
+  industrial_software_aero_us: {role_label: "aerospace manufacturing engineers",
+                           roles: [Manufacturing Engineer, Quality Engineer, Production Engineer],
+                           keywords: [aerospace, defense, aircraft]}
+  machine_vision_us:      {role_label: "quality and automation engineers",
+                           roles: [Quality Engineer, Automation Engineer, Vision Engineer],
+                           keywords: [manufacturing, packaging, electronics]}
+  digital_twin_us:        {role_label: "process and manufacturing engineers",
+                           roles: [Process Engineer, Manufacturing Engineer, Simulation Engineer],
+                           keywords: [manufacturing, plant, energy]}
+  industrial_software_uk: {role_label: "manufacturing engineers", countries: [GB],
+                           roles: [Manufacturing Engineer, Production Engineer, Process Engineer],
+                           keywords: [manufacturing, factory, plant]}

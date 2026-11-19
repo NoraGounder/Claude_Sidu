@@ -1,0 +1,143 @@
+# Layer 0: ideal customer profile. Layer 1 turns segments into searches; Layer 3 uses personas.
+# Industry IDs are LinkedIn industry codes (v2), checked against
+# github.com/HarvestAPI/linkedin-industry-codes-v2 on 2026-11-06.
+
+version: 1
+
+# Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md D1, D8).
+buyer_profile: >-
+  Companies in the Netherlands and Belgium (later the US, UK and Ireland) with 20-1,000
+  employees in logistics, wholesale and distribution, installation and technical services, or
+  manufacturing, that run operations and finance processes (invoices, orders, planning) where
+  manual work can be automated or replaced with well-designed custom software.
+# What we offer, in one line, for Jev's contact-relevance question (decisions.md D1).
+offer_summary: >-
+  Design-first automation and custom software for manual operations and finance work
+  (invoices, orders, data entry). Mendix is not offered.
+
+company:
+  employees_min: 20    # widened from 50-500 on 2026-11-19 (decisions.md D30)
+  employees_max: 1000
+  # Values passed to the Harvest company-size filter. Confirm the exact spelling on the
+  # first live run (the engine stores the raw response, so a mismatch is easy to spot).
+  linkedin_company_sizes: ["11-50", "51-200", "201-500", "501-1000"]
+
+industry_groups:
+  logistics:
+    label: Transport, logistics and warehousing
+    ids: [116, 87, 92, 93]   # Transportation/Logistics/Supply Chain; Freight; Truck; Warehousing
+  wholesale:
+    label: Wholesale and distribution
+    ids: [133, 134, 49, 1231, 1178, 1187, 1171, 1166]   # Wholesale; Import/Export; Building materials; Food; Hardware/Plumbing/Heating; Machinery; Electrical; Metals
+  installation:
+    label: Installation and technical services
+    ids: [48, 435, 453, 51]  # Construction; Specialty trade contractors; Building equipment contractors; Civil engineering
+  manufacturing:
+    label: Manufacturing
+    ids: [25, 55, 135, 840, 23, 743, 146]   # Manufacturing; Machinery; Industrial machinery; Fabricated metal; Food & beverage; Plastics & rubber; Packaging
+  facilities:
+    label: Facilities services
+    ids: [122]
+
+# One search per segment. LinkedIn caps a search at 20 pages x 50 companies = 1,000, so broad
+# groups are split by country. max_items is per monthly run (4 x 300 full-mode companies = $4.80,
+# inside Apify's free $5 a month); the next run continues from the next page.
+#
+# 2026-11-06: the Netherlands is the primary market (most current customers are Dutch), plus
+# English-speaking clients in the US, UK and Ireland. All emails in English.
+# 2026-11-09: Quailworks decided the offer (decisions.md). The Dutch segments are on; the US, UK and
+# Ireland stay off until the Dutch results show a working message (launch-plan.md, phase 3).
+segments:
+  - {name: logistics_us,     enabled: false, industry_group: logistics,     locations: [United States],  max_items: 300}
+  - {name: wholesale_us,     enabled: false, industry_group: wholesale,     locations: [United States],  max_items: 300}
+  - {name: manufacturing_us, enabled: false, industry_group: manufacturing, locations: [United States],  max_items: 300}
+  - {name: installation_us,  enabled: false, industry_group: installation,  locations: [United States],  max_items: 300}
+  - {name: logistics_uk,     enabled: false, industry_group: logistics,     locations: [United Kingdom], max_items: 300}
+  - {name: wholesale_uk,     enabled: false, industry_group: wholesale,     locations: [United Kingdom], max_items: 300}
+  - {name: manufacturing_uk, enabled: false, industry_group: manufacturing, locations: [United Kingdom], max_items: 300}
+  - {name: installation_uk,  enabled: false, industry_group: installation,  locations: [United Kingdom], max_items: 300}
+  - {name: logistics_ie,     enabled: false, industry_group: logistics,     locations: [Ireland],        max_items: 300}
+  - {name: wholesale_ie,     enabled: false, industry_group: wholesale,     locations: [Ireland],        max_items: 300}
+  - {name: manufacturing_ie, enabled: false, industry_group: manufacturing, locations: [Ireland],        max_items: 300}
+  - {name: installation_ie,  enabled: false, industry_group: installation,  locations: [Ireland],        max_items: 300}
+  # Netherlands: in scope (emails in English). About 840 Dutch accounts are already scored (pages 1-6 used).
+  - {name: logistics_nl,     enabled: true , industry_group: logistics,     locations: [Netherlands],    max_items: 300}
+  - {name: wholesale_nl,     enabled: true , industry_group: wholesale,     locations: [Netherlands],    max_items: 300}
+  - {name: installation_nl,  enabled: true , industry_group: installation,  locations: [Netherlands],    max_items: 300}
+  - {name: manufacturing_nl, enabled: true , industry_group: manufacturing, locations: [Netherlands],    max_items: 300}
+
+allowed_countries: [US, GB, IE, NL, BE]   # NL and BE need prior consent by law; risk accepted for the first batch (decisions.md D18, D20)
+
+exclusions:
+  # Company names containing any of these are dropped in Layer 1 (case-insensitive).
+  name_keywords:
+    - uitzendbureau
+    - uitzend
+    - detachering
+    - recruitment
+    - staffing
+    - werving
+    - consultancy
+    - consulting
+    - software
+    - automatisering
+    - gemeente
+    - provincie
+    - rijkswaterstaat
+    - ministerie
+    # Seen in the first live Layer 2 sample: associations, port authorities, training bodies
+    - vereniging
+    - association
+    - federatie
+    - stichting
+    - port of
+    - havenbedrijf
+    - training
+    - academy
+  domains: [themarblejar.io]
+  # Real do-not-contact list (current clients, open deals, partners): private/exclusions.csv
+
+# Layer 3: who we contact, in priority order. Max 2 per account.
+personas:
+  operations:
+    - COO
+    - Chief Operating Officer
+    - Operations Director
+    - Directeur Operations
+    - Operationeel Directeur
+    - Head of Operations
+    - Hoofd Operations
+    - Operations Manager
+    - Manager Operations
+    - Logistiek Manager
+    - Supply Chain Manager
+    - Bedrijfsleider
+    - Hoofd Bedrijfsbureau
+    - Manager Customer Service
+    - Customer Service Manager
+    - Teamleider Administratie
+  finance:
+    - CFO
+    - Financieel Directeur
+    - Finance Director
+    - Finance Manager
+    - Manager Financiën
+    - Hoofd Financiële Administratie
+    - Manager Financiële Administratie
+    - Controller
+    - Financial Controller
+    - Hoofd Administratie
+    - Manager Finance & Control
+    - Manager Finance and Control
+  owner_led:          # use only for companies under about 150 employees
+    - Algemeen Directeur
+    - Managing Director
+    - Directeur-eigenaar
+    - CEO
+    - Directeur
+    - Eigenaar
+    - DGA
+  # An entry matches at a word end, also inside Dutch compounds (managementassistent), but not inside a
+  # longer word: "Intern" no longer drops "International ..." titles (2026-11-10), so the longer forms
+  # (Internship, Stagiaire, Traineeship) are listed separately.
+  exclude_titles: [Intern, Internship, Stagiair, Stagiaire, Assistant, Assistent, Student, Trainee, Traineeship]

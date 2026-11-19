@@ -1,0 +1,156 @@
+# Layer 5 copy for Quailworks' own outbound. Written by people, filled only with facts we can show the
+# source for (engine/gtm/layers/l5_copy.py). Offer and claims follow decisions.md (Q3, Q30-Q33): no
+# results, timelines or prices, no client names, and no promise other than the one written in email 2.
+#
+# Rules: plain text, no links in email 1, short, no exclamation marks, openings are questions that
+# presume nothing, the GDPR notice at the end of email 1. Placeholders in {curly_braces}.
+# A hook is only used when its fact exists; otherwise the next one in `hook_priority` applies.
+
+hook_priority: [sales_job_ad, trade_show, certification, growth, sales_stack, generic]
+# The most specific supported opening goes first; Jev 1.14's fact check still falls back down this list.
+# (First drafts, 2026-11-10: with Jev choosing, 155 of 185 emails used the generic opening.)
+angle: priority
+
+# Quote a clean role name when a confirmed open job title contains it. Careers pages often glue the job
+# description onto the title, so the raw title is never quoted. First match wins (most specific first).
+quote_titles:
+  - {label: "sales development representative", pattern: 'sales\s+development\s+rep|\bSDR\b'}
+  - {label: "business development representative", pattern: 'business\s+development\s+rep|\bBDR\b'}
+  - {label: "founding account executive", pattern: 'founding\s+account\s+executive'}
+  - {label: "account executive", pattern: 'account\s+executive'}
+  - {label: "sales engineer", pattern: 'sales\s+engineer'}
+  - {label: "business development manager", pattern: 'business\s+development\s+manager'}
+  - {label: "business development director", pattern: 'director,?\s+(of\s+)?business\s+development|business\s+development\s+director|head\s+of\s+business\s+development'}
+  - {label: "sales director", pattern: 'sales\s+director|director,?\s+(of\s+)?sales\b|head\s+of\s+sales'}
+  - {label: "inside sales representative", pattern: 'inside\s+sales'}
+  - {label: "sales manager", pattern: '\bsales\s+manager'}
+job_title_qa: "Open job listed on their careers page"
+# LinkedIn page names often carry a tagline: "Vimachem - IIoT Pharma 4.0 AI Platform" -> "Vimachem".
+company_name_cut: [" | ", " - ", " – ", " — ", ", powered by", ": "]
+greetings:
+  en: ["Hi", "Hello"]
+signoffs:
+  en: ["Best,", "Thanks,"]
+
+# Facts quoted from evidence labels (scoring.yaml `detect`), with the source URL kept for review.
+named_facts:
+  stack: {signal: sales_stack, qa: "Sales tool named in one of their job ads", labels: [HubSpot, Salesforce, Pipedrive, Zoho CRM, Apollo, ZoomInfo, Salesloft, Outreach]}
+  trade_show: {signal: trade_show, qa: "Trade show named on their website", labels: [IMTS, FABTECH, ProMat, MODEX, Automate, PACK EXPO, Hannover Messe, SEMICON,
+                                            The Assembly Show, Paris Air Show, Farnborough, MRO Americas, Space Symposium,
+                                            AeroDef, SAE WCX, The Battery Show, CAMX, JEC World, RAPID + TCT, Formnext,
+                                            Autosport International, Advanced Engineering, MACH, Space-Comm Expo,
+                                            Engineering Design Show]}
+  # ITAR is a registration, not a certification, so it scores but is not quoted.
+  certification: {signal: supplier_certification, qa: "Certification mentioned on their website", labels: [AS9100, IATF 16949, NADCAP]}
+
+# English role words that make a vacancy title quotable ("account executive", "sales engineer").
+title_role_words: 'representative|\brep\b|executive|manager|engineer|specialist|associate|developer|director'
+company_suffixes: [inc, incorporated, llc, l.l.c., ltd, corp, corporation]
+# Never in an automatically approved draft (decisions.md Q3, Q4). The one promise in email 2 is worded
+# without these words on purpose, so any other promise still stops a draft.
+banned_phrases: [guarantee, guaranteed, marble jar, case study, per month, in days, money back, refund]
+
+# One example process, so Jev 1.14 is not asked to choose one.
+process:
+  outbound:
+    description: Finding companies with a reason to buy and writing to the right person
+    en: "spotting companies with a reason to buy now, writing to the right person"
+
+hooks:
+  sales_job_ad:
+    needs: job_title
+    description: Open with the sales or business development role they are hiring for
+    subject:
+      en: "your {job_title} opening"
+    en: "I saw the {job_title} opening at {company}."
+    market_line:
+      en: "Before that person starts: {market_names} are hiring {market_role} this month."
+    cta:
+      en: "Shall I send you 10 companies in your market that show a buying signal right now, each with its source? It could be that person's first list. No call needed."
+  trade_show:
+    needs: trade_show
+    description: Open with the trade show their website mentions
+    subject:
+      en: "{trade_show} and {company}"
+    en: "I saw {trade_show} mentioned on the {company} website. Outside of shows like that, how do first conversations with new customers usually start?"
+  certification:
+    needs: certification
+    description: Open with the aerospace or automotive quality certification on their website
+    subject:
+      en: "{certification} and {company}"
+    # True for suppliers that hold the certification and for software sold to them (who only mention it).
+    en: "I saw {certification} mentioned on the {company} website. When a new aerospace or automotive program kicks off, how do the engineers on it usually first hear about {company}?"
+  growth:
+    needs: open_roles
+    description: Open with how many roles they are hiring for (growth)
+    subject:
+      en: "{open_roles} open roles at {company}"
+    en: "I saw {company} has {open_roles} open roles. Is finding new customers keeping pace with that, or is it the harder part to grow?"
+  sales_stack:
+    needs: stack
+    description: Open with the CRM or sales tool named in their job ads
+    subject:
+      en: "{stack} at {company}"
+    en: "I saw a job ad at {company} that mentions {stack}. How do new accounts get into {stack} today: added by hand, or already automated?"
+  generic:
+    needs: null
+    description: Open with how they find new customers today
+    subject:
+      en: "next customers at {company}"
+    # A pure question: the first version listed channels and was flagged as an assumption in 43% of drafts.
+    en: "Quick question: how does {company} find its next customers today?"
+
+# Email 1 (decisions.md Q42, 2026-11-16): show the work first. Three companies in the prospect's market
+# that are hiring now (markets.yaml, from job postings) follow the opening, then the one promise, then
+# one small ask for the rest of the list. Without a market list the email falls back to offering it.
+market_line:
+  en: "Three companies in your market are hiring {market_role} this month: {market_names}."
+cta_market:
+  en: "Want the other seven, with the job posting behind each?"
+
+# The ask when no market list is available ({cta}).
+cta:
+  en: "Shall I send you 10 companies in your market that show a buying signal right now, each with its source? No call needed."
+
+steps:
+  - day: 0
+    en: |
+      {greeting} {first_name},
+
+      {hook} {market_line}
+
+      That's what we build: outbound for companies that sell to engineers. It finds buyers with a reason to talk now and books the first meetings. If it doesn't book 12 qualified meetings in the first 90 days of sending, we keep working without a fee.
+
+      Before Quailworks I spent over a decade as a design engineer, from launch-vehicle turbopumps to hypercar suspension: the person suppliers were trying to reach.
+
+      {cta}
+
+      {signoff}
+      {sender_first_name}
+
+      {gdpr_notice}
+  - day: 3
+    en: |
+      {greeting} {first_name},
+
+      A bit more on how it works: the engine watches your market for reasons to reach out (a company hiring, exhibiting or growing), checks each one against the job posting or the company's own website, finds the right person and writes from those facts. You own the domains, the data and the playbook; we run it in your name.
+
+      Worth 30 minutes to see what it would find for {company}?
+
+      {sender_first_name}
+  - day: 7
+    en: |
+      {greeting} {first_name},
+
+      One thing from my years on the buying side: the supplier emails worth answering were the few that showed the sender knew what I was working on. That is the idea behind everything we build.
+
+      The 10 companies in your market with a buying signal are still on offer, each with its source, so you can judge the quality yourself. Shall I put the list together?
+
+      {sender_first_name}
+  - day: 14
+    en: |
+      {greeting} {first_name},
+
+      I don't want to keep emailing you. Shall I leave it here, or would a conversation in a few months suit you better?
+
+      {sender_first_name}

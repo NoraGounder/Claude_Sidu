@@ -1,0 +1,170 @@
+# Quailworks lead engine: operating manual for Claude Code
+
+Quailworks is a done-for-you outbound agency. Claude Code is the architect and the operator of
+the lead engine: it builds every layer, runs them, and connects every outside tool by API, CLI
+or MCP. A client only takes the meetings we book.
+
+The repository also hosts the agency website (`index.html`). Leave it alone unless asked.
+
+## Hard rules
+
+1. **Treat this repository as shareable** (private since 2026-11-16, but its history was public and it
+   may be shared again). Never commit prospect data, contact details, client-private
+   files, exports or API keys. Pipeline data lives in `data/` and client-private files in
+   `clients/<client>/private/`. Both are gitignored. Check `git status` before every commit.
+2. **Money:** every paid call goes through the budget guard (`gtm.budget`) and is logged in the
+   `runs` table. Do a `--dry-run` before any new kind of paid run, and respect
+   `clients/<client>/limits.yaml`. Never raise a cap without the user's say-so.
+3. **No sending, no CRM writes, no deletes on outside systems** without explicit approval from
+   the user in this conversation. These are Layers 6 and 7, and they will have their own gates.
+4. **Compliance (NL/BE, GDPR):** check suppression before enrichment and before sending. Record
+   the data source on every contact. Never scrape behind a login. Respect robots.txt when crawling.
+5. Keep systems simple. If a layer needs a manual step from the client, it is wrong.
+6. **AI decisions use TypeSafe Jev 1.14 only.** Model `typesafe/jev-1.14` through
+   `https://openrouter.ai/api/alpha/decisions`, authenticated with `OPENROUTER_API_KEY`. Never OpenRouter
+   Auto Router, Jev Router, the Jev Latest alias, or GPT, Claude, Gemini or any other model through
+   OpenRouter, and no fallback: if Jev is unavailable, stop and report the error. Jev does qualification,
+   ICP scoring and classification; crawling, deterministic checks and data processing stay in Python.
+   Every request logs the reported model ID, tokens and cost (table `jev_calls`). Never print or store
+   the API key. The policy lives in `clients/<client>/ai.yaml` and is enforced by `gtm/sources/jev.py`.
+7. **The Marble Jar (2026-11-09):** Mendix is not offered and never appears in outreach. Market: the Netherlands
+   first (most current customers are Dutch), plus the US, UK and Ireland later; all emails in English. The offer,
+   targeting and copy follow `clients/the-marble-jar/decisions.md`. Never claim integrations, timelines, fixed
+   prices or free work in outreach, never sell pebls or the new platform, and do not change website positioning
+   (the website refresh is a separate project).
+8. **Do not ask the client; decide.** Quailworks decides from the client's website, public data and our own
+   results, records the decision in `clients/<client>/decisions.md` with what would change it, and moves on.
+   Contact the client only for what we legally or physically cannot do for them (a signature, a calendar).
+   Bundle those into one message at launch. Never send the client questionnaires.
+9. **Quailworks as its own client (2026-11-10):** `clients/quailworks/`. Never reuse The Marble Jar's
+   accounts, contacts or replies for it (DPA article 8.4, GDPR purpose limitation): it runs its own
+   discovery, sends from its own domains and mailboxes (`sending.yaml` `mailbox_domains`) in its own
+   campaigns (`QW`) in the shared Smartlead account, and mirrors into its own HubSpot portal
+   (`HUBSPOT_TOKEN_QUAILWORKS`). A sending domain belongs to exactly one client. Offer, ICP and copy follow `clients/quailworks/decisions.md`.
+
+## The pipeline
+
+| Layer | What it does | Tools | Code | Status |
+|---|---|---|---|---|
+| 0 | Offer, ICP, qualification rules, budgets, GTM brain (context for every Jev decision) | config files | `clients/<client>/`, `gtm/brain.py` | built |
+| 1 | Discover target accounts | Harvest API (Apify) | `gtm/layers/l1_discover.py` | built |
+| 2 | Cheap pre-filter: crawl site and careers pages, deterministic rules, Jev 1.14 decisions (non-buyers, ICP fit, admin job titles), score and tier | requests + BeautifulSoup, Crawl4AI browser for blocked and JavaScript pages, TypeSafe Jev 1.14 | `gtm/layers/l2_prefilter.py`, `l2_jev.py` | built |
+| 3 | Find decision-makers (FullEnrich people search), rank them with Jev 1.14 (titles only), find work emails for the chosen ones (max 2 per Tier 1–2 account; Tier 3 parked by the launch plan) | FullEnrich, TypeSafe Jev 1.14 | `gtm/layers/l3_contacts.py` | built |
+| 4 | Send gate: suppression, role/free-mail addresses, domain match, contact country, email status, catch-all cap, freshness, sender consent, GDPR source | Python rules (`gate.yaml`); MillionVerifier only to re-check stale emails | `gtm/layers/l4_gate.py` | built |
+| 5 | Drafts from human-written templates and crawled facts only; Jev 1.14 picks the angle and fact-checks the opening (a flagged opening falls back to a safer one); `approve` passes drafts that clear every check, the rest go to a person | Python templates, TypeSafe Jev 1.14, CSV round-trip | `gtm/layers/l5_copy.py` | built |
+| 6 | Upload approved, gate-ready leads (one campaign per region, checked mailboxes, one contact per company); start only with `--i-confirm` after approval; sync replies, bounces and unsubscribes (Jev 1.14 classifies masked replies) | Smartlead + SmartSenders mailboxes, TypeSafe Jev 1.14 | `gtm/layers/l6_send.py` | built (one Smartlead account for all clients; key in the URL: set `SMARTLEAD_API_KEY` as an environment variable; each client links only its own `mailbox_domains`, and push stops if a domain is listed for two clients) |
+| 7 | Handoff: replies needing a person become deals and one-page briefs with the first answer; outcomes (the client's one word, proposal, won with value) feed learning and lookalikes; HubSpot mirror (writes only with `--live` after approval) | HubSpot (free), templates/replies.yaml | `gtm/layers/l7_handoff.py` | built |
+
+## How to run
+
+```bash
+cd engine && pip install -e ".[dev]"
+python -m gtm --client the-marble-jar discover --dry-run          # shows queries and cost estimate
+python -m gtm --client the-marble-jar discover --segment logistics_nl --max-items 50
+python -m gtm --client the-marble-jar best-clients              # import private/best_clients.csv: exclude, crawl, lookalikes
+python -m gtm --client the-marble-jar stats
+python -m gtm --client the-marble-jar export --status qualified_l1
+python -m gtm --client the-marble-jar prefilter --limit 20     # Layer 2 trial (free); --rescore --refresh re-reads every site
+python -m gtm --client the-marble-jar tiers --tier tier_1 --verbose
+python -m gtm --client the-marble-jar jev --dry-run            # Jev 1.14 decisions (shows first request)
+python -m gtm --client the-marble-jar jev                      # decide all scored accounts
+python -m gtm --client the-marble-jar jev --new-titles         # also re-decide accounts whose job list gained titles
+python -m gtm --client the-marble-jar contacts --dry-run       # Layer 3 plan and cost
+python -m gtm --client the-marble-jar contacts --limit 10      # Layer 3 small live test
+python -m gtm --client the-marble-jar gate                     # Layer 4 send gate (free)
+python -m gtm --client the-marble-jar draft && python -m gtm --client the-marble-jar approve   # Layer 5: drafts, then Quailworks' automatic review
+python -m gtm --client the-marble-jar export-drafts            # only the drafts left for a person
+python -m gtm --client the-marble-jar push                     # Layer 6 dry run; --live uploads (paused)
+python -m gtm --client the-marble-jar start --region nl --i-confirm   # sends: only after the user approves
+python -m gtm --client the-marble-jar sync                     # replies, bounces, unsubscribes
+python -m gtm --client the-marble-jar handoff                  # Layer 7: deals and meeting briefs (data/briefs/)
+python -m gtm --client the-marble-jar outcome 42 qualified     # also: booked, not a fit, follow up, proposal, won --value 25000
+python -m gtm --client the-marble-jar deals                    # pipeline and won revenue
+python -m gtm --client the-marble-jar crm                      # HubSpot dry run; --live writes after approval
+python -m gtm --client the-marble-jar retention                # DPA deletion schedule (dry run; --apply deletes local data)
+python -m gtm --client the-marble-jar learn                    # conversations, meetings and revenue per signal, opening, tier
+python -m gtm --client quailworks sample --name "Acme" --roles "Controls Engineer" --search "packaging" --exclude "Acme"   # Signal Sample from job postings (sample.yaml)
+python -m gtm --client quailworks discover-hiring --dry-run   # Layer 1 by signal: companies hiring for the role (BlitzAPI, hiring.yaml)
+python -m gtm --client quailworks funnel                      # funnel and cost per step, this client only (free)
+python -m gtm --client quailworks linkedin                    # yesterday's Tier 1 contacts, for manual LinkedIn requests
+python -m gtm --client quailworks markets --refresh           # weekly: hiring companies per segment, named in email 1 (markets.yaml)
+pytest -q
+```
+
+Run the paid layers from a machine with open internet access, such as the user's laptop. In a
+Claude Code cloud session, each vendor's host must be allowed and its key saved as a network
+secret. See `.env.example`.
+
+## Memory and working across chats
+
+Each client runs in its own Claude Code chat (Quailworks in one, The Marble Jar in another), on the
+same branch, with the user's Notion as shared memory.
+
+- **Start of a session:** `git pull`, then read the Notion page "Quailworks GTM Brain" (status, open
+  items, key dates, learnings and its "Between chats" notes) and search the Notion memories for the client.
+- **Stay in your lane:** a chat edits only its own client's folder (`clients/<client>/`). A change to
+  shared files (`engine/`, `CLAUDE.md`, `.env.example`) or to anything the other client relies on (the
+  Smartlead account, a sending domain, a shared budget) gets a dated note under "Between chats". When
+  the other chat must know before its next run, also message its session directly (`send_message`).
+- **After every paid run, decision change or result:** add a row to the page's "Run log" database and
+  update the page. A changed decision also goes into the client's `decisions.md`: the repository stays
+  the source of truth for config.
+- **Before every push:** pull and rebase, because the other chat pushes to the same branch.
+- Notion gets only counts, costs and lessons. Never put prospect names, contact details,
+  client-private files or keys there.
+
+## Where things live
+
+- `clients/<client>/client.yaml`: identity, sender, language, the few things needed from the client
+- `clients/<client>/offer.md`: the offer and the definition of a qualified meeting
+- `clients/<client>/icp.yaml`: segments for Layer 1, personas for Layer 3, hard exclusions
+- `clients/<client>/scoring.yaml`: fit and signal scoring for Layer 2
+- `clients/<client>/limits.yaml`: monthly budget caps and send caps
+- `clients/<client>/ai.yaml`: AI policy (Jev 1.14 only, no fallback) and decision thresholds
+- `clients/<client>/brain.yaml`: GTM brain (offer, personas and pains, pillars, objections, competitors,
+  voice, signals). Each entry is confirmed, decided, hypothesis or ask_mithun; ask_mithun never reaches Jev
+- `clients/<client>/private/best_clients.csv`: the client's best customers (gitignored). Never emailed;
+  Jev 1.14 scores prospects for similarity to them (`jev_lookalike` in scoring.yaml)
+- `clients/<client>/decisions.md`: every decision Quailworks made instead of asking the client, with what
+  would change it
+- `clients/the-marble-jar/launch-plan.md`: phases, volume (Tier 1–2, 40 a day) and monthly cost
+- `clients/<client>/gate.yaml`: Layer 4 send-gate rules and the GDPR notice text
+- `clients/<client>/private/exclusions.csv`: real do-not-contact list (gitignored)
+- `engine/gtm/`: the engine; `engine/tests/`: tests with synthetic data only
+- `docs/quailworks-handoff.md`: starting point for running the engine for Quailworks itself
+- `clients/_template/` + the `new-client` skill: start a new client from Quailworks' setup; `docs/playbook.md`:
+  counts, costs and lessons from Quailworks' launch
+- `clients/quailworks/`: Quailworks' own outbound (US and UK companies that sell to hardware engineering teams); every
+  command takes `--client quailworks`; `launch-plan.md` has the run order
+
+### Client-specific behaviour lives in config (defaults = The Marble Jar's)
+
+The engine has no client logic of its own. A client changes it with these optional keys; without
+them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks.py` checks this):
+
+- `scoring.yaml`: `detect` (evidence rules per signal, replacing the default Dutch admin rules),
+  `job_page_signals`, `case_sensitive_signals`, `signal_bonuses` (e.g. two sales vacancies at once),
+  `job_boards` (read open jobs from the public feeds of Greenhouse, Lever and Ashby job boards;
+  `countries` leaves out jobs the board places elsewhere), `quote_width`, `matches_per_label`
+- `ai.yaml`: `not_a_buyer` and `job_titles` (Layer 2 Jev questions; `job_titles.signal` names the
+  evidence signal), `thresholds.job_title`, `contact_question` (Layer 3), `job_evidence` (Jev 1.14
+  checks each job-ad word match on a careers page: a rejected match no longer counts as a signal, a
+  confirmed one may be quoted in the opening; `thresholds.job_evidence`, `max_evidence_per_request`)
+- `gate.yaml`: `verify_statuses` (emails with these finder ratings are held until MillionVerifier has
+  checked them with `gate --recheck`)
+- `templates/sequence.yaml`: `hooks.<hook>.needs` / `.description`, `process.<name>.description`
+  (one process means no Jev question), `named_facts`, `title_role_words`, `company_suffixes`,
+  `banned_phrases`, `cta` and `hooks.<hook>.cta` (the ask after the opening, `{cta}` in a step)
+- `templates/replies.yaml`: `call_prep` (the meeting brief's call questions)
+- `client.yaml`: `crm.hubspot_token_env` (each client's own HubSpot portal)
+- `sending.yaml`: `mailbox_domains` (the client's own sending domains; one domain, one client),
+  `send_order: best_first` (upload the strongest companies first),
+  `min_warmup_days` / `min_warmup_reputation` (mailboxes join a campaign only when warm; every upload
+  links newly ready ones), `spread_daily_cap` (the per-mailbox cap is kept by the campaign total)
+- `sample.yaml`: the Signal Sample (`sample` command): signals and weights for a prospect's market
+- `markets.yaml` + `sequence.yaml` `market_line` / `cta_market`: name three hiring companies in the
+  prospect's market in email 1 (`markets --refresh` weekly; `never_name` keeps vendors and recruiters out)
+- `hiring.yaml`: discovery by hiring signal (`discover-hiring`, BlitzAPI): job titles, industries per
+  search; `limits.yaml` `blitzapi_records` caps the records used a month. `scoring.yaml`
+  `enrichment_policy.email_first: blitzapi` tries BlitzAPI for work emails before FullEnrich
+- `.claude/skills/`: one skill per runnable layer

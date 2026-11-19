@@ -1,0 +1,47 @@
+# Layer 6: Smartlead sending settings (engine/gtm/layers/l6_send.py).
+# Mailbox limits come from limits.yaml (sending: max_per_mailbox_per_day, max_emails_per_day).
+# One Smartlead account serves every client; each is kept apart by its own domains and campaign prefix.
+
+campaign_prefix: "<2-4 letters, unique per client>"
+
+# Only mailboxes on these domains are linked to Quailworks' campaigns, so no other client's mailbox is
+# used. A domain listed here and in another client's sending.yaml stops push for both.
+mailbox_domains: []   # the client's own sending domains; empty means no mailbox is ever used
+
+# US and UK (decisions.md Q8). US Central time keeps sends inside working hours from coast to coast.
+regions:
+  us: {countries: [US], timezone: America/Chicago}
+  uk: {countries: [GB], timezone: Europe/London}
+
+schedule:
+  days_of_the_week: [1, 2, 3, 4]   # Monday-Thursday: four sending days for capacity (decisions.md Q19)
+  start_hour: "09:00"
+  end_hour: "16:30"
+  min_time_btw_emails: 8           # minutes between sends per mailbox
+
+settings:
+  track_open: false                # pixels hurt deliverability and are unreliable
+  track_click: false
+  stop_on_reply: true
+  stop_on_auto_reply: false
+  send_as_plain_text: true
+
+# Smartlead sends in upload order: the strongest companies first (tier, then signal and fit scores), so
+# the small daily volume of the first weeks goes to the best-matched people (decisions.md Q37).
+send_order: best_first
+
+# Launch: only these tiers are uploaded. Add tier_3 once Tier 1-2 results prove the message.
+send_tiers: [tier_1, tier_2]
+
+# A second contact at the same company waits until the first one's sequence is over.
+stagger_days_same_account: 21
+
+# Mailboxes must have warm-up on before they are linked to a campaign.
+require_warmup: true
+# A mailbox joins a campaign only after 14 days of warm-up with a reputation of 95% or more, so mailboxes
+# added later join by themselves when ready.
+min_warmup_days: 14
+min_warmup_reputation: 95
+# The ramp (limits.yaml) is kept by the campaign's daily total, capped at ready mailboxes x the per-mailbox
+# cap, so a mailbox whose own Smartlead ceiling is higher (15 a day) can still be used (Q46).
+spread_daily_cap: true

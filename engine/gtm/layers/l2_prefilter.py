@@ -1,0 +1,307 @@
+"""Layer 2: cheap pre-filter. Crawl each Layer 1 account's website and careers page, find
+evidence with rules, score fit and signals from scoring.yaml, and assign a tier. Crawling, rules
+and arithmetic are deterministic Python. AI decisions come only from TypeSafe Jev 1.14
+(gtm/layers/l2_jev.py); they are stored in jev_decisions and folded into every score here, so a
+re-crawl or re-score never loses them.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+
+from gtm import db
+from gtm.config import ClientConfig
+from gtm.crawl import Page, SiteCrawl, crawl_site, default_fetcher
+from gtm.layers import l1_hiring
+from gtm.layers.l1_discover import band_midpoint
+from gtm.normalize import has_keyword, size_range
+from gtm.signals import Evidence, extract, is_dutch, rules_for
+
+# Default extra points for several distinct labels of one signal (The Marble Jar's scoring.yaml).
+DEFAULT_SIGNAL_BONUSES = {"multiple_admin_ads": {"signal": "admin_job_ad", "min_labels": 2}}
+
+
+def job_signal(cfg: ClientConfig) -> str:
+    """The evidence signal that Jev 1.14's job-title answers count towards (ai.yaml job_titles.signal)."""
+    return (cfg.ai.get("job_titles") or {}).get("signal", "admin_job_ad")
+
+
+def job_threshold(cfg: ClientConfig) -> float:
+    t = cfg.ai["thresholds"]
+    return t["job_title"] if "job_title" in t else t["admin_role"]
+
+
+def evidence_threshold(cfg: ClientConfig) -> float:
+    return cfg.ai["thresholds"].get("job_evidence", job_threshold(cfg))
+
+
+def evidence_key(label: str, quote: str) -> str:
+    """Names one word match in Jev's stored checks: when the page text changes, it is a new match."""
+    return f"{label}|{hashlib.sha1(quote.encode()).hexdigest()[:10]}"
+
+
+def checked_evidence(cfg: ClientConfig, evidence: list[Evidence], jev: dict | None) -> list[Evidence]:
+    """Optional (ai.yaml `job_evidence`): a word match for the job signal on a careers page counts only
+    until Jev 1.14 has checked it and said it is not an open role (a testimonial, another job's
+    description, a role abroad). Matches not checked yet stay, so the next Jev run can check them."""
+    if not cfg.ai.get("job_evidence") or not jev:
+        return evidence
+    signal, threshold, checks = job_signal(cfg), evidence_threshold(cfg), jev.get("checks") or {}
+    return [e for e in evidence
+            if e.signal != signal or checks.get(evidence_key(e.label, e.quote), 1.0) >= threshold]
+
+
+def order_titles(cfg: ClientConfig, titles: list[str]) -> list[str]:
+    """Titles that match the job signal's rules first: a job board can list a hundred roles, and
+    only the first ones are stored and put to Jev 1.14."""
+    patterns = [p for _, p in rules_for(cfg.scoring).rules.get(job_signal(cfg), [])]
+    return sorted(titles, key=lambda t: not any(re.search(p, t, re.I) for p in patterns))
+
+
+@dataclass
+class Score:
+    fit: int
+    signal: int
+    tier: str
+    breakdown: dict
+    flags: list[str] = field(default_factory=list)
+    reason: str | None = None
+
+
+def load_jev(conn, account_id: int) -> dict | None:
+    row = conn.execute("SELECT * FROM jev_decisions WHERE account_id=?", (account_id,)).fetchone()
+    if not row:
+        return None
+    return {"model_id": row["model_id"], "not_a_buyer": row["not_a_buyer"], "icp_fit": row["icp_fit"],
+            "icp_confidence": row["icp_confidence"], "titles": json.loads(row["titles_json"]),
+            "lookalike": row["lookalike"] if "lookalike" in row.keys() else None,
+            "checks": json.loads(row["checks_json"] or "{}") if "checks_json" in row.keys() else {}}
+
+
+def jev_evidence(cfg: ClientConfig, site: SiteCrawl | None, jev: dict | None) -> list[Evidence]:
+    if not jev:
+        return []
+    threshold, signal = job_threshold(cfg), job_signal(cfg)
+    url = (site.careers.url if site and site.careers and site.careers.ok else
+           (site.board_url or site.home.url) if site else "")
+    posted = site.posted if site else {}
+    return [Evidence(signal, f"job title: {title}", posted.get(title) or url, f"{title} (Jev 1.14, p={p:.2f})")
+            for title, p in jev["titles"].items() if p >= threshold]
+
+
+def fit_score(cfg: ClientConfig, account: dict, site: SiteCrawl | None, evidence: list[Evidence],
+              jev: dict | None = None) -> tuple[int, dict]:
+    rules = cfg.scoring["fit"]
+    parts: dict[str, int] = {}
+
+    start, end = size_range(account.get("employee_range"))
+    mid = band_midpoint(start, end)
+    if mid is None:
+        mid = account.get("employee_count")
+    if mid is not None:
+        if cfg.icp.company.employees_min <= mid <= cfg.icp.company.employees_max:
+            parts["employees"] = rules["employees"]["in_range"]
+            s_lo, s_hi = rules["employees"]["sweet_spot"]
+            if s_lo <= mid <= s_hi:
+                parts["sweet_spot"] = rules["employees"]["sweet_spot_bonus"]
+
+    groups = {s.name: s.industry_group for s in cfg.icp.segments}
+    weights = [rules["industry_group"].get(groups.get(seg), 0) for seg in json.loads(account["segments"])]
+    if weights:
+        parts["industry"] = max(weights)
+
+    parts["country"] = rules["country"].get(account.get("country") or "", 0)
+    if site and site.home.ok:
+        parts["website"] = rules["website_reachable"]
+        if is_dutch(site):
+            parts["dutch_site"] = rules["dutch_language_site"]
+    if any(e.signal == "subsidiary_of_large_group" for e in evidence):
+        parts["subsidiary"] = rules.get("subsidiary_of_large_group", 0)
+    if jev and jev.get("icp_fit") is not None and rules.get("jev_icp_fit"):
+        # Jev's ICP score is 0 (poor) .. 2 (strong); scale to the configured weight.
+        parts["jev_icp_fit"] = round(rules["jev_icp_fit"] * jev["icp_fit"] / 2)
+    if jev and jev.get("lookalike") is not None and rules.get("jev_lookalike"):
+        # Similarity to the client's best customers, 0 (not) .. 2 (very similar).
+        parts["jev_lookalike"] = round(rules["jev_lookalike"] * jev["lookalike"] / 2)
+    return max(0, sum(parts.values())), parts
+
+
+def signal_score(cfg: ClientConfig, site: SiteCrawl | None, evidence: list[Evidence]) -> tuple[int, dict]:
+    """Points for every weighted signal (scoring.yaml `signals`) that has evidence. Two special cases:
+    `headcount_growth` also counts when the careers page lists 5 or more roles, and `signal_bonuses`
+    add points when one signal has several distinct labels (e.g. two different admin vacancies)."""
+    w = cfg.scoring["signals"]
+    bonuses = cfg.scoring.get("signal_bonuses", DEFAULT_SIGNAL_BONUSES)
+    labels: dict[str, set[str]] = {}
+    for e in evidence:
+        labels.setdefault(e.signal, set()).add(e.label)
+    parts: dict[str, int] = {}
+    for key, weight in w.items():
+        if key in bonuses:
+            continue
+        if key == "headcount_growth":
+            # Optional (scoring.yaml growth_min_roles, default 5; 0 = off): a careers page listing this
+            # many titles counts as growth. The count is noisy (navigation links, duplicates), so a
+            # client can rely on explicit growth evidence only (The Marble Jar, audit C3).
+            min_roles = cfg.scoring.get("growth_min_roles", 5)
+            if key in labels or (min_roles and site and len(set(site.job_titles)) >= min_roles):
+                parts[key] = weight
+        elif key in labels:
+            parts[key] = weight
+    for key, rule in bonuses.items():
+        if key in w and len(labels.get(rule["signal"], ())) >= rule.get("min_labels", 2):
+            parts[key] = w[key]
+    return min(100, sum(parts.values())), parts
+
+
+def tier_for(cfg: ClientConfig, fit: int, signal: int, lookalike: float | None = None,
+             jev_icp: float | None = None) -> str:
+    t = cfg.scoring["tiers"]
+    # Optional (tiers.min_jev_icp): once Jev 1.14 has rated a company below this ICP score (0 poor .. 2
+    # strong), it cannot be Tier 1-2, whatever its signals. Not set = The Marble Jar's behaviour.
+    min_icp = t.get("min_jev_icp")
+    if min_icp is not None and jev_icp is not None and jev_icp < min_icp:
+        return "tier_3" if fit >= t["tier_3"]["fit_min"] else "rejected_l2"
+    if fit >= t["tier_1"]["fit_min"] and signal >= t["tier_1"]["signal_min"]:
+        return "tier_1"
+    fit_only = t.get("tier_2_fit_only", {}).get("fit_min")
+    if (fit >= t["tier_2"]["fit_min"] and signal >= t["tier_2"]["signal_min"]) or (fit_only and fit >= fit_only):
+        return "tier_2"
+    # A company that closely resembles the client's best customers is worth a contact even
+    # without a buying signal today.
+    look = t.get("tier_2_lookalike") or {}
+    if lookalike is not None and look and lookalike >= look["lookalike_min"] and fit >= look["fit_min"]:
+        return "tier_2"
+    if fit >= t["tier_3"]["fit_min"]:
+        return "tier_3"
+    return "rejected_l2"
+
+
+TIER_ORDER = ["tier_1", "tier_2", "tier_3"]
+
+
+def is_local_arm(cfg: ClientConfig, account: dict) -> bool:
+    """Optional (scoring.yaml subsidiary_name_words): a whole word such as "Benelux" in the company name
+    marks the local arm of a larger group."""
+    words = cfg.scoring.get("subsidiary_name_words") or []
+    name = account.get("name") or ""
+    return any(re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", name, re.I) for w in words)
+
+
+def score_account(cfg: ClientConfig, account: dict, site: SiteCrawl | None,
+                  jev: dict | None = None) -> tuple[Score, list[Evidence]]:
+    found = checked_evidence(cfg, extract(site, rules_for(cfg.scoring)) if site else [], jev)
+    evidence = found + jev_evidence(cfg, site, jev)
+    fit, fit_parts = fit_score(cfg, account, site, evidence, jev)
+    signal, sig_parts = signal_score(cfg, site, evidence)
+    flags = []
+    if not account.get("website"):
+        flags.append("no_website")
+    elif site and not site.home.ok:
+        flags.append(f"unreachable:{site.home.error or site.home.status}")
+    if any(e.signal == "subsidiary_of_large_group" for e in evidence) or is_local_arm(cfg, account):
+        flags.append("subsidiary")
+    tier, reason = tier_for(cfg, fit, signal, (jev or {}).get("lookalike"), (jev or {}).get("icp_fit")), None
+    # Optional (scoring.yaml tiers.subsidiary_max_tier): local arms of international groups buy software
+    # at group level, so they are not worth an early email (The Marble Jar, audit H5).
+    cap = cfg.scoring["tiers"].get("subsidiary_max_tier")
+    if cap and "subsidiary" in flags and tier in TIER_ORDER and TIER_ORDER.index(tier) < TIER_ORDER.index(cap):
+        tier = cap
+    if tier == "rejected_l2":
+        reason = f"fit {fit} below tier 3"
+    if jev:
+        flags.append("jev:" + jev["model_id"])
+        if jev["not_a_buyer"] is not None and jev["not_a_buyer"] >= cfg.ai["thresholds"]["not_a_buyer"]:
+            tier, reason = "rejected_l2", f"jev:not_a_buyer p={jev['not_a_buyer']:.2f}"
+    return Score(fit, signal, tier, {"fit": fit_parts, "signals": sig_parts}, flags, reason), evidence
+
+
+def _save(conn, account_id: int, site: SiteCrawl | None, score: Score, evidence: list[Evidence]) -> None:
+    ts = db.now_iso()
+    conn.execute("DELETE FROM evidence WHERE account_id=? AND layer='L2'", (account_id,))
+    for e in evidence:
+        conn.execute(
+            "INSERT INTO evidence(account_id, layer, signal, label, url, quote, found_at) VALUES (?,?,?,?,?,?,?)",
+            (account_id, "L2", e.signal, e.label, e.url, e.quote, ts))
+    home_ok = bool(site and site.home.ok)
+    conn.execute(
+        "INSERT OR REPLACE INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, careers_url,"
+        " job_link_count, job_titles, flags, breakdown, scored_at, home_title, home_excerpt)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (account_id, score.fit, score.signal, score.tier, int(home_ok), int(home_ok and is_dutch(site)),
+         site.careers.url if site and site.careers and site.careers.ok else (site.board_url or None) if site else None,
+         site.job_link_count if site else 0,
+         json.dumps((site.job_titles if site else [])[:30], ensure_ascii=False),
+         json.dumps(score.flags), json.dumps(score.breakdown), ts,
+         site.home.title[:200] if home_ok else None,
+         site.home.text[:1200] if home_ok else None))
+    conn.execute("UPDATE accounts SET status=?, status_reason=? WHERE id=?",
+                 (score.tier, score.reason, account_id))
+
+
+def run(cfg: ClientConfig, conn, limit: int | None = None, rescore: bool = False, workers: int = 8,
+        fetcher_factory=None, account_ids: list[int] | None = None) -> dict:
+    fetcher_factory = fetcher_factory or default_fetcher
+    if account_ids is not None:
+        marks = ",".join("?" * len(account_ids)) or "NULL"
+        accounts = [dict(r) for r in conn.execute(
+            f"SELECT * FROM accounts WHERE client=? AND id IN ({marks}) ORDER BY id",
+            (cfg.slug, *account_ids)).fetchall()]
+    else:
+        statuses = ("qualified_l1", "tier_1", "tier_2", "tier_3", "rejected_l2") if rescore else ("qualified_l1",)
+        marks = ",".join("?" * len(statuses))
+        accounts = [dict(r) for r in conn.execute(
+            f"SELECT * FROM accounts WHERE client=? AND status IN ({marks}) ORDER BY id",
+            (cfg.slug, *statuses)).fetchall()]
+    # Exclusion keywords may have been added after Layer 1 ran: re-check names before crawling.
+    kept = []
+    for acc in accounts:
+        kw = has_keyword(acc["name"], cfg.icp.exclusions.name_keywords)
+        if kw:
+            conn.execute("UPDATE accounts SET status='rejected_l1', status_reason=? WHERE id=?",
+                         (f"excluded_keyword:{kw}", acc["id"]))
+            conn.execute("DELETE FROM l2_scores WHERE account_id=?", (acc["id"],))
+        else:
+            kept.append(acc)
+    conn.commit()
+    accounts = kept[:limit] if limit else kept
+    run_id = db.start_run(conn, cfg.slug, "L2", "crawl", f"{len(accounts)} accounts", 0.0, {"limit": limit})
+
+    boards = cfg.scoring.get("job_boards")   # optional: read hosted job boards' public feeds
+
+    # Optional (scoring.yaml posted_jobs: true): titles of live job postings stored by
+    # `discover-hiring --postings` join the titles read on the site, so Jev 1.14 judges them too.
+    posted = {a["id"]: l1_hiring.posted_jobs(conn, a["id"]) for a in accounts} if cfg.scoring.get("posted_jobs") else {}
+
+    def work(acc):
+        try:
+            site = (crawl_site(fetcher_factory(), acc["website"], job_boards=boards)
+                    if acc.get("website") else None)
+            if site and posted.get(acc["id"]):
+                site.posted = posted[acc["id"]]
+                site.job_titles = list(dict.fromkeys([*site.posted, *site.job_titles]))
+            if site and (boards or site.posted):
+                site.job_titles = order_titles(cfg, site.job_titles)
+        except Exception as exc:  # noqa: BLE001 - score the account without a site, flag it
+            site = SiteCrawl(home=Page(url=acc["website"], status=0, error=f"crawl_error:{type(exc).__name__}"))
+        return acc, site
+
+    summary = {"accounts": len(accounts), "tier_1": 0, "tier_2": 0, "tier_3": 0, "rejected_l2": 0,
+               "unreachable": 0, "jev_decided": 0}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(work, a) for a in accounts]
+        for fut in as_completed(futures):
+            acc, site = fut.result()
+            jev = load_jev(conn, acc["id"])
+            score, evidence = score_account(cfg, acc, site, jev)
+            _save(conn, acc["id"], site, score, evidence)
+            conn.commit()
+            summary[score.tier] += 1
+            summary["unreachable"] += any(f.startswith("unreachable") for f in score.flags)
+            summary["jev_decided"] += jev is not None
+    db.finish_run(conn, run_id, "succeeded", len(accounts), 0.0, json.dumps(summary))
+    return summary

@@ -1,0 +1,75 @@
+# Layer 0 rules, applied in Layer 2. Two separate scores (0-100), then a tier.
+# Weights are a starting point; the `learn` report (meetings and revenue per signal and tier)
+# recalibrates them once replies exist (decisions.md: decide from results, do not ask the client).
+
+fit:
+  employees:
+    in_range: 30          # 20-1,000 (D30); the sweet spot below keeps 80-300 first
+    sweet_spot: [80, 300]
+    sweet_spot_bonus: 10
+  industry_group:
+    logistics: 25
+    wholesale: 25
+    installation: 20
+    manufacturing: 20
+    facilities: 15
+  country:
+    US: 15
+    GB: 15
+    IE: 12
+    NL: 15      # first market (D7)
+    BE: 10      # sent with the NL campaign (D20)
+  website_reachable: 5
+  dutch_language_site: 0    # no longer relevant: English-speaking market
+  # Seen in the first live Layer 1 data (e.g. "Hilti Nederland BV"): local arms of large groups
+  # often buy software at group level, so they fit less well than independent companies.
+  subsidiary_of_large_group: -15
+  # TypeSafe Jev 1.14's ICP score (0 poor .. 2 strong), scaled to 0-15 points (gtm/layers/l2_jev.py).
+  jev_icp_fit: 15
+  # Jev 1.14's similarity to The Marble Jar's best clients (private/best_clients.csv, imported with
+  # `best-clients`), 0 not .. 2 very similar, scaled to 0-20 points. No effect until the list exists.
+  jev_lookalike: 20
+
+
+# Titles of live job postings (discover-hiring --postings, BlitzAPI) join the titles read on the
+# company's own site; Jev 1.14 still decides whether each is admin work (decisions.md D24).
+posted_jobs: true
+
+# The careers-page title count is noisy (navigation links, duplicates, business units), so it does
+# not count as growth for The Marble Jar (audit C3, 2026-11-17). 0 = off; engine default 5.
+growth_min_roles: 0
+
+# Whole words in a company name that mark the local arm of a larger group (audit H5).
+subsidiary_name_words: [Nederland, Netherlands, Benelux, Europe, EMEA, Belgium, "België", Belgique]
+
+signals:
+  # Found on careers pages and in job ads during Layer 2.
+  admin_job_ad: 30            # administratief medewerker, crediteuren-/debiteurenadministratie, orderverwerking, data entry
+  multiple_admin_ads: 15      # two or more such roles open at once
+  manual_process_language: 10 # Excel, handmatig, papieren, dubbel invoeren, overtypen in an ad or on the site.
+                              # A plain word match ("Excel" is in most job ads), so it cannot make Tier 2 alone (audit H4)
+  erp_mention: 10             # Exact, AFAS, SAP Business One, Navision, Twinfield: tells us what to integrate with
+  # new_ops_or_finance_leader was listed here at 15 points but nothing detects it yet (audit M10):
+  # removed until Layer 3 records start dates. brain.yaml keeps it as a hypothesis.
+  headcount_growth: 10        # explicit growth evidence only (new site or warehouse); see growth_min_roles
+
+tiers:
+  # Maximum fit is 125 (90 + Jev ICP fit 15 + Jev lookalike 20), and a Dutch company in range with a working site scores 75-90 on fit
+  # alone. So Tier 1 and 2 need real signals; fit-only accounts are Tier 3 (cheapest handling).
+  tier_1: {fit_min: 60, signal_min: 45}   # e.g. two admin vacancies (30 + 15)
+  tier_2: {fit_min: 60, signal_min: 25}
+  tier_3: {fit_min: 50}
+  # Very similar to a best client (Jev lookalike >= 1.5 of 2) is at least Tier 2, signal or not.
+  tier_2_lookalike: {lookalike_min: 1.5, fit_min: 60}
+  # Anything below tier_3 is dropped before we pay for contacts.
+  # Local arms of international groups (name words below, or "part of ... Group" on the site) are
+  # parked in Tier 3: they buy software at group level (audit H5, 2026-11-17).
+  subsidiary_max_tier: tier_3
+
+enrichment_policy:
+  # Layer 3. FullEnrich is itself a waterfall over 20+ providers, so there is no second provider.
+  tier_1: {max_contacts: 2}
+  tier_2: {max_contacts: 2}
+  # Launch plan: Tier 3 is parked (0 = not searched, nothing spent) until Tier 1-2 replies show a
+  # message that works. Set back to 1 to include it.
+  tier_3: {max_contacts: 0}
