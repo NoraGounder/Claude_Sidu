@@ -10,22 +10,29 @@ job_titles: [administratief medewerker, medewerker administratie, financieel adm
              medewerker binnendienst, commercieel medewerker binnendienst, logistiek administratief medewerker,
              medewerker crediteurenadministratie, medewerker debiteurenadministratie, crediteurenadministratie,
              debiteurenadministratie, data entry, administrative assistant, accounts payable,
-             accounts receivable, order administrator, administratief planner]
+             accounts receivable, order administrator, administratief planner,
+             # 2026-11-19: roles that also mean retyping data (customs, invoicing, back office, purchasing)
+             douanedeclarant, customs declarant, customs clerk, medewerker douane, medewerker facturatie,
+             facturist, billing specialist, backoffice medewerker, medewerker backoffice, medewerker verkoop binnendienst,
+             medewerker klantenservice, customer service medewerker, inkoopassistent, assistent inkoper,
+             medewerker inkoop, purchase assistant, boekhoudkundig medewerker, boekhouder, junior boekhouder,
+             salarisadministrateur, medewerker salarisadministratie, administratief assistent, office manager,
+             medewerker transportplanning, expeditiemedewerker, logistiek medewerker administratie]
 posted_last_days: 30
 job_countries: [NL, BE]
 
 searches:
-  - {name: hiring_logistics_nlbe, segment: logistics_nl, hq_countries: [NL, BE], max_items: 150,
+  - {name: hiring_logistics_nlbe, segment: logistics_nl, hq_countries: [NL, BE], max_items: 400,
      industries: ["Transportation, Logistics, Supply Chain and Storage", Truck Transportation,
                   Freight and Package Transportation, Warehousing and Storage]}
-  - {name: hiring_wholesale_nlbe, segment: wholesale_nl, hq_countries: [NL, BE], max_items: 150,
+  - {name: hiring_wholesale_nlbe, segment: wholesale_nl, hq_countries: [NL, BE], max_items: 400,
      industries: [Wholesale, Wholesale Import and Export, Wholesale Building Materials,
                   Wholesale Food and Beverage, "Wholesale Hardware, Plumbing, Heating Equipment",
                   Wholesale Machinery, Wholesale Computer Equipment, Wholesale Metals and Minerals]}
-  - {name: hiring_installation_nlbe, segment: installation_nl, hq_countries: [NL, BE], max_items: 150,
+  - {name: hiring_installation_nlbe, segment: installation_nl, hq_countries: [NL, BE], max_items: 400,
      industries: [Construction, Building Construction, Civil Engineering, Specialty Trade Contractors,
                   Building Equipment Contractors]}
-  - {name: hiring_manufacturing_nlbe, segment: manufacturing_nl, hq_countries: [NL, BE], max_items: 150,
+  - {name: hiring_manufacturing_nlbe, segment: manufacturing_nl, hq_countries: [NL, BE], max_items: 400,
      industries: [Manufacturing, Machinery Manufacturing, Industrial Machinery Manufacturing,
                   Fabricated Metal Products, Food and Beverage Manufacturing, Plastics Manufacturing,
                   Packaging and Containers Manufacturing, Electrical Equipment Manufacturing]}
