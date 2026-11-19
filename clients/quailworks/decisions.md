@@ -459,6 +459,19 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   have yet, and switching it on now would block the launch upload. Would change: the vault being set up
   (then turn it on and back up before `push --live`).
 
+- **Q48. Use the flat BlitzAPI plan for signals, not volume (2026-11-19, the user: "make the best use of
+  every tool we already pay for").** The limit is sending, not data: about 264 new leads can be emailed in
+  December (6 mailboxes on the 5/10/15 ramp, 4 days a week, 4 emails per lead) and about 164 a week once
+  all 11 mailboxes run at 15 a day. Contacts found far ahead of sending go stale (emails decay, job ads
+  close in weeks) and GDPR data minimisation says not to hold personal data we will not use. So the plan
+  buys signals: wider hiring searches (all enabled segments, the UK, more new-business titles; Jev still
+  decides per title) and, weekly, up to 3,000 live job postings matched to every account we have, so a
+  Tier 3 company that starts hiring moves up (`hiring.yaml postings`, `scoring.yaml posted_jobs`).
+  First run: 42 companies hiring (32 already known: the signal market is small, not the record budget),
+  and 138 Tier 3 companies with a live new-business posting. People and emails are found only for a
+  rolling buffer of about three weeks of sending. Would change: send capacity growing (more mailboxes or
+  a higher ramp), or Tier 3 companies converting as well as Tier 1-2 (then source deeper).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

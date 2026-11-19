@@ -643,7 +643,7 @@ def test_discovery_by_hiring_signal_stores_accounts_within_the_record_allowance(
     cfg = load_client(QW)
     conn = db.connect()
     plans = l1_hiring.plan(cfg, ["hiring_robotics_us"], 3)
-    assert plans[0].job["date_posted"] == {"last_days": 30} and plans[0].job["location"] == {"country_code": {"include": ["US"]}}
+    assert plans[0].job["date_posted"] == {"last_days": 30} and plans[0].job["location"] == {"country_code": {"include": ["US", "GB"]}}
     assert "Robotics Engineering" in plans[0].company["industry"]["include"]
     assert plans[0].company["employee_count"] == {"min": 11, "max": 1000} and plans[0].est_cost == 0
     session = BlitzSession([_blitz_company("Halden Robotics", "halden.example"),

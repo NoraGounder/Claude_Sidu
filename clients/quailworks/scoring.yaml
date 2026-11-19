@@ -145,3 +145,7 @@ enrichment_policy:
   tier_1: {max_contacts: 2}
   tier_2: {max_contacts: 2}
   tier_3: {max_contacts: 0}   # parked until Tier 1-2 replies show a message that works
+
+# Titles of live job postings stored by `discover-hiring --postings` count as careers-page titles;
+# Jev still checks each one (Q48).
+posted_jobs: true
