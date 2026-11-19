@@ -6,7 +6,7 @@ version: 1
 
 # Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md D1, D8).
 buyer_profile: >-
-  Companies in the Netherlands and Belgium (later the US, UK and Ireland) with 50-500
+  Companies in the Netherlands and Belgium (later the US, UK and Ireland) with 20-1,000
   employees in logistics, wholesale and distribution, installation and technical services, or
   manufacturing, that run operations and finance processes (invoices, orders, planning) where
   manual work can be automated or replaced with well-designed custom software.
@@ -16,11 +16,11 @@ offer_summary: >-
   (invoices, orders, data entry). Mendix is not offered.
 
 company:
-  employees_min: 50
-  employees_max: 500
+  employees_min: 20    # widened from 50-500 on 2026-11-19 (decisions.md D30)
+  employees_max: 1000
   # Values passed to the Harvest company-size filter. Confirm the exact spelling on the
   # first live run (the engine stores the raw response, so a mismatch is easy to spot).
-  linkedin_company_sizes: ["51-200", "201-500"]
+  linkedin_company_sizes: ["11-50", "51-200", "201-500", "501-1000"]
 
 industry_groups:
   logistics:

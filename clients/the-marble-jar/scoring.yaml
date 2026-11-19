@@ -4,7 +4,7 @@
 
 fit:
   employees:
-    in_range: 30          # 50-500
+    in_range: 30          # 20-1,000 (D30); the sweet spot below keeps 80-300 first
     sweet_spot: [80, 300]
     sweet_spot_bonus: 10
   industry_group:

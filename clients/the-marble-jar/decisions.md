@@ -140,6 +140,19 @@ Sources: themarblejar.io (read 2026-11-09), the user's instructions of 2026-11-0
   sending mailboxes (audit M12); a different first email for the second contact at a company (M11);
   BlitzAPI as first email source once Mithun has had the sub-processor notice (D24).
 
+## Volume (2026-11-19, Sidarth's answers)
+
+- **D29. The NL/BE risk decision (D18, D20) covers every new Dutch and Belgian contact, not only the
+  first batch.** Same conditions: low volume, identity and opt-out in every email, every stop honoured
+  at once, automatic pause on any complaint (D28). Change if: a complaint, a regulator letter, or legal
+  advice.
+- **D30. Company size 20-1,000 employees** (was 50-500, D8). With an open admin vacancy as the
+  requirement, the 50-500 pool in our sectors is about 100 companies a month; smaller firms reply and
+  decide faster, and firms up to 1,000 still buy from a studio. The 80-300 sweet spot keeps its bonus,
+  so they are emailed first. Change if: `learn` shows one size band without meetings.
+- **More roles in the hiring search** (customs, invoicing, back office, purchasing, payroll): Jev 1.14
+  still decides whether each posting is manual admin work before it counts.
+
 ## Needed from Mithun (only what we cannot do for him)
 
 One message, at launch, a few minutes:

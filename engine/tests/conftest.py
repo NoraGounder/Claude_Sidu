@@ -28,6 +28,7 @@ def legacy_nl(client_dir: Path) -> None:
     icp_path = client_dir / "icp.yaml"
     icp = yaml.safe_load(icp_path.read_text(encoding="utf-8"))
     icp["allowed_countries"] = ["NL", "BE"]
+    icp["company"]["employees_min"], icp["company"]["employees_max"] = 50, 500   # the fixtures' size band (TMJ D30 widened it)
     for seg in icp["segments"]:
         seg["enabled"] = seg["name"].endswith("_nl")
     icp_path.write_text(yaml.safe_dump(icp, allow_unicode=True, sort_keys=False), encoding="utf-8")
