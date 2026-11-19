@@ -66,15 +66,29 @@ def price_key(cfg: ClientConfig) -> str:
     return f"openrouter:{cfg.ai['model']}:request"
 
 
-def plan(cfg: ClientConfig, conn, limit: int | None = None, redo: bool = False) -> JevPlan:
+def _has_new_titles(conn, account_id: int, titles: list[str], cap: int) -> bool:
+    """True when the account lists a job title Jev has not judged yet (e.g. a posting stored since)."""
+    row = conn.execute("SELECT titles_json FROM jev_decisions WHERE account_id=?", (account_id,)).fetchone()
+    judged = json.loads(row["titles_json"] or "{}") if row else {}
+    return any(t not in judged for t in titles[:cap])
+
+
+def plan(cfg: ClientConfig, conn, limit: int | None = None, redo: bool = False,
+         new_titles: bool = False) -> JevPlan:
+    """Accounts to decide: those without a decision; with `redo`, all; with `new_titles`, also those
+    whose list of open jobs gained a title Jev has not judged (weekly job postings, a fresh crawl)."""
     check_policy(cfg.ai)
-    done = "" if redo else " AND a.id NOT IN (SELECT account_id FROM jev_decisions)"
+    done = "" if (redo or new_titles) else " AND a.id NOT IN (SELECT account_id FROM jev_decisions)"
     rows = conn.execute(
         "SELECT a.id, a.name, a.industry, a.country, a.employee_range, s.home_title, s.home_excerpt,"
         " s.job_titles FROM accounts a JOIN l2_scores s ON s.account_id=a.id"
         f" WHERE a.client=? AND a.status IN ('tier_1','tier_2','tier_3'){done} ORDER BY a.id",
         (cfg.slug,)).fetchall()
     items = [dict(r) | {"job_titles": json.loads(r["job_titles"])} for r in rows]
+    if new_titles and not redo:
+        cap = cfg.ai.get("max_titles_per_request", 15)
+        decided = {r[0] for r in conn.execute("SELECT account_id FROM jev_decisions")}
+        items = [i for i in items if i["id"] not in decided or _has_new_titles(conn, i["id"], i["job_titles"], cap)]
     if limit:
         items = items[:limit]
     if cfg.ai.get("job_evidence"):

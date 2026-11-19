@@ -469,7 +469,11 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   Tier 3 company that starts hiring moves up (`hiring.yaml postings`, `scoring.yaml posted_jobs`).
   First run: 42 companies hiring (32 already known: the signal market is small, not the record budget),
   and 138 Tier 3 companies with a live new-business posting. People and emails are found only for a
-  rolling buffer of about three weeks of sending. Would change: send capacity growing (more mailboxes or
+  rolling buffer of about three weeks of sending. Result the same day: Jev confirmed a new-business
+  posting at 86 of those companies, Tier 1 grew from 141 to 232, and 69 more contacts became send-ready
+  (286 in all, 163 first contacts to upload plus 84 second contacts) for $5.35 of FullEnrich and $0.02 of
+  Jev; BlitzAPI found most emails. Weekly routine: `discover-hiring --postings`, `prefilter --rescore`,
+  `jev --new-titles`, `contacts`, `gate --recheck`, `draft`, `approve`. Would change: send capacity growing (more mailboxes or
   a higher ramp), or Tier 3 companies converting as well as Tier 1-2 (then source deeper).
 
 ## Needed from the user (only what we cannot do ourselves)

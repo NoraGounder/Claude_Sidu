@@ -821,3 +821,26 @@ def test_the_marble_jar_keeps_its_launch_safeguards():
     assert sending["min_warmup_days"] >= 14 and sending["min_warmup_reputation"] >= 95
     assert sending["send_order"] == "best_first"
     assert set(gate["verify_statuses"]) >= {"DELIVERABLE", "HIGH_PROBABILITY"}
+
+
+def test_jev_decides_again_only_accounts_with_new_job_titles(env):
+    import json as _json
+    from gtm import db
+    from gtm.config import load_client
+    from gtm.layers import l2_jev
+    cfg, conn = load_client(QW), db.connect()
+    ids = []
+    for n in range(2):
+        conn.execute("INSERT INTO accounts(client, name, domain, segments, source, status, first_seen, last_seen)"
+                     " VALUES (?,?,?,?,?,?,?,?)", (QW, f"Co{n}", f"co{n}.example", "[]", "test", "tier_3",
+                                                   "2026-11-19", "2026-11-19"))
+        ids.append(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+    titles = {ids[0]: ["Account Executive"], ids[1]: ["Account Executive", "Sales Engineer (Austin, TX)"]}
+    for i in ids:
+        conn.execute("INSERT INTO l2_scores(account_id, fit, signal, tier, reachable, dutch_site, job_titles, scored_at)"
+                     " VALUES (?,?,?,?,?,?,?,?)", (i, 0, 0, "tier_3", 1, 0, _json.dumps(titles[i]), "2026-11-19"))
+        conn.execute("INSERT INTO jev_decisions(account_id, model_id, titles_json, decided_at) VALUES (?,?,?,?)",
+                     (i, "typesafe/jev-1.14", _json.dumps({"Account Executive": 0.9}), "2026-11-19"))
+    conn.commit()
+    assert [i["id"] for i in l2_jev.plan(cfg, conn).items if i["id"] in ids] == []           # both decided
+    assert [i["id"] for i in l2_jev.plan(cfg, conn, new_titles=True).items if i["id"] in ids] == [ids[1]]

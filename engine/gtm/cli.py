@@ -102,7 +102,7 @@ def cmd_jev(args) -> int:
               f"{counts['drops_undone']} drops undone. Re-score with: prefilter --rescore")
         return 0
     try:
-        jp = l2_jev.plan(cfg, conn, limit=args.limit, redo=args.redo)
+        jp = l2_jev.plan(cfg, conn, limit=args.limit, redo=args.redo, new_titles=args.new_titles)
     except JevPolicyError as exc:
         print(f"Refused by the AI policy: {exc}")
         return 3
@@ -715,6 +715,8 @@ def build_parser() -> argparse.ArgumentParser:
     j = sub.add_parser("jev", help="Layer 2 AI decisions with TypeSafe Jev 1.14 (no other model)")
     j.add_argument("--limit", type=int)
     j.add_argument("--redo", action="store_true", help="decide again accounts Jev already decided")
+    j.add_argument("--new-titles", action="store_true",
+                   help="also decide again accounts with job titles Jev has not judged (after --postings)")
     j.add_argument("--dry-run", action="store_true", help="show the first request and cost, call nothing")
     j.add_argument("--purge-legacy", action="store_true",
                    help="remove AI verdicts made before the Jev 1.14 policy (Jev Router)")

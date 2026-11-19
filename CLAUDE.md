@@ -68,6 +68,7 @@ python -m gtm --client the-marble-jar prefilter --limit 20     # Layer 2 trial (
 python -m gtm --client the-marble-jar tiers --tier tier_1 --verbose
 python -m gtm --client the-marble-jar jev --dry-run            # Jev 1.14 decisions (shows first request)
 python -m gtm --client the-marble-jar jev                      # decide all scored accounts
+python -m gtm --client the-marble-jar jev --new-titles         # also re-decide accounts whose job list gained titles
 python -m gtm --client the-marble-jar contacts --dry-run       # Layer 3 plan and cost
 python -m gtm --client the-marble-jar contacts --limit 10      # Layer 3 small live test
 python -m gtm --client the-marble-jar gate                     # Layer 4 send gate (free)

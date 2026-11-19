@@ -91,3 +91,17 @@ reply needs a list within two working days (decisions.md Q31).
 | **Total new spend** | | **about 70-90** |
 
 At the funnel above that is roughly $5-15 per booked call in the first month.
+
+## Every week (decisions.md Q48)
+
+Fresh signals for the next three weeks of sending; BlitzAPI records are flat, the rest costs cents:
+
+```bash
+python -m gtm --client quailworks discover-hiring --postings     # live job postings onto known accounts
+python -m gtm --client quailworks prefilter --rescore            # free, from the crawl cache
+python -m gtm --client quailworks jev --new-titles               # Jev judges only titles it has not seen
+python -m gtm --client quailworks contacts                       # people and emails for new Tier 1-2 only
+python -m gtm --client quailworks gate --recheck
+python -m gtm --client quailworks markets --refresh
+python -m gtm --client quailworks draft && python -m gtm --client quailworks approve
+```
