@@ -1,0 +1,38 @@
+# Layer 7: first answers sent from the Smartlead inbox, in the founder's name, within a few working hours of
+# an interested reply. Written by people; filled only with known values. Same rules as decisions.md E7: no
+# rates or results in writing. {times} is the booking link when private/sender.yaml has one, otherwise two
+# proposed slots. Most interested replies will say "yes, send the profile" (email 1 offers it, E6).
+
+interested: |
+  Thanks {first_name}, good to hear.
+
+  I'll send the one-page profile today. To point it at what matters to you: which parts or systems is the team shortest of hands on right now, and which CAD and PLM do you run?
+
+  If you would rather talk it through, {times}
+
+  {sender_first_name}
+
+question: |
+  Thanks {first_name}, fair question.
+
+  It depends on the scope and how you like to work, so the quickest way is a short call where you show me
+  the part or the gap: {times}
+
+  {sender_first_name}
+
+referral: |
+  Thanks {first_name}, that helps. Would you mind introducing me, or is it fine if I mention your
+  name when I reach out?
+
+  {sender_first_name}
+
+times_with_link: "you can pick a time here: {booking_link}"
+times_without_link: "would Tuesday or Thursday next week work for 20 minutes? Send me a time that suits you (UK time)."
+
+# Lines for the meeting brief's "For the call" section ({sender} = the sender's first name).
+call_prep:
+  - "Ask which programme is short of design hands, which parts, and the next hard deadline (build, test, show)."
+  - "Ask how they buy contract design today: agency contractors, a consultancy, or direct; who signs it off."
+  - "Check the CAD and PLM, the drawing standard, remote access, NDA and IP terms, and any export-control limits."
+  - "Offer the first step that fits (offer.md): a named engineer on a day rate, or a small fixed-price package to prove the work."
+  - "Afterwards {sender} records one word: qualified, not a fit, or follow up."

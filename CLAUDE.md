@@ -136,6 +136,10 @@ same branch, with the user's Notion as shared memory.
   counts, costs and lessons from Quailworks' launch
 - `clients/quailworks/`: Quailworks' own outbound (US and UK companies that sell to hardware engineering teams); every
   command takes `--client quailworks`; `launch-plan.md` has the run order
+- `clients/quailworks-engineering/`: Quailworks' second offer (2026-11-19), contract mechanical design
+  engineering for UK and US hardware companies hiring design engineers. Same vendor accounts, Smartlead
+  account and HubSpot portal as `quailworks`, its own caps, `QWE` campaigns and sending domains, and it
+  holds companies Quailworks GTM emailed in the last 90 days; offer and copy follow its `decisions.md`
 
 ### Client-specific behaviour lives in config (defaults = The Marble Jar's)
 
@@ -160,7 +164,9 @@ them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks
 - `sending.yaml`: `mailbox_domains` (the client's own sending domains; one domain, one client),
   `send_order: best_first` (upload the strongest companies first),
   `min_warmup_days` / `min_warmup_reputation` (mailboxes join a campaign only when warm; every upload
-  links newly ready ones), `spread_daily_cap` (the per-mailbox cap is kept by the campaign total)
+  links newly ready ones), `spread_daily_cap` (the per-mailbox cap is kept by the campaign total),
+  `avoid_overlap_with` / `overlap_days` (hold companies another of the sender's own offers emailed
+  recently; company domains and names only, for offers run by one company under one founder's name)
 - `sample.yaml`: the Signal Sample (`sample` command): signals and weights for a prospect's market
 - `markets.yaml` + `sequence.yaml` `market_line` / `cta_market`: name three hiring companies in the
   prospect's market in email 1 (`markets --refresh` weekly; `never_name` keeps vendors and recruiters out)

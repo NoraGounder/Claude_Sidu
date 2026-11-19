@@ -1,0 +1,40 @@
+# Layer 0: client identity and operating model. Quailworks Engineering is Quailworks' second offer
+# (2026-11-19): mechanical design engineering for hardware teams, sold with the same engine and tools as
+# Quailworks' own GTM outbound (decisions.md E1). Same company, same founder, its own campaigns.
+# Public repo: real names, contact details and contracts belong in ./private/ (gitignored).
+
+client: quailworks-engineering
+display_name: Quailworks Engineering   # HubSpot deals read "Quailworks Engineering | <company>" (E1)
+website: https://quailworks.co         # no engineering page yet (decisions.md E9)
+offices: [Gowarczów (PL)]   # Quailworks sp. z o.o., public company register (KRS 0001108506)
+
+operating_model: own_outbound   # Quailworks sells its own engineering work; the founder takes the meetings
+
+language:
+  default: en        # UK and US (decisions.md E4)
+  by_country: {}
+  fallback: en
+
+sender:
+  mode: founder
+  details: private/sender.yaml   # name, title, booking link (copy sender.example.yaml)
+  # The founder already sends Quailworks' GTM emails in his own name (quailworks Q45). This offer needs its
+  # own yes, given when he sets his name on this offer's mailboxes in Smartlead (decisions.md E2).
+  consent_to_send_in_name: pending
+  consent_scope: send in the founder's own name, from Quailworks Engineering's own sending domains only
+
+handoff:
+  channel: Smartlead inbox + calendar invite
+  outcome_capture: one word after each call (qualified / not a fit / follow up)
+
+crm:
+  # Same company, same portal as Quailworks' GTM offer: one CRM, deals told apart by display_name (E1).
+  hubspot_token_env: HUBSPOT_TOKEN_QUAILWORKS
+
+# Quailworks decides (decisions.md). Only these need the user, in one message at launch:
+needed_from_client:
+  - One sending domain with three SmartSenders mailboxes in the founder's name, warm-up on (decisions.md E2, about $15 a month)
+  - The founder's name set as sender on those mailboxes in Smartlead (records consent) and private/sender.yaml
+  - OK on an engineering page on quailworks.co before the first send (decisions.md E9)
+  - The warm list: 20-30 people from past programmes, written to personally (decisions.md E10)
+  - The "go" to start sending (CLAUDE.md rule 3)

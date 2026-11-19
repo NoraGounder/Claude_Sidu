@@ -1,0 +1,80 @@
+# Quailworks Engineering GTM brain: how the engineering offer goes to market (structure as for Quailworks).
+# The engine sends the compact part of this file to TypeSafe Jev 1.14 with every qualification, contact
+# and angle decision (gtm/brain.py).
+#
+# Status per entry:
+#   confirmed    stated in the founder's CV or by the user (date in the note)
+#   decided      Quailworks' own decision (decisions.md), used like confirmed until results say otherwise
+#   hypothesis   working assumption; Jev may use it, the copy must not state it as fact
+# `jev: false` keeps a note for people only. No personal data: the repository is shareable, so the CV's
+# employers, programmes and contact details are not repeated here (quailworks Q2).
+
+version: 1
+
+market_profile:
+  - {status: confirmed, note: "founder's CV, 2026-11-19", text: "The founder has over a decade as a mechanical design engineer on motorsport, hypercar, automotive and aerospace programmes: suspension, chassis, driveline, composite and turbopump components, from concept to released drawings, in CATIA V5/3DEXPERIENCE, Siemens NX and Creo."}
+  - {status: confirmed, note: "founder's CV", text: "He has led and trained an offshore team producing GD&T drawings, managed suppliers, and worked with analysis teams on weight and stiffness."}
+  - {status: decided, note: "decisions.md E3", text: "Quailworks Engineering sells mechanical design capacity to hardware teams: a senior design engineer on a day rate, or a fixed-price design package, starting next week."}
+  - {status: decided, note: "decisions.md E4-E5", text: "UK first, then the US: companies with 11-500 employees that design their own vehicles, race cars, spacecraft, aircraft, robots or machines."}
+
+offer:
+  - {status: decided, note: "decisions.md E3", text: "Design capacity on demand: concept, layout, detailed 3D, GD&T drawings, ply tables, BOMs, DFM with suppliers, jigs and fixtures; the client keeps design authority."}
+  - {status: decided, note: "decisions.md E6", text: "First step: a one-page profile of the engineer, with the parts designed and the CAD used, no call needed. Then a 20-minute call about the part or the gap."}
+  - {status: decided, jev: false, note: "decisions.md E7", text: "No employer or programme names, rates, team size or results in outreach; programme types only."}
+  - {status: decided, jev: false, note: "decisions.md E8", text: "Day rate quoted per engagement; fixed-price packages at estimated days x day rate + 15%; never in email."}
+
+personas:
+  engineering_leader:
+    titles_from: icp.yaml personas.engineering_leader
+    pains:
+      - {status: hypothesis, text: "More parts to design and release than people, with a build, test or show date that will not move."}
+      - {status: hypothesis, text: "Hiring a design engineer takes months, and the programme cannot wait."}
+      - {status: hypothesis, text: "Contractors from agencies take weeks to learn the team's CAD set-up and standards."}
+  owner_led:
+    titles_from: icp.yaml personas.owner_led
+    pains:
+      - {status: hypothesis, text: "A permanent hire is a big fixed cost before the next funding round or order."}
+      - {status: hypothesis, text: "The founder or CTO is still doing detailed design themselves."}
+
+message_pillars:
+  - {status: decided, note: "decisions.md E5", text: "Write when they are hiring a design engineer: the work needs doing now and the budget exists."}
+  - {status: confirmed, note: "founder's CV", text: "Proven on weight- and packaging-critical parts, from concept to drawing release."}
+  - {status: decided, note: "decisions.md E3", text: "Two easy ways to buy: a day rate, as with any contractor, or a fixed-price package with a written scope."}
+  - {status: decided, note: "decisions.md E3", text: "The client keeps design authority; the work follows their CAD, PLM and drawing standard."}
+
+objections:   # for replies and call prep, never in a first email
+  - {status: hypothesis, objection: "We use an agency for contractors.", answer_direction: "Fine; a direct engagement saves the agency margin and the person is senior; start with one small package to compare."}
+  - {status: hypothesis, objection: "We need someone on site.", answer_direction: "Remote work in their CAD is the default; on-site weeks for build or integration can be agreed."}
+  - {status: hypothesis, objection: "Our data is export-controlled.", answer_direction: "Ask what is controlled; EU-based work suits UK and commercial programmes; US ITAR work is not offered."}
+  - {status: hypothesis, objection: "You're one person.", answer_direction: "True today, and the founder does the work; scope is agreed to fit; more engineers join as work grows."}
+  - {status: hypothesis, objection: "IP and confidentiality.", answer_direction: "NDA before any data; all IP assigned to the client in the contract."}
+
+competitors:  # what the buyer would otherwise do; companies of these types are not prospects
+  - {status: hypothesis, text: "Hire a permanent design engineer, or wait."}
+  - {status: hypothesis, text: "Contract design engineers through recruitment agencies."}
+  - {status: hypothesis, text: "Engineering consultancies and design service firms."}
+  - {status: decided, jev: false, note: "decisions.md", text: "Learn competitors from replies and meeting outcomes, not from questions."}
+
+voice:
+  - {status: decided, note: "decisions.md E7", text: "Plain text, short, one question, no exclamation marks, no hype, no links in the first email."}
+  - {status: decided, note: "decisions.md E7", text: "Engineer to engineer, in the founder's own name, first person (I), in English."}
+
+signals:      # why write now; points in scoring.yaml, rules in scoring.yaml `detect`
+  - {status: decided, key: design_job_ad, why_now: "Hiring a mechanical design engineer: the work exists now and has a budget."}
+  - {status: hypothesis, key: multiple_design_ads, why_now: "Several design roles open at once: the design office is the bottleneck."}
+  - {status: hypothesis, key: cad_platform, why_now: "CATIA, NX or Creo in their job ads: the founder can work in their CAD from day one."}
+  - {status: hypothesis, key: new_programme, why_now: "A prototype, test campaign, unveiling or contract win: a design deadline."}
+  - {status: hypothesis, key: venture_backed, why_now: "Funded: money to spend and investors waiting for hardware."}
+  - {status: hypothesis, key: trade_show, why_now: "Exhibiting: a show date is a design deadline."}
+  - {status: hypothesis, key: headcount_growth, why_now: "Growing faster than hiring can keep up."}
+  - {status: hypothesis, key: supplier_certification, why_now: "Designs parts for aerospace or automotive programmes."}
+
+stack:
+  - {status: decided, note: "scoring.yaml detect.cad_platform", text: "CATIA V5/3DEXPERIENCE, Siemens NX, Creo."}
+
+hiring:
+  - {status: decided, note: "ai.yaml job_titles", text: "Mechanical design roles: mechanical design engineer, design engineer, CAD engineer or designer, chassis, suspension, structures or composites design engineer, mechanical designer."}
+
+not_used:
+  influencers_and_experts: "Not used: no social or content channel in this pipeline yet."
+  keyword_portfolio: "Not used: no SEO or ads. Search words live in icp.yaml."

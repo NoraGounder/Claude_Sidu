@@ -1,0 +1,133 @@
+# Layer 5 copy for Quailworks Engineering. Written by people, filled only with facts we can show the source
+# for (engine/gtm/layers/l5_copy.py). Claims follow decisions.md E7: programme types, never employer or
+# programme names; no rates, team size or results; "I", because today the founder does the work.
+#
+# Rules: plain text, no links in email 1, short, no exclamation marks, openings that presume nothing, the
+# GDPR notice at the end of email 1. Placeholders in {curly_braces}. A hook is only used when its fact
+# exists; otherwise the next one in `hook_priority` applies.
+
+hook_priority: [design_job_ad, cad_platform, trade_show, growth, generic]
+# The most specific supported opening goes first; Jev 1.14's fact check still falls back down this list.
+angle: priority
+
+# Quote a clean role name when a confirmed open job title contains it, never the raw title text.
+# First match wins, so the most specific come first.
+quote_titles:
+  - {label: "mechanical design engineer", pattern: 'mechanical\s+design\s+engineer'}
+  - {label: "composites design engineer", pattern: 'composites?\s+design\s+engineer'}
+  - {label: "chassis design engineer", pattern: 'chassis\s+design\s+engineer'}
+  - {label: "suspension design engineer", pattern: 'suspension\s+design\s+engineer'}
+  - {label: "vehicle design engineer", pattern: 'vehicle\s+design\s+engineer'}
+  - {label: "structures design engineer", pattern: 'structures?\s+design\s+engineer'}
+  - {label: "product design engineer", pattern: 'product\s+design\s+engineer'}
+  - {label: "chassis engineer", pattern: 'chassis\s+engineer'}
+  - {label: "CAD engineer", pattern: '\bcad\s+engineer'}
+  - {label: "CAD designer", pattern: '\bcad\s+designer'}
+  - {label: "mechanical designer", pattern: 'mechanical\s+designer'}
+  - {label: "design draughtsperson", pattern: 'draughts(man|person)|drafts(man|person)'}
+  - {label: "mechanical engineer", pattern: 'mechanical\s+engineer'}
+  - {label: "design engineer", pattern: 'design\s+engineer'}
+job_title_qa: "Open job listed on their careers page or a job board"
+company_name_cut: [" | ", " - ", " – ", " — ", ", powered by", ": "]
+greetings:
+  en: ["Hi", "Hello"]
+signoffs:
+  en: ["Best,", "Thanks,"]
+
+# Facts quoted from evidence labels (scoring.yaml `detect`), with the source URL kept for review.
+named_facts:
+  cad: {signal: cad_platform, qa: "CAD system named in one of their job ads", labels: [CATIA, Siemens NX, Creo]}
+  trade_show: {signal: trade_show, qa: "Trade show named on their website",
+               labels: [Autosport International, Advanced Engineering, Engineering Design Show, PMW Expo, PRI Show,
+                        SEMA, Farnborough, Paris Air Show, Space-Comm Expo, Space Symposium, JEC World, CAMX,
+                        The Battery Show, Formnext, RAPID + TCT, Automate, Hannover Messe]}
+
+title_role_words: 'engineer|designer|draughts\w*|drafts\w*|technician|specialist'
+company_suffixes: [ltd, limited, plc, llp, inc, incorporated, llc, l.l.c., corp, corporation]
+# Never in an automatically approved draft (decisions.md E7). "outbound" and "signal engine" keep the GTM
+# offer's words out of this one.
+banned_phrases: [guarantee, guaranteed, case study, per hour, per day, day rate of, our engineers, our team of,
+                 money back, refund, marble jar, outbound, signal engine, meetings]
+
+# One process, so Jev 1.14 is not asked to choose one.
+process:
+  design:
+    description: Taking parts from concept to released drawings
+    en: "taking parts from concept to released drawings"
+
+hooks:
+  design_job_ad:
+    needs: job_title
+    description: Open with the mechanical design role they are hiring for
+    subject:
+      en: "your {job_title} opening"
+    en: "I saw the {job_title} opening at {company}. While you hire, I could take design work off the team from next week, on a day rate or as a fixed-price package."
+  cad_platform:
+    needs: cad
+    description: Open with the CAD system named in their job ads
+    subject:
+      en: "{cad} design work at {company}"
+    en: "I saw that the engineering team at {company} works in {cad}, which I design in too. When there are more parts to release than people, I could help from next week, on a day rate or as a fixed-price package."
+  trade_show:
+    needs: trade_show
+    description: Open with the trade show their website mentions
+    subject:
+      en: "{trade_show} and {company}"
+    en: "I saw {trade_show} mentioned on the {company} website. When a show date lands on the design team, how do you add capacity for the crunch?"
+  growth:
+    needs: open_roles
+    description: Open with how many roles they are hiring for (growth)
+    subject:
+      en: "{open_roles} open roles at {company}"
+    en: "I saw {company} has {open_roles} open roles. Is the design office keeping pace, or is it where work queues up?"
+  generic:
+    needs: null
+    description: Open with how they add design capacity
+    subject:
+      en: "design capacity at {company}"
+    en: "Quick question: when the design team at {company} has more work than people, how do you add capacity?"
+
+# The one ask (decisions.md E6): something useful, no call needed.
+cta:
+  en: "Shall I send you a one-page profile with the parts I've designed and the CAD I work in? No call needed."
+
+steps:
+  - day: 0
+    en: |
+      {greeting} {first_name},
+
+      {hook}
+
+      I run Quailworks Engineering. Over the last decade I've designed suspension, chassis and composite parts for hypercars and race cars, including a championship-winning touring car, and components for a launch-vehicle turbopump, in CATIA, NX and Creo, through to toleranced drawings and supplier release.
+
+      {cta}
+
+      {signoff}
+      {sender_first_name}
+
+      {gdpr_notice}
+  - day: 3
+    en: |
+      {greeting} {first_name},
+
+      Two ways to work together: I join the team on a day rate, in your CAD and PLM and to your drawing standard, or I take a fixed-price package with a written scope, such as one upright, housing or jig from concept to drawing release. Either way your team keeps design authority.
+
+      Worth 20 minutes to see where it would help {company}?
+
+      {sender_first_name}
+  - day: 7
+    en: |
+      {greeting} {first_name},
+
+      One thing I learned as the contractor brought in mid-programme: the first days go on learning the team's CAD set-up, standards and interfaces. So I start with one small part to your standard, and you judge the work before handing over more.
+
+      The one-page profile is still on offer. Shall I send it?
+
+      {sender_first_name}
+  - day: 14
+    en: |
+      {greeting} {first_name},
+
+      I don't want to keep emailing you. Shall I leave it here, or check back when your next programme ramps up?
+
+      {sender_first_name}

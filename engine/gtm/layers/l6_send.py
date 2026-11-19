@@ -100,10 +100,32 @@ class PushPlan:
     held: dict[str, int] = field(default_factory=dict)                # reason -> count
 
 
+def overlap_companies(conn, sending: dict, now: datetime) -> dict[str, set[str]]:
+    """Companies that other offers of the same sender emailed recently (sending.yaml `avoid_overlap_with`,
+    a list of client slugs, and `overlap_days`, default 90). Opt-in: for clients run by one company under one
+    founder's name (Quailworks' GTM and engineering offers), so one company never hears two pitches from
+    the same person at once. Only company domains and names are compared; no contact data crosses over."""
+    others = [str(c) for c in sending.get("avoid_overlap_with") or []]
+    found: dict[str, set[str]] = {"domain": set(), "company": set()}
+    if not others:
+        return found
+    since = (now - timedelta(days=int(sending.get("overlap_days", 90)))).isoformat()
+    marks = ",".join("?" * len(others))
+    for r in conn.execute(f"SELECT a.domain, a.name FROM outbound o JOIN accounts a ON a.id=o.account_id"
+                          f" WHERE o.client IN ({marks}) AND (o.pushed_at >= ? OR o.status='replied')",
+                          (*others, since)):
+        if r["domain"]:
+            found["domain"].add(r["domain"].lower())
+        if r["name"]:
+            found["company"].add(r["name"].lower())
+    return found
+
+
 def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
     now = now or datetime.now(timezone.utc)
     sending = load_sending(cfg)
     plan = PushPlan()
+    overlap = overlap_companies(conn, sending, now)
 
     def hold(reason):
         plan.held[reason] = plan.held.get(reason, 0) + 1
@@ -141,6 +163,8 @@ def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
         if email in suppressed["email"] or email.split("@")[-1] in suppressed["domain"] \
                 or (r["account_domain"] or "") in suppressed["domain"] or r["company"].lower() in suppressed["company"]:
             hold("suppressed"); continue
+        if (r["account_domain"] or "").lower() in overlap["domain"] or r["company"].lower() in overlap["company"]:
+            hold("emailed_by_another_offer"); continue
         if r["account_id"] in active_accounts:
             hold("another_contact_at_this_company_is_active"); continue
         region = region_for(sending, r["account_country"])

@@ -1,0 +1,71 @@
+# AI policy for this client's pipeline. Enforced in code (engine/gtm/sources/jev.py): a run
+# refuses to start if these settings break the rules below. Same policy as every client:
+# - Only TypeSafe Jev 1.14 makes AI decisions (qualification, ICP scoring, classification).
+# - Never OpenRouter Auto Router, Jev Router, the Jev Latest alias, or any GPT/Claude/Gemini/other
+#   model through OpenRouter. No fallback: if Jev is unavailable, stop and report the error.
+# - Crawling, deterministic checks and data processing stay in Python.
+# - Every request logs the model ID Jev reports, token usage and cost (table jev_calls).
+# - The API key is never printed or written anywhere.
+
+provider: openrouter
+endpoint: https://openrouter.ai/api/alpha/decisions
+model: typesafe/jev-1.14
+api_key_env: OPENROUTER_API_KEY
+fallback: none
+
+thresholds:
+  not_a_buyer: 0.80      # drop the account
+  job_title: 0.70        # count a job title as a mechanical design role (design_job_ad)
+  job_evidence: 0.60     # a word match on a careers page is an open design role in the UK or US
+  unsupported_claim: 0.50   # Layer 5: flag a draft when an unsupported claim is more likely than not
+max_titles_per_request: 15
+max_evidence_per_request: 12
+workers: 4
+
+# Layer 2: who clearly cannot buy outside design work (decisions.md E5, E11).
+not_a_buyer:
+  instructions: >-
+    Is this organisation clearly NOT a company that could buy outside mechanical design engineering
+    (a contract design engineer, or a fixed-price design package) for physical products it designs
+    itself? Not a buyer: engineering consultancies, design agencies, engineering staffing and
+    recruiting firms (they sell the same service as the seller, see seller_context), software-only
+    companies, distributors, resellers and dealerships, repair and maintenance shops, race circuits
+    and event organisers, airlines that only operate aircraft, media, associations, non-profits,
+    schools, universities and government bodies. Companies that design and build their own vehicles,
+    race cars, aircraft, spacecraft, robots, machines or energy hardware are possible buyers, and so
+    are suppliers that design their own parts.
+  "true": Not a possible buyer (one of the listed types)
+  "false": A company that designs its own hardware and could buy design work
+
+# Layer 2: which open job titles count as the work we take on (decisions.md E5).
+job_titles:
+  signal: design_job_ad
+  question: >-
+    Is the job title "{title}" a mechanical design role that a contract design engineer could fill:
+    mechanical design engineer, design engineer for mechanical parts, mechanical engineer doing design,
+    CAD engineer or designer, chassis, suspension, vehicle, structures or composites design engineer,
+    mechanical designer or design draughtsperson? Electronics, electrical, PCB, software, firmware,
+    test, manufacturing, process, quality, stress analysis and simulation-only roles, sales, and
+    management or leadership roles are not. When a location follows in brackets, it has to be in the
+    United Kingdom or the United States, or remote: a role clearly based in another country is not.
+  "true": A mechanical design role, in the UK or US
+  "false": Any other kind of role, or a role based in another country
+
+# Layer 2: careers pages mention roles in staff profiles and inside other jobs' descriptions, and list
+# roles abroad. Jev 1.14 checks every word match before it counts or is quoted (quailworks Q34).
+job_evidence:
+  question: >-
+    This text was found on the company's careers or job page: "{quote}". Does it show that the company
+    itself has an open position right now for the role "{label}", or a very similar mechanical design
+    role, based in the United Kingdom or the United States, or remote? Answer no when the words are a
+    staff member's own job title or a testimonial, when they appear only inside the description of a
+    different job, when they describe the company's products or services, or when the position is
+    clearly based in another country.
+  "true": An open mechanical design position at this company, in the UK or US
+  "false": Not an open position, a different kind of role, or based in another country
+
+# Layer 3: which job titles decide on buying the offer.
+contact_question: >-
+  Would a person with the job title "{title}" at this company decide on, or strongly influence,
+  bringing in an outside mechanical design engineer, or a fixed-price design package, for the
+  engineering team's programmes?

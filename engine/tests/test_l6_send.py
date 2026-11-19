@@ -149,6 +149,36 @@ def test_plan_applies_every_guard(env):
     assert lead["custom_fields"]["tmj_email_1"] == "Body 0 for Anna" and lead["custom_fields"]["tmj_subject"]
 
 
+def test_companies_another_offer_emailed_are_held(env):
+    """sending.yaml avoid_overlap_with: a company emailed by another of the sender's own offers in the last
+    overlap_days waits; other companies, and companies that offer emailed long ago, go ahead."""
+    path = env / "sending.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data.update({"avoid_overlap_with": ["other-offer"], "overlap_days": 90})
+    path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    cfg = load_client(CLIENT)
+    conn = db.connect()
+    for name, domain, pushed in (("Groothandel BV", "groothandel.example", "2099-01-01T00:00:00"),
+                                 ("Oud BV", "oud.example", "2000-01-01T00:00:00")):
+        acc = conn.execute("INSERT INTO accounts(client, name, domain, country, segments, source, status, first_seen,"
+                           " last_seen) VALUES (?,?,?,?,?,?,?,?,?)",
+                           ("other-offer", name, domain, "NL", "[]", "t", "tier_1", "t", "t")).lastrowid
+        contact = conn.execute("INSERT INTO contacts(client, account_id, person_id, status, data_source, created_at,"
+                               " updated_at) VALUES (?,?,?,?,?,?,?)",
+                               ("other-offer", acc, f"p-{domain}", "ready", "t", "t", "t")).lastrowid
+        conn.execute("INSERT INTO outbound(contact_id, client, account_id, draft_id, campaign_id, status, pushed_at)"
+                     " VALUES (?,?,?,?,?,?,?)", (contact, "other-offer", acc, 0, 0, "pushed", pushed))
+    _approved(conn, "Groothandel BV", "NL", "Anna", "anna@groothandel.example")    # emailed by the other offer
+    _approved(conn, "Oud BV", "NL", "Bram", "bram@oud.example")                    # emailed long ago
+    _approved(conn, "Klein BV", "NL", "Cas", "cas@klein.example")                  # never emailed
+    plan = l6_send.plan_push(cfg, conn)
+    assert sorted(lead["email"] for lead in plan.eligible["nl"]) == ["bram@oud.example", "cas@klein.example"]
+    assert plan.held == {"emailed_by_another_offer": 1}
+    data.pop("avoid_overlap_with")
+    path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    assert len(l6_send.plan_push(load_client(CLIENT), conn).eligible["nl"]) == 3     # opt-in: off by default
+
+
 def test_consent_is_required(env):
     path = env / "client.yaml"
     path.write_text(path.read_text().replace("consent_to_send_in_name: granted", "consent_to_send_in_name: pending"))
