@@ -15,6 +15,7 @@ not suppressed, and no other contact of the same account active in the last `sta
 
 from __future__ import annotations
 
+import html
 import json
 import re
 from dataclasses import dataclass, field
@@ -27,7 +28,7 @@ from gtm import brain, db
 from gtm.config import ClientConfig
 from gtm.layers.l5_copy import clean_first_name, load_sender
 from gtm.sources.jev import JevClient, JevResult, check_policy
-from gtm.sources.smartlead import SmartleadClient
+from gtm.sources.smartlead import SmartleadClient, SmartleadError
 
 REPLY_CATEGORIES = {
     "interested": "Wants to talk, asks for a call or a time, or says yes to the offer",
@@ -308,8 +309,13 @@ def latest_reply(history: list[dict]) -> tuple[str | None, str | None]:
         return None, None
     last = replies[-1]
     body = last.get("email_body") or last.get("body") or last.get("text") or ""
-    body = re.sub(r"<[^>]+>", " ", body)
-    body = re.split(r"\n(?:On .+wrote:|Op .+schreef.+:|-----Original Message-----|From: )", body)[0]
+    body = re.sub(r"<br\s*/?>|</p>|</div>", "\n", body, flags=re.I)
+    body = html.unescape(re.sub(r"<[^>]+>", " ", body))
+    # Cut the quoted thread. HTML replies often arrive without a line break before "On ... wrote:"
+    # (Gmail), so the quote marker is matched anywhere, shortest first (found in the rehearsal).
+    body = re.split(r"(?:^|\s)(?:On [^\n]{5,200}? wrote:|Op [^\n]{5,200}? (?:schreef|het volgende geschreven)[^\n]{0,40}:|"
+                    r"Am [^\n]{5,200}? schrieb[^\n]{0,40}:|-----Original Message-----|-----Oorspronkelijk bericht-----|"
+                    r"\nFrom: |\nVan: )", body, maxsplit=1)[0]
     return re.sub(r"\s+", " ", body).strip()[:3000], last.get("time") or last.get("sent_time") or last.get("timestamp")
 
 
@@ -363,7 +369,13 @@ def sync(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, jev: JevCli
                          (lead_id, db.now_iso(), o["contact_id"]))
             if category in SUPPRESS:
                 db.add_suppression(conn, cfg.slug, "email", o["email"], "replied: unsubscribe")
-                sl.block([o["email"]])
+                conn.commit()        # the opt-out is kept even if Smartlead's call below fails
+                try:
+                    if lead_id:
+                        sl.unsubscribe_lead(lead_id)
+                except SmartleadError as exc:
+                    totals.setdefault("warnings", []).append(f"Smartlead unsubscribe failed ({exc}); "
+                                                             "suppressed locally, the reply already stopped the sequence")
                 totals["unsubscribed"] += 1
             totals["replies"] += 1
             totals["needs_human"] += category in NEEDS_HUMAN

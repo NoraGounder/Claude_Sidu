@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 
@@ -41,3 +42,11 @@ def legacy_nl(client_dir: Path) -> None:
     scoring["fit"]["dutch_language_site"] = 5
     scoring_path.write_text(yaml.safe_dump(scoring, allow_unicode=True, sort_keys=False), encoding="utf-8")
     engine_defaults(client_dir)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_backups(monkeypatch):
+    """Tests never touch the real backup vault: a session with GTM_BACKUP_KEY/REMOTE set would
+    otherwise restore real data into a test folder or push a test database to the vault."""
+    monkeypatch.delenv("GTM_BACKUP_KEY", raising=False)
+    monkeypatch.delenv("GTM_BACKUP_REMOTE", raising=False)

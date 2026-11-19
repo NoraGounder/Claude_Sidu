@@ -119,5 +119,7 @@ class SmartleadClient:
             return data.get("history") or data.get("events") or data.get("data") or []
         return []
 
-    def block(self, emails: list[str]) -> dict:
-        return self._req("POST", "/leads/block-list", json={"emails": emails})
+    def unsubscribe_lead(self, lead_id) -> dict:
+        """Unsubscribe a lead from every current and future campaign in the account
+        (api-reference/leads/unsubscribe; the old /leads/block-list path does not exist, found 2026-11-19)."""
+        return self._req("POST", f"/leads/{lead_id}/unsubscribe")

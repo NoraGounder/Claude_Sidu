@@ -211,7 +211,7 @@ def test_sync_classifies_masked_replies_and_suppresses_unsubscribes(env):
     assert "Anna" not in sent and "1234" not in sent and "@groothandel" not in sent
     assert {b["model"] for b in jev_stub.bodies} == {"typesafe/jev-1.14"}
     assert "anna@groothandel.example" in db.suppressed_values(conn, CLIENT, "email")
-    assert any(p == "/leads/block-list" for _, p, _, _ in sl_stub.calls)
+    assert any(p == "/leads/55/unsubscribe" for _, p, _, _ in sl_stub.calls)   # global unsubscribe by lead id
     # The same reply is not processed twice
     assert l6_send.sync(cfg, conn, sl=sl, jev=JevClient(cfg.ai, session=jev_stub))["replies"] == 0
 
@@ -291,3 +291,12 @@ def test_rehearsal_emails_only_the_seeds_and_cleans_up(env):
     out = l6_send.cleanup_rehearsal(cfg, conn, sl=sl)
     assert out["removed"] == 2
     assert conn.execute("SELECT COUNT(*) FROM campaigns").fetchone()[0] == 0
+
+
+def test_latest_reply_cuts_gmail_quote_without_line_break():
+    body = ("<div>Sounds interesting can we talk next week?</div><div>On Tue 17. Nov 2026 at 12:14, Mithun "
+            "&lt;m@x.example&gt; wrote:<blockquote>Hello, I saw the vacancy &#39;stop&#39;</blockquote></div>")
+    text, _ = l6_send.latest_reply([{"type": "SENT", "email_body": "Hi"}, {"type": "REPLY", "email_body": body}])
+    assert text == "Sounds interesting can we talk next week?"
+    text, _ = l6_send.latest_reply([{"type": "REPLY", "email_body": "stop\n\nOp di 17 nov 2026 schreef Mithun:\n> Hoi"}])
+    assert text == "stop"
