@@ -54,38 +54,83 @@ exclude:
   name_keywords: [holdings, holding, investments, property, properties, estates, nominees,
                   "management company", "rtm company", trustees, "pension", "(uk) branch"]
 
-# ---------- Sieve 1: public numbers only (Companies House profile, filed accounts, owners) ----------
+# ---------- Sieve 1: Stanford company criteria, on public numbers only ----------
+# Source: Stanford GSB, "2026 A Primer on Search Funds", Part IV (p.23-28): desirable and undesirable
+# company criteria. Dollar figures converted at £0.79 per $ (decisions.md E5). The Primer calls these "a
+# framework of ideal circumstances, not absolute restrictions", so only the clearly undesirable cases that the
+# register can prove are hard fails; the rest are scored. Unknowns are never a fail: they go to the ledger.
 sieve1:
-  # Hard fails: any one drops the company (a "review" can still be forced by hand later).
-  hard:
-    min_years: 10
-    # Companies House last_accounts.type values. Left out: dormant, micro-entity (too small), initial,
-    # and the subsidiary exemptions (owned by a parent, not by an owner).
+  hard:                                       # Primer "undesirable" (company), when the register shows it
+    min_years: 10                             # history of cash flow generation
     accounts_types_allowed: [full, medium, small, group, total-exemption-full, total-exemption-small,
-                             audited-abridged, unaudited-abridged]
-    exclude_insolvency_history: true
+                             audited-abridged, unaudited-abridged]   # left out: dormant, micro-entity, subsidiary exemptions
+    exclude_insolvency_history: true          # turnaround situation
     exclude_overdue_accounts: true
-    exclude_corporate_majority_owner: true     # owned by a group or fund: not an owner-run business
-    max_accounts_age_months: 24                # latest accounts must be this recent
-    min_net_assets_gbp: 1                      # negative equity: out
-    employees_min: 10                          # when the accounts disclose it
-    employees_max: 250
-    turnover_min_gbp: 1500000                  # when disclosed (small companies may omit the P&L)
-    turnover_max_gbp: 30000000
-  # Soft bars: scored, never a reason to drop on their own (board: bars trigger review, not rejection).
-  bars:
-    operating_margin_min: 0.10                 # Stanford: under 10% is thin
-    net_debt_to_net_assets_max: 1.0            # "low debt today"
-    retained_earnings_growth_years: 2          # of the last 3: a profit proxy when no P&L is filed
-    owner_age_succession: 60                   # majority owner aged 60+: strong succession signal
+    exclude_corporate_majority_owner: true    # owned by a group or fund: no motivated owner-seller
+    max_accounts_age_months: 24
+    min_net_assets_gbp: 1                     # negative equity: a turnaround
+    exclude_loss_making: true                 # operating loss in the latest year: a turnaround
+    turnover_min_gbp: 8000000                 # "small company: less than $10 million in revenue"
+    ebitda_min_gbp: 1200000                   # "... or $1.5 million in EBITDA"
+    turnover_max_gbp: 24000000                # above $30M "may be too complex" for a first-time CEO
+    employees_min: 20                         # implied by the revenue floor; catches tiny firms with no P&L filed
+    employees_max: 500
+  bars:                                       # Primer "desirable" (company), scored
+    turnover_target_gbp: [8000000, 24000000]  # "$10 million to $30 million in revenue"
+    ebitda_target_gbp: [1200000, 4000000]     # "greater than $1.5 million in EBITDA"; most success at $1.5-5M
+    ebitda_margin_target: 0.15                # "EBITDA margins of greater than 15 percent ... margin of safety"
+    ebitda_margin_floor: 0.10                 # "under 10 percent: a dangerously thin margin for error"
+    rotc_target: 0.20                         # "healthy and sustainable profit margins (ROTC > 20%)"
+    retained_earnings_growth_years: 2         # profit proxy when no P&L is filed
+    net_debt_to_net_assets_max: 1.0
+    owner_age_motivated: 60                   # "motivated seller for non-business reasons" (retirement)
     owner_age_watch: 55
-  # Weights add up to 100. Pass >= pass_score with no hard fail; review in between; below: fail.
-  weights:
-    profit_evidence: 30
-    balance_sheet: 20
-    size_fit: 15
-    succession: 20
-    history: 10
-    disclosure: 5
+    bench_directors_under_55: 1               # "solid middle management" proxy: a younger director exists
+  weights:                                    # add up to 100
+    financial_size: 20      # revenue and EBITDA in the Stanford range
+    profitability: 20       # EBITDA margin vs 15% (proxy: retained earnings growth)
+    return_on_capital: 10   # ROTC proxy: operating profit / capital employed
+    cash_history: 10        # years trading and growing equity
+    motivated_seller: 15    # majority owner's age
+    management_bench: 15    # younger directors next to the owner
+    balance_sheet: 10       # low debt today
   pass_score: 60
   review_score: 40
+
+# ---------- Sieve 2a: Stanford industry scorecard (Primer p.30), one Jev decision per SIC code ----------
+# Ten criteria, each 1 (low fit) to 3 (high fit), out of 30. Scored once per industry code and reused for every
+# company in it. The Primer's example industries scored 20-28.
+industry_scorecard:
+  min_score: 22
+  criteria:
+    fragmented: "Fragmented industry: many small players, no dominant consolidator"
+    growing: "Industry growing, ideally with a tailwind"
+    recurring_revenue: "Recurring revenue model: regular payments from customers who stay 18+ months"
+    sizable: "Sizable industry: total revenue and number of companies"
+    healthy_margins: "Healthy and sustainable margins (return on tangible capital above 20%)"
+    straightforward: "Straightforward operations a first-time CEO can learn quickly"
+    barriers_to_entry: "High barriers to entry"
+    low_customer_concentration: "Low customer concentration and low customer pricing power"
+    no_consolidation: "No consolidation trend by strategic buyers bidding up prices"
+    low_exogenous_risk: "Low exogenous risk: regulation, payment, technology, AI displacement, commodity, fads"
+
+# ---------- Sieve 2b: Hamilton Helmer's 7 Powers (Jev 1.14 on the company's own website) ----------
+# A Power is a Benefit (better cash flow) protected by a Barrier (competitors cannot copy it).
+# Small private firms rarely show more than one or two; the website is weak evidence, so this ranks rather than
+# drops, and every Power found becomes a claim in the evidence ledger, status "unverified", to test with the owner.
+seven_powers:
+  min_clear_powers: 1          # at least one Power with clear evidence to count as "qualified"
+  powers:
+    scale_economies: "Scale economies: unit cost falls as volume grows (route density, shared depots, purchasing)"
+    network_economies: "Network economies: the service is worth more to each customer as more customers use it"
+    counter_positioning: "Counter-positioning: a business model incumbents cannot copy without hurting their own"
+    switching_costs: "Switching costs: customers lose money, time or certification by changing supplier"
+    branding: "Branding: customers pay more for the same thing because of reputation and trust built over years"
+    cornered_resource: "Cornered resource: preferential access to something valuable (licence, accreditation, permit, contract, people)"
+    process_power: "Process power: embedded ways of working that give lower cost or better quality and take years to copy"
+
+# ---------- Qualification ----------
+# qualified  = sieve 1 pass + industry score >= min_score + at least min_clear_powers Power with clear evidence
+# watch      = sieve 1 pass or review, but sieve 2 short of the bar or unknown
+qualification:
+  max_websites_per_run: 200

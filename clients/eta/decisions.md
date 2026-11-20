@@ -42,3 +42,26 @@ industry score), owner outreach, the deal pack and the investor engine come next
 Owner and director names and birth month/year come from the public register and stay in data/ (gitignored),
 with the source recorded on every row. Nothing about a specific company or person is committed or sent to
 Notion. Before any outreach, the UK GDPR legitimate-interest assessment is written like The Marble Jar's.
+
+## E5. Selection criteria: Stanford Search Fund criteria and Hamilton Helmer's 7 Powers (2026-11-20)
+
+Sidarth's instruction: qualify each business with the Stanford Search Fund investment criteria (2026 Primer,
+Part IV) and Hamilton Helmer's 7 Powers. This replaces the earlier guessed bars.
+
+- **Sieve 1, Stanford company criteria, public numbers.** Hard fails only where the register proves an
+  "undesirable" trait: turnaround (insolvency history, operating loss, negative equity), too small (under $10M
+  revenue or $1.5M EBITDA), group-owned (no motivated owner-seller). Scored: revenue $10-30M and EBITDA in range,
+  EBITDA margin above 15% (under 10% is thin), return on tangible capital above 20%, history of cash generation,
+  motivated seller (owner 60+), management bench (a director under 55). Dollars converted at £0.79 per $.
+  EBITDA = operating profit + depreciation; without the depreciation note, operating profit (a floor).
+  ROTC is approximated by return on capital employed (equity plus net debt).
+- **Sieve 2a, Stanford industry scorecard** (Primer p.30): ten criteria scored 1-3 by Jev 1.14, once per SIC
+  code; 22 of 30 is the bar (the Primer's examples score 20-28).
+- **Sieve 2b, 7 Powers:** Jev 1.14 rates each Power from the company's own website, found by domain guess and
+  accepted only when the site shows the registered company number. A Power needs a Benefit and a Barrier.
+  At least one Power with clear evidence is required to be "qualified"; each is an `unverified` claim in the
+  evidence ledger to test with the owner. Websites are weak evidence, so a missing site means "watch", not out.
+
+Tension recorded: Stanford's size floor ($1.5M EBITDA) sits above where the board's value rules expected the
+steepest discounts (under ~$1M profit). Following Stanford, sub-floor companies now fail when their accounts show
+it. Would change it: Sidarth choosing a smaller first deal, or the floor leaving too few qualified companies.

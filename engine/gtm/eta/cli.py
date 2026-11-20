@@ -123,6 +123,26 @@ def cmd_screen(args) -> int:
     return 0
 
 
+def cmd_qualify(args, jev=None, fetcher=None) -> int:
+    from gtm.eta import qualify
+
+    cfg, eta, conn = _setup(args)
+    rows = qualify.candidates(conn, cfg.slug)[: args.limit or None]
+    print(f"Sieve 2 for {cfg.slug}: {len(rows)} sieve-1 survivors (pass/review). Stanford industry scorecard per SIC "
+          f"code and Hamilton Helmer's 7 Powers per company, with TypeSafe Jev 1.14.")
+    if args.dry_run:
+        print("Dry run: no website fetched, no Jev call made.")
+        return 0
+    r = qualify.run(conn, cfg, eta, fetcher=fetcher, jev=jev, limit=args.limit)
+    print(f"Industries scored {r['industries_scored']}; websites found {r['websites_found']}; 7 Powers decided "
+          f"{r['powers_decided']}. Qualified {r['qualified']}, watch {r['watch']}, not qualified {r['not_qualified']}.")
+    for i, q in enumerate(qualify.qualified(conn, cfg.slug)[:10], 1):
+        b = q["breakdown"]
+        print(f"  {i:>2}. {q['score']:>5} {q['verdict']:<9} {q['company_number']} {q['name'][:38]:<38} "
+              f"industry {b.get('industry_score') or '?'}/30, powers {', '.join(b.get('clear_powers') or []) or '-'}")
+    return 0
+
+
 LIST_COLUMNS = ["rank", "verdict", "score", "company_number", "name", "search_code", "locality", "postal_code",
                 "incorporated", "years", "accounts_type", "period", "turnover", "operating_margin", "net_assets",
                 "cash", "net_debt", "employees", "retained_growth_years", "owner_age", "owner_band", "directors",
@@ -163,6 +183,9 @@ def cmd_run(args) -> int:
     cmd_enrich(args, ch)
     args.rescreen = False
     cmd_screen(args)
+    if args.qualify:
+        args.dry_run = False
+        cmd_qualify(args)
     args.verdict, args.out = "pass,review", None
     return cmd_list(args)
 
@@ -228,7 +251,13 @@ def register(sub) -> None:
     r.add_argument("--steps", help="comma list of profile,accounts,owners (default all)")
     r.add_argument("--skip-discover", action="store_true", help="only work through companies already found")
     r.add_argument("--top", type=int, help="list only the first N")
+    r.add_argument("--qualify", action="store_true", help="also run sieve 2 (Jev 1.14: industry + 7 Powers)")
     r.set_defaults(func=cmd_run)
+
+    q = sub.add_parser("eta-qualify", help="ETA sieve 2: Stanford industry scorecard + 7 Powers (Jev 1.14)")
+    q.add_argument("--limit", type=int, help="companies to qualify this run")
+    q.add_argument("--dry-run", action="store_true", help="show how many would be qualified, call nothing")
+    q.set_defaults(func=cmd_qualify)
 
     st = sub.add_parser("eta-stats", help="ETA: companies per stage, sieve verdicts, requests this month")
     st.set_defaults(func=cmd_stats)

@@ -9,8 +9,10 @@ description: Run the ETA search (clients/eta), Sidarth's own search for a UK bus
 2. Dry run first: `python -m gtm --client eta eta-discover --dry-run`.
 3. Small live run on one code: `python -m gtm --client eta eta-run --code 71200 --max-per-code 50 --limit 50`.
    Check `eta-stats`, a few rows in the CSV in `data/eta/`, and `eta-evidence <number>` for the top company.
-4. Then widen: more codes, higher `--max-per-code`. Each run continues where the last stopped.
-5. Report: found, dropped (with reasons), pass/review/fail, the top 10 with score, owner age and size.
+4. Sieve 2 on the survivors: `python -m gtm --client eta eta-qualify --dry-run`, then `--limit 25`. It scores each
+   SIC code on Stanford's industry scorecard and each company on Hamilton Helmer's 7 Powers (Jev 1.14 only).
+5. Then widen: more codes, higher `--max-per-code`. Each run continues where the last stopped.
+6. Report: found, dropped (with reasons), pass/review/fail, the top 10 with score, owner age and size.
 
 Rules
 - Free API, 600 requests per 5 minutes; the client paces itself and stops at `limits.yaml` `max_requests_per_run`.

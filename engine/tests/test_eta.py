@@ -26,16 +26,17 @@ def test_parse_accounts_maps_concepts_by_period():
     assert acc.company_number == "99999901"
     assert acc.latest_period == "2025-03-31"
     cy = acc.periods["2025-03-31"]
-    assert cy["turnover"] == 2_400_000
-    assert cy["operating_profit"] == 360_000
-    assert cy["employees"] == 24
-    assert cy["net_assets"] == 900_000
-    assert cy["cash"] == 250_000
+    assert cy["turnover"] == 12_400_000
+    assert cy["operating_profit"] == 1_860_000
+    assert cy["depreciation"] == 140_000
+    assert cy["employees"] == 84
+    assert cy["net_assets"] == 2_900_000
+    assert cy["cash"] == 950_000
     assert cy["creditors_after_one_year"] == 100_000       # Creditors + maturity dimension
     assert cy["creditors_within_one_year"] == 300_000
     assert cy["bank_loans"] == 0                           # zero-dash format
-    assert acc.periods["2024-03-31"]["turnover"] == 2_100_000   # scale="3"
-    assert acc.periods["2024-03-31"]["retained_earnings"] == 750_000
+    assert acc.periods["2024-03-31"]["turnover"] == 11_100_000   # scale="3"
+    assert acc.periods["2024-03-31"]["retained_earnings"] == 2_450_000
     # A dimensioned Equity fact (share capital column) must not be taken as net assets.
     assert cy["net_assets"] != 100
 
@@ -237,12 +238,13 @@ def test_pipeline_end_to_end(env):
     good = by_number["99999901"]
     assert good["verdict"] == "pass" and good["score"] >= 80
     m = good["metrics"]
-    assert m["turnover"] == 2_400_000 and m["operating_margin"] == 0.15
+    assert m["turnover"] == 12_400_000 and m["ebitda"] == 2_000_000
+    assert m["ebitda_margin"] == 0.1613 and m["rotc"] > 0.2
     assert m["owner_age"] == 64 and m["owner_band"] == "75-100"
     assert m["directors"] == 2 and m["directors_under_55"] == 1
 
     assert by_number["99999904"]["verdict"] == "fail"
-    assert "owned_by_a_company" in by_number["99999904"]["hard_fails"]
+    assert "no_motivated_owner_group_owned" in by_number["99999904"]["hard_fails"]
 
     # No online accounts: kept, but scored on what is known and never passed on unknowns alone.
     paper = by_number["99999905"]
@@ -254,7 +256,7 @@ def test_evidence_ledger_marks_unknowns_with_next_steps(env):
     cfg, eta, conn = env
     _run_all(env, _register())
     ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "99999901")}
-    assert ledger["Turnover"]["status"] == "public" and ledger["Turnover"]["value"] == "£2,400,000"
+    assert ledger["Turnover"]["status"] == "public" and ledger["Turnover"]["value"] == "£12,400,000"
     assert ledger["Turnover"]["source"].endswith("/99999901/filing-history")
     assert ledger["Owner earnings"]["status"] == "unknown" and "sieve 3" in ledger["Owner earnings"]["next_step"]
     assert ledger["Customer concentration"]["status"] == "unknown"
@@ -314,3 +316,107 @@ def test_cli_dry_run_calls_nothing(tmp_path, monkeypatch, capsys):
     assert main(["--client", "eta", "eta-discover", "--dry-run", "--code", "71200"]) == 0
     out = capsys.readouterr().out
     assert "71200" in out and "Dry run" in out
+
+
+# ---------- sieve 2: Stanford industry scorecard + 7 Powers ----------
+
+from gtm.crawl import Page
+from gtm.eta import qualify
+from gtm.sources.jev import JevResult
+
+
+class FakeJev:
+    """Answers like TypeSafe Jev 1.14: score questions get 0..2 (criteria index scale)."""
+
+    def __init__(self, industry=2.0, powers=None):
+        self.industry, self.powers, self.calls = industry, powers or {}, []
+
+    def decide(self, state, questions, timeout=60):
+        self.calls.append((state, questions))
+        if "website_text" in state:
+            answers = {k: {"type": "score", "score": self.powers.get(k, 0.2)} for k in questions}
+        else:
+            answers = {k: {"type": "score", "score": self.industry} for k in questions}
+        return JevResult(answers, "typesafe/jev-1.14-20261014", 100, 20, 0.0001, 50, "req")
+
+
+class FakeFetcher:
+    def __init__(self, pages):
+        self.pages, self.calls = pages, []
+
+    def get(self, url):
+        self.calls.append(url)
+        return self.pages.get(url) or Page(url=url, status=404)
+
+
+def _site(number):
+    home = Page(url="https://www.exampletestingservices.co.uk/", status=200, title="Example Testing Services",
+                text="UKAS accredited calibration and testing for aerospace customers since 1998.",
+                links=[("https://www.exampletestingservices.co.uk/privacy", "Privacy")])
+    legal = Page(url="https://www.exampletestingservices.co.uk/privacy", status=200,
+                 text=f"Example Testing Services Limited, registered in England no. {number}.")
+    return {home.url: home, legal.url: legal}
+
+
+@pytest.fixture
+def screened(env, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "placeholder")
+    _run_all(env, _register())
+    return env
+
+
+def test_domain_candidates_and_number_match():
+    c = qualify.domain_candidates("EXAMPLE TESTING SERVICES LIMITED")
+    assert c[0] == "exampletestingservices.co.uk" and "example-testing-services.com" in c
+    assert qualify.shows_number("Registered no. 9999901 in England", "09999901")
+    assert not qualify.shows_number("Call 0199999901", "99999901")
+
+
+def test_industry_scorecard_is_one_decision_per_code_and_cached(screened):
+    cfg, eta, conn = screened
+    jev = FakeJev(industry=1.6)
+    first = qualify.score_industries(conn, cfg, eta, {"71200": "Technical testing"}, jev)
+    assert first == {"71200": 26.0}                      # 10 criteria x (1 + 1.6)
+    qualify.score_industries(conn, cfg, eta, {"71200": "Technical testing"}, jev)
+    assert len(jev.calls) == 1
+    state, questions = jev.calls[0]
+    assert set(questions) == set(eta["industry_scorecard"]["criteria"]) and state["uk_sic_2007_code"] == "71200"
+
+
+def test_qualify_finds_verified_site_and_counts_clear_powers(screened):
+    cfg, eta, conn = screened
+    jev = FakeJev(industry=1.6, powers={"cornered_resource": 1.8, "switching_costs": 1.6, "branding": 0.9})
+    out = qualify.run(conn, cfg, eta, fetcher=FakeFetcher(_site("99999901")), jev=jev)
+    assert out["websites_found"] == 1 and out["qualified"] == 1
+    top = qualify.qualified(conn, cfg.slug)[0]
+    assert top["company_number"] == "99999901" and top["verdict"] == "qualified"
+    assert sorted(top["breakdown"]["clear_powers"]) == ["cornered_resource", "switching_costs"]
+    ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "99999901")}
+    assert ledger["7 Powers: cornered resource"]["status"] == "unverified"
+    assert ledger["Stanford industry score"]["value"] == "26 of 30"
+    powers_q = [q for s, q in jev.calls if "website_text" in s][0]
+    assert set(powers_q) == set(eta["seven_powers"]["powers"])
+
+
+def test_no_verified_site_means_watch_not_qualified(screened):
+    cfg, eta, conn = screened
+    out = qualify.run(conn, cfg, eta, fetcher=FakeFetcher(_site("12345678")), jev=FakeJev(industry=1.6))
+    assert out["websites_found"] == 0 and out["qualified"] == 0
+    row = conn.execute("SELECT verdict FROM eta_screen WHERE company_number='99999901' AND sieve=2").fetchone()
+    assert row["verdict"] == "watch"
+
+
+def test_weak_industry_is_not_qualified(screened):
+    cfg, eta, conn = screened
+    out = qualify.run(conn, cfg, eta, fetcher=FakeFetcher(_site("99999901")),
+                      jev=FakeJev(industry=0.3, powers={"process_power": 2.0}))
+    assert out["not_qualified"] >= 1 and out["qualified"] == 0
+
+
+def test_qualify_refuses_a_non_jev_model(screened):
+    from gtm.sources.jev import JevPolicyError
+
+    cfg, eta, conn = screened
+    cfg.ai["model"] = "openrouter/auto"
+    with pytest.raises(JevPolicyError):
+        qualify.run(conn, cfg, eta, fetcher=FakeFetcher({}), jev=FakeJev())

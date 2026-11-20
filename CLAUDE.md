@@ -62,11 +62,14 @@ Pipeline"; decisions: `clients/eta/decisions.md`; buy box and sieve-1 bars: `cli
 reads the UK register only (Companies House, free, key in `COMPANIES_HOUSE_API_KEY`; in a cloud session it is a
 network secret for api.company-information.service.gov.uk and document-api.company-information.service.gov.uk,
 so set the variable to `proxy-injected`). Code: `engine/gtm/eta/`, `engine/gtm/ixbrl.py`,
-`engine/gtm/sources/companies_house.py`; tables `eta_*` in data/engine.db. No AI calls, no outreach yet.
+`engine/gtm/sources/companies_house.py`; tables `eta_*` in data/engine.db. Selection: sieve 1 = Stanford Search Fund
+company criteria on filed numbers; sieve 2 (`eta-qualify`) = Stanford industry scorecard per SIC code and Hamilton
+Helmer's 7 Powers per company, both TypeSafe Jev 1.14 (decisions.md E5). No outreach yet.
 
 ```bash
 python -m gtm --client eta eta-discover --dry-run              # searches per SIC code, calls nothing
 python -m gtm --client eta eta-run --code 71200 --max-per-code 100 --limit 100   # discover, enrich, screen, list
+python -m gtm --client eta eta-qualify --limit 25               # sieve 2: industry scorecard + 7 Powers (Jev 1.14)
 python -m gtm --client eta eta-stats
 python -m gtm --client eta eta-evidence <company number>       # evidence ledger for one company
 ```
