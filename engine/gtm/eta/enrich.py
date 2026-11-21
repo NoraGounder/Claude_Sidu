@@ -190,3 +190,30 @@ def owners_step(ch, conn, client: str, eta: dict, limit: int | None = None) -> d
         out["companies"] += 1
         conn.commit()
     return out
+
+
+def reparse_cached(conn, client: str) -> dict:
+    """Re-read every cached filing with the current parser (after a parser fix), without new requests."""
+    root = data_dir() / "eta" / "docs"
+    out = {"documents": 0, "numbers": 0}
+    known = {r["company_number"] for r in conn.execute("SELECT company_number FROM eta_companies WHERE client=?",
+                                                       (client,))}
+    for folder in sorted(root.glob("*")) if root.exists() else []:
+        number = folder.name
+        if number not in known:
+            continue
+        for doc in sorted(folder.glob("*.xhtml")):
+            tid = doc.stem
+            source = store.register_url(number) + f"/filing-history/{tid}"
+            row = conn.execute("SELECT MAX(filing_date) FROM eta_financials WHERE client=? AND company_number=?"
+                               " AND source_url=?", (client, number, source)).fetchone()
+            parsed = ixbrl.parse(doc.read_bytes())
+            if parsed.company_number and parsed.company_number.lstrip("0") != number.lstrip("0"):
+                continue
+            for fact in parsed.facts:
+                store.save_financial(conn, client, number, fact.period_end, fact.metric, fact.value,
+                                     fact.concept, source, row[0] or "")
+                out["numbers"] += 1
+            out["documents"] += 1
+        conn.commit()
+    return out

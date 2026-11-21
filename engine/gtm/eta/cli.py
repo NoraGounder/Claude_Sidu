@@ -60,7 +60,7 @@ def _logged(conn, cfg, layer: str, label: str, params: dict, fn, ch):
     except Exception as exc:
         db.finish_run(conn, run_id, "failed", ch.requests_made - before, 0.0, str(exc)[:300])
         raise
-    db.finish_run(conn, run_id, "succeeded", ch.requests_made - before, 0.0, json.dumps(result)[:500])
+    db.finish_run(conn, run_id, "succeeded", ch.requests_made - before, 0.0, json.dumps(result, default=lambda o: getattr(o, "__dict__", str(o)))[:500])
     return result
 
 
@@ -118,6 +118,10 @@ def cmd_enrich(args, ch=None) -> int:
 
 def cmd_screen(args) -> int:
     cfg, eta, conn = _setup(args)
+    if getattr(args, "reparse", False):
+        rp = enrich.reparse_cached(conn, cfg.slug)
+        print(f"Re-read {rp['documents']} cached filings ({rp['numbers']} numbers) with the current parser.")
+        args.rescreen = True
     r = screen.run(conn, cfg.slug, eta, rescreen=args.rescreen)
     print(f"Sieve 1: pass {r['pass']}, review {r['review']}, fail {r['fail']}.")
     return 0
@@ -236,6 +240,7 @@ def register(sub) -> None:
 
     s = sub.add_parser("eta-screen", help="ETA: sieve 1 on public numbers, score and evidence ledger")
     s.add_argument("--rescreen", action="store_true", help="also re-screen companies screened before")
+    s.add_argument("--reparse", action="store_true", help="re-read cached filings with the current parser first")
     s.set_defaults(func=cmd_screen)
 
     li = sub.add_parser("eta-list", help="ETA: ranked CSV of screened companies in data/eta/")

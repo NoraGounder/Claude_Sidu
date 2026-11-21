@@ -34,13 +34,18 @@ CONCEPTS: dict[str, tuple[str, ...]] = {
     "creditors_after_one_year": ("CreditorsDueAfterOneYear",),
     "bank_loans": ("BankBorrowings", "BankBorrowingsOverdrafts", "BankLoansOverdrafts", "BankOverdrafts"),
     "retained_earnings": ("RetainedEarningsAccumulatedLosses", "ProfitLossAccountReserve"),
-    "depreciation": ("DepreciationExpensePropertyPlantEquipment", "DepreciationAmortisationExpense"),
+    "depreciation": ("DepreciationExpensePropertyPlantEquipment", "DepreciationAmortisationExpense",
+                     "IncreaseFromDepreciationChargeForYearPropertyPlantEquipment"),
     "dividends": ("DividendsPaid", "DividendsPaidOnShares", "EquityDividendsPaid"),
 }
 _LOOKUP = {name: (metric, rank) for metric, names in CONCEPTS.items() for rank, name in enumerate(names)}
 
-# Creditors are often one concept split by a maturity dimension instead of two concepts.
-_MATURITY = {"withinoneyear": "creditors_within_one_year", "afteroneyear": "creditors_after_one_year"}
+# Creditors are often one concept split by a maturity (or current/non-current) dimension instead of two concepts.
+_MATURITY = {"withinoneyear": "creditors_within_one_year", "afteroneyear": "creditors_after_one_year",
+             "currentfinancialinstruments": "creditors_within_one_year",
+             "non-currentfinancialinstruments": "creditors_after_one_year"}
+# Filed FRS 102 accounts tag the profit and loss reserve as Equity on the retained-earnings equity class.
+_EQUITY_CLASS = {"retainedearningsaccumulatedlosses": "retained_earnings"}
 
 
 @dataclass
@@ -147,6 +152,10 @@ def parse(content: bytes | str) -> Accounts:
             if len(dims) != 1:
                 continue
             metric, rank = _MATURITY.get(next(iter(dims.values())).lower()), 0
+        elif concept == "Equity" and dims:
+            if len(dims) != 1:
+                continue
+            metric, rank = _EQUITY_CLASS.get(next(iter(dims.values())).lower()), 1
         elif dims:
             continue   # dimensioned facts are breakdowns (by class of equity, by asset type, ...)
         if not metric:

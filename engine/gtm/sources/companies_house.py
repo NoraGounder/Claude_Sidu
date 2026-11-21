@@ -22,6 +22,7 @@ import requests
 API = "https://api.company-information.service.gov.uk"
 DOCS = "https://document-api.company-information.service.gov.uk"
 WINDOW_SECS = 300
+PROXY_PLACEHOLDER = "proxy-injected"
 
 
 class CompaniesHouseError(RuntimeError):
@@ -42,7 +43,10 @@ class CompaniesHouseClient:
                 "COMPANIES_HOUSE_API_KEY is not set. Get a free key at developer.company-information.service.gov.uk "
                 "(in a cloud session save it as a network secret and set the variable to 'proxy-injected').")
         self.http = session or requests.Session()
-        self.http.auth = (key, "")
+        if key != PROXY_PLACEHOLDER:
+            # A real key (laptop): Basic auth, key as user name, empty password. In a cloud session the
+            # variable holds the placeholder and the network proxy adds the header itself.
+            self.http.auth = (key, "")
         self.http.headers.update({"Accept": "application/json", "User-Agent": "eta-search/0.1"})
         self.per_window, self.max_requests = per_window, max_requests
         self.retries, self.backoff = retries, backoff_secs

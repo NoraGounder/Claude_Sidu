@@ -420,3 +420,28 @@ def test_qualify_refuses_a_non_jev_model(screened):
     cfg.ai["model"] = "openrouter/auto"
     with pytest.raises(JevPolicyError):
         qualify.run(conn, cfg, eta, fetcher=FakeFetcher({}), jev=FakeJev())
+
+
+def test_cloud_placeholder_leaves_the_header_to_the_proxy():
+    session = FakeSession([])
+    chmod.CompaniesHouseClient(api_key="proxy-injected", session=session)
+    assert session.auth is None
+
+
+FRS102_EQUITY = b"""<html xmlns:ix="http://www.xbrl.org/2013/inlineXBRL" xmlns:xbrli="http://www.xbrl.org/2003/instance"
+ xmlns:xbrldi="http://xbrl.org/2006/xbrldi"><body><ix:header><ix:resources>
+<xbrli:context id="re"><xbrli:entity><xbrli:segment><xbrldi:explicitMember dimension="core:EquityClassesDimension">core:RetainedEarningsAccumulatedLosses</xbrldi:explicitMember></xbrli:segment></xbrli:entity><xbrli:period><xbrli:instant>2025-03-31</xbrli:instant></xbrli:period></xbrli:context>
+<xbrli:context id="nc"><xbrli:entity><xbrli:segment><xbrldi:explicitMember dimension="core:FinancialInstrumentCurrentNon-currentDimension">core:Non-currentFinancialInstruments</xbrldi:explicitMember></xbrli:segment></xbrli:entity><xbrli:period><xbrli:instant>2025-03-31</xbrli:instant></xbrli:period></xbrli:context>
+<xbrli:context id="d"><xbrli:entity></xbrli:entity><xbrli:period><xbrli:startDate>2024-04-01</xbrli:startDate><xbrli:endDate>2025-03-31</xbrli:endDate></xbrli:period></xbrli:context>
+</ix:resources></ix:header>
+<ix:nonFraction name="core:Equity" contextRef="re" unitRef="GBP">412,000</ix:nonFraction>
+<ix:nonFraction name="core:Creditors" contextRef="nc" unitRef="GBP">55,000</ix:nonFraction>
+<ix:nonFraction name="core:IncreaseFromDepreciationChargeForYearPropertyPlantEquipment" contextRef="d" unitRef="GBP">21,000</ix:nonFraction>
+</body></html>"""
+
+
+def test_real_frs102_tagging_of_reserves_creditors_and_depreciation():
+    p = ixbrl.parse(FRS102_EQUITY).periods["2025-03-31"]
+    assert p["retained_earnings"] == 412_000
+    assert p["creditors_after_one_year"] == 55_000
+    assert p["depreciation"] == 21_000
