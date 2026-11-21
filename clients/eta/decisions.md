@@ -65,3 +65,49 @@ Part IV) and Hamilton Helmer's 7 Powers. This replaces the earlier guessed bars.
 Tension recorded: Stanford's size floor ($1.5M EBITDA) sits above where the board's value rules expected the
 steepest discounts (under ~$1M profit). Following Stanford, sub-floor companies now fail when their accounts show
 it. Would change it: Sidarth choosing a smaller first deal, or the floor leaving too few qualified companies.
+
+## E6. United States: SBA PPP file for discovery and size (2026-11-21)
+
+**Decision.** The US search starts from the SBA's public Paycheck Protection Program file (loans of $150k+, 2020-21,
+free, data.sba.gov). It lists every borrower with NAICS code, jobs, loan amount, business type and age. A first-draw
+loan was 2.5 months of payroll, so payroll ~ 4.8 x loan and revenue ~ payroll / the industry's payroll share
+(`eta.yaml` `us.payroll_share`). Sieve 1 for the US scores these proxies (`us.sieve1`); sieve 2 is the same Stanford
+industry scorecard (per NAICS code) and 7 Powers as the UK. A US website counts only if it shows a name word plus
+the ZIP code or the city and state.
+
+**Why.** The US has no public register of private-company accounts. The PPP file is the largest free list of US
+private companies with a size measure, and it covers every industry.
+
+**Limits.** Data is from 2020-21: a company may since have closed or been sold (sieve 2's website check catches most).
+Pay is capped at $100k a head in the loan formula, so high-pay firms look smaller. Revenue is an estimate (+/- 30%)
+and every derived number is "unverified" in the ledger. No owner names or ages: they come from the broker or owner.
+Race, ethnicity, gender and veteran fields are never read into the database.
+
+**First run (2026-11-21).** 33,785 borrowers in the 25 target NAICS codes after the prefilter; 6,574 pass and
+7,735 review; the best 3,000 are stored. Sieve 2 trial on the top 10: 4 verified websites, 0 clear Powers, industry
+scores 18.9-20.3 of 30 (all "watch").
+
+**What would change it.** A paid US private-company data source with real revenue (if Sidarth wants one), or
+state registry data for owner details (some states are in the Alexandria catalogue: CO, GA, MO, NH, TX).
+
+## E7. Poland: KRS open API; numbers only through rejestr.io if Sidarth buys it (2026-11-21)
+
+**Decision.** Polish discovery uses the KRS open API (api-krs.ms.gov.pl, Ministry of Justice, free, no key). It
+cannot search by industry, so `eta-pl` reads the daily KRS bulletin (every company with a register entry that day,
+including filing annual accounts), reads each new number's current extract once, and keeps sp. z o.o. and S.A.
+companies whose main PKD code is in `eta.yaml` `pl.pkd_codes`. Sieve 1 scores registration age, accounts filed on
+time, owner age (when the extract shows a full PESEL; only birth year and month are kept), owner-operated and share
+capital, and fails liquidation, bankruptcy, late filing and group ownership. Without filed numbers a Polish company
+can reach "review", never "pass".
+
+**Why.** The KRS is the official register, public and free. The filed statements are in the RDF repository, which is
+behind bot protection (Incapsula): it is not crawled (house rule: no getting around protections). rejestr.io resells
+the same statements as JSON: 500 zł per 10,000 requests, 0.5 zł per statement in JSON. That is a spend Sidarth
+decides; until then numbers come from the owner.
+
+**Status.** Code and tests are built against the API's documented JSON. On 2026-11-21 the API showed its maintenance
+page (Przerwa techniczna) all day, so there is no live run yet: `eta-pl` stops cleanly and resumes next time.
+
+**What would change it.** Sidarth approving rejestr.io (then a `rejestr_io` source fills Revenue, EBITDA, employees
+and net assets, and Polish companies can pass), or the bulletin turning out not to list accounts filings (then
+discovery moves to rejestr.io's PKD search).

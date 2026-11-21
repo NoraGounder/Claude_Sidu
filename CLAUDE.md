@@ -59,7 +59,7 @@ The repository also hosts the agency website (`index.html`). Leave it alone unle
 
 Not an outbound client: Sidarth's own search for a business to buy. Design: the whiteboard "ETA Deal Sourcing
 Pipeline"; decisions: `clients/eta/decisions.md`; buy box and sieve-1 bars: `clients/eta/eta.yaml`. Milestone 1
-reads the UK register only (Companies House, free, key in `COMPANIES_HOUSE_API_KEY`; in a cloud session it is a
+reads the UK register (the US and Poland were added 2026-11-21, below) (Companies House, free, key in `COMPANIES_HOUSE_API_KEY`; in a cloud session it is a
 network secret for api.company-information.service.gov.uk and document-api.company-information.service.gov.uk,
 so set the variable to `proxy-injected`). Code: `engine/gtm/eta/`, `engine/gtm/ixbrl.py`,
 `engine/gtm/sources/companies_house.py`; tables `eta_*` in data/engine.db. Selection: sieve 1 = Stanford Search Fund
@@ -72,7 +72,14 @@ python -m gtm --client eta eta-run --code 71200 --max-per-code 100 --limit 100  
 python -m gtm --client eta eta-qualify --limit 25               # sieve 2: industry scorecard + 7 Powers (Jev 1.14)
 python -m gtm --client eta eta-stats
 python -m gtm --client eta eta-evidence <company number>       # evidence ledger for one company
+python -m gtm --client eta eta-us                               # US: SBA PPP file -> sieve 1 on size proxies (E6)
+python -m gtm --client eta eta-pl --days 5 --max-new 2000       # Poland: KRS bulletin -> extracts -> sieve 1 (E7)
+python -m gtm --client eta eta-qualify --market US --limit 25   # sieve 2 for one country
 ```
+
+Three countries share the tables: UK ids are Companies House numbers, US ids `US-<loan number>`, Polish ids
+`PL-<KRS>` (`engine/gtm/eta/markets.py`). US numbers are estimates from the PPP file (free, cached in data/eta/sba/);
+Polish numbers need rejestr.io, which is not bought (decisions.md E7).
 
 ## How to run
 

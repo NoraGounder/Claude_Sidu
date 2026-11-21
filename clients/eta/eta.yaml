@@ -134,3 +134,115 @@ seven_powers:
 # watch      = sieve 1 pass or review, but sieve 2 short of the bar or unknown
 qualification:
   max_websites_per_run: 200
+
+# ==================================================================================================
+# United States (decisions.md E6). There is no public register of private-company accounts in the US, so
+# discovery and size come from the SBA's public Paycheck Protection Program file (loans of $150k+, 2020-21):
+# every borrower's NAICS code, jobs reported and loan amount. A first-draw loan was 2.5 months of payroll
+# (pay capped at $100k a head), so annual payroll ~ 4.8 x loan; revenue ~ payroll / the industry's payroll
+# share. These are estimates (ledger status "unverified"): real numbers come from the seller.
+# ==================================================================================================
+us:
+  ppp_url: https://data.sba.gov/sites/default/files/distribution/SBA-OCA-2022-07-001/public_150k_plus_240930.csv
+  naics_codes:                     # the same "boring B2B" profile as the UK list
+    811310: Commercial and industrial machinery repair
+    811210: Electronic and precision equipment repair
+    238210: Electrical contractors
+    238220: Plumbing, heating and air-conditioning contractors
+    238290: Other building equipment contractors
+    238160: Roofing contractors
+    541330: Engineering services
+    541380: Testing laboratories
+    541620: Environmental consulting services
+    561621: Security systems services
+    561720: Janitorial services
+    561710: Exterminating and pest control services
+    561730: Landscaping services
+    562111: Solid waste collection
+    562112: Hazardous waste collection
+    562910: Remediation services
+    221320: Sewage treatment facilities
+    332813: Electroplating, plating, polishing and coloring
+    332710: Machine shops
+    333998: All other miscellaneous general purpose machinery
+    334515: Instruments for measuring and testing electricity
+    423830: Industrial machinery and equipment merchant wholesalers
+    532412: Construction and mining machinery rental
+    532490: Other commercial and industrial machinery rental
+    488490: Other support activities for road transportation
+  # payroll as a share of revenue, by NAICS prefix (longest prefix wins); rough Census averages
+  payroll_share: {"22": 0.15, "23": 0.25, "31": 0.20, "32": 0.20, "33": 0.20, "3327": 0.33, "42": 0.07,
+                  "48": 0.30, "53": 0.20, "54": 0.40, "56": 0.40, "562": 0.25, "81": 0.33}
+  payroll_multiple: 4.8            # annual payroll per $ of first-draw loan (12 / 2.5)
+  revenue_band: 0.3                # the revenue estimate is +/- 30%
+  prefilter:                       # applied while the file streams; everything else is dropped unread
+    jobs_min: 15
+    jobs_max: 600
+    revenue_estimate_min_usd: 5000000
+    business_types: ["Corporation", "Subchapter S Corporation", "Limited  Liability Company(LLC)",
+                     "Limited Liability Company(LLC)", "Limited Liability Partnership", "Partnership"]
+    states: []                     # empty = all states
+  sieve1:
+    hard:
+      revenue_min_usd: 8000000     # central estimate; Stanford's floor is $10M, kept lower for estimate error
+      revenue_max_usd: 40000000
+      jobs_min: 20
+      jobs_max: 500
+      exclude_change_of_ownership: true   # bought recently: the owner is not a motivated seller
+    bars:
+      revenue_target_usd: [10000000, 30000000]
+      revenue_core_usd: [12000000, 25000000]   # full size points; the rest of the target band gets 70%
+      jobs_target: [20, 200]
+      payroll_per_job_good_usd: 50000
+    weights: {size: 30, jobs: 15, skilled_pay: 10, resilience: 15, forgiven: 10, entity: 10, history: 10}
+    pass: 90                       # proxies are thin, so "pass" asks for nearly everything to line up
+    review: 75
+  max_per_run: 3000               # survivors stored per run, best first (the rest are counted, not kept)
+
+# ==================================================================================================
+# Poland (decisions.md E7). The KRS open API (api-krs.ms.gov.pl, free, no key) gives each company's current
+# extract: legal form, registration date, PKD codes, shareholders, board, filed financial statements and any
+# liquidation or bankruptcy. It cannot search by PKD, so discovery reads the daily KRS bulletin (every company
+# with a register entry that day, which includes filing annual accounts) and keeps the PKD codes below. Filed
+# numbers sit in the RDF repository, which is behind bot protection and is not crawled; they come from
+# rejestr.io (paid) only when Sidarth approves that spend, otherwise from the seller.
+# ==================================================================================================
+pl:
+  api: https://api-krs.ms.gov.pl/api/krs
+  requests_per_second: 2
+  legal_forms: ["SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ", "SPÓŁKA AKCYJNA"]
+  pkd_codes:                       # PKD 2007 subclasses, the same profile
+    "33.12.Z": Repair of machinery
+    "33.14.Z": Repair of electrical equipment
+    "33.20.Z": Installation of industrial machinery and equipment
+    "38.11.Z": Collection of non-hazardous waste
+    "38.12.Z": Collection of hazardous waste
+    "39.00.Z": Remediation
+    "43.21.Z": Electrical installation
+    "43.22.Z": Plumbing, heating, gas and air-conditioning installation
+    "43.29.Z": Other construction installation
+    "43.91.Z": Roofing
+    "71.12.Z": Engineering activities and technical consultancy
+    "71.20.B": Other technical testing and analysis
+    "80.20.Z": Security systems service activities
+    "81.21.Z": General cleaning of buildings
+    "81.22.Z": Other building and industrial cleaning
+    "81.29.Z": Other cleaning activities
+    "81.30.Z": Landscape service activities
+    "25.61.Z": Treatment and coating of metals
+    "25.62.Z": Machining
+    "28.29.Z": Other general-purpose machinery
+    "46.69.Z": Wholesale of other machinery and equipment
+    "77.32.Z": Renting of construction machinery
+    "77.39.Z": Renting of other machinery
+  sieve1:
+    hard:
+      min_years_in_krs: 10         # KRS opened in 2001; older firms re-registered 2001-2004
+      exclude_liquidation_or_bankruptcy: true
+      max_months_since_accounts_filed: 20
+      exclude_corporate_majority_owner: true
+    bars: {owner_age_motivated: 60, owner_age_watch: 55}
+    weights: {history: 25, filings: 20, motivated_seller: 25, owner_operated: 15, capital: 15}
+    pass: 60
+    review: 40
+    size_unknown_verdict: review   # without filed numbers no Polish company can pass sieve 1

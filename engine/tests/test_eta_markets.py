@@ -1,0 +1,205 @@
+"""ETA search in the US (SBA PPP file) and Poland (KRS open API). Synthetic data only: every loan number,
+company, KRS number, person and figure below is made up."""
+
+import csv
+from datetime import date
+
+import pytest
+
+from gtm.config import load_client
+from gtm.crawl import Page
+from gtm.eta import markets, pl, qualify, store, us
+
+TODAY = date(2026, 11, 21)
+PPP_FIELDS = ["LoanNumber", "DateApproved", "ProcessingMethod", "BorrowerName", "BorrowerCity", "BorrowerState",
+              "BorrowerZip", "LoanStatus", "CurrentApprovalAmount", "FranchiseName", "BusinessAgeDescription",
+              "JobsReported", "NAICSCode", "BusinessType", "OriginatingLender", "NonProfit", "ForgivenessAmount",
+              "Race", "Gender"]
+
+
+@pytest.fixture
+def env(tmp_path, monkeypatch):
+    monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path))
+    cfg = load_client("eta")
+    return cfg, store.load_eta(cfg), store.connect(tmp_path / "engine.db"), tmp_path
+
+
+def _loan(number, name, amount, jobs, naics="238220", method="PPP", age="Existing or more than 2 years old",
+          btype="Subchapter S Corporation", zip_code="55401-1234", forgiven=None, franchise="", nonprofit=""):
+    return {"LoanNumber": number, "DateApproved": "04/15/2020", "ProcessingMethod": method, "BorrowerName": name,
+            "BorrowerCity": "Exampleton", "BorrowerState": "MN", "BorrowerZip": zip_code, "LoanStatus": "Paid in Full",
+            "CurrentApprovalAmount": str(amount), "FranchiseName": franchise, "BusinessAgeDescription": age,
+            "JobsReported": str(jobs), "NAICSCode": naics, "BusinessType": btype, "OriginatingLender": "Test Bank",
+            "NonProfit": nonprofit, "ForgivenessAmount": str(forgiven if forgiven is not None else amount),
+            "Race": "Unanswered", "Gender": "Unanswered"}
+
+
+def _ppp(tmp_path, rows):
+    path = tmp_path / "ppp.csv"
+    with open(path, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=PPP_FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+    return path
+
+
+# ---------- markets ----------
+
+def test_market_from_id_and_industry_keys():
+    assert markets.market_of("09999901") == "GB" and markets.market_of("US-123") == "US"
+    assert markets.market_of("PL-0000099999") == "PL"
+    assert markets.industry_key("US-1", "238220") == "naics:238220"
+    assert markets.split_key("pkd:43.22.Z") == ("PL", "43.22.Z") and markets.split_key("71200") == ("GB", "71200")
+
+
+# ---------- US ----------
+
+def test_ppp_estimates_payroll_and_revenue_from_the_first_draw(env):
+    _, eta, _, tmp = env
+    # $500k first draw -> payroll $2.4M -> revenue $9.6M at the 25% construction payroll share
+    rows = [_loan("9000000001", "EXAMPLE HEATING INC", 500000, 60),
+            _loan("9000000002", "EXAMPLE HEATING, INC.", 450000, 58, method="PPS")]
+    b = list(us.stream(_ppp(tmp, rows), eta["us"]))
+    assert len(b) == 1                                   # both draws are one borrower
+    b = b[0]
+    assert b.company_id == "US-9000000001" and b.payroll_est == 2_400_000 and b.revenue_est == 9_600_000
+    assert b.second_draw == 450000 and b.jobs == 60
+
+
+def test_ppp_prefilter_drops_franchises_nonprofits_and_other_industries(env):
+    _, eta, _, tmp = env
+    rows = [_loan("9000000003", "FRANCHISE CLEAN LLC", 900000, 80, franchise="Big Brand"),
+            _loan("9000000004", "COMMUNITY WORKS", 900000, 80, nonprofit="Y"),
+            _loan("9000000005", "EXAMPLE DENTAL PC", 900000, 80, naics="621210"),
+            _loan("9000000006", "TINY SHOP INC", 160000, 5)]
+    assert list(us.stream(_ppp(tmp, rows), eta["us"])) == []
+
+
+def test_us_sieve1_ranks_survivors_and_keeps_no_fails(env):
+    cfg, eta, conn, tmp = env
+    rows = [_loan("9000000010", "STRONG MECHANICAL INC", 1_000_000, 120),          # revenue est $19.2M
+            _loan("9000000011", "SHAKY MECHANICAL INC", 1_000_000, 120),
+            _loan("9000000012", "SHAKY MECHANICAL INC", 800_000, 110, method="PPS"),
+            _loan("9000000013", "NEW OWNER MECHANICAL INC", 1_000_000, 120, age="Change of Ownership"),
+            _loan("9000000014", "SMALLER MECHANICAL INC", 300_000, 30)]             # revenue est $5.8M
+    out = us.run(conn, cfg.slug, eta, _ppp(tmp, rows))
+    assert out["fails"] == {"recent_change_of_ownership": 1, "too_small_revenue_estimate": 1}
+    kept = {r["company_number"]: r for r in conn.execute("SELECT * FROM eta_screen WHERE sieve=1")}
+    assert set(kept) == {"US-9000000010", "US-9000000011"}
+    assert kept["US-9000000010"]["score"] > kept["US-9000000011"]["score"]    # second draw = 25% revenue fall
+    ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "US-9000000010")}
+    assert ledger["Revenue (estimate)"]["status"] == "unverified"
+    assert ledger["Jobs reported (PPP, 2020-21)"]["status"] == "public"
+    assert ledger["Owner age"]["status"] == "unknown"
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(eta_screen)")]
+    assert "Race" not in str(list(conn.execute("SELECT metrics FROM eta_screen")))
+
+
+def test_us_website_needs_name_and_zip():
+    row = {"company_number": "US-1", "name": "STRONG MECHANICAL INC", "postal_code": "55401",
+           "locality": "Exampleton, MN"}
+    assert qualify.belongs("Strong Mechanical - 12 Main St, Exampleton, MN 55401", row)
+    assert not qualify.belongs("Strong Mechanical of Texas, Dallas TX 75201", row)
+    assert qualify.domain_candidates("STRONG MECHANICAL INC", "US")[0] == "strongmechanical.com"
+
+
+# ---------- Poland ----------
+
+def _odpis(krs="0000099999", form="SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ", pkd=("43", "22", "Z"),
+           registered="05.06.2001", filed=("12.06.2026", "15.06.2025", "20.06.2024"), corporate_owner=False,
+           troubled=False, pesel="55031512345"):
+    holders = [{"nazwisko": {"nazwiskoICzlon": "PRZYKŁADOWY"}, "imiona": {"imie": "JAN"},
+                "identyfikator": {"pesel": pesel}, "posiadaneUdzialy": "80 UDZIAŁÓW O ŁĄCZNEJ WARTOŚCI 40 000 ZŁ",
+                "czyPosiadaCaloscUdzialow": False}]
+    holders.append({"nazwa": "PRZYKŁAD HOLDING SP. Z O.O.", "identyfikator": {"krs": "0000088888"},
+                    "posiadaneUdzialy": ("920" if corporate_owner else "20") + " UDZIAŁÓW",
+                    "czyPosiadaCaloscUdzialow": False})
+    return {"naglowekA": {"numerKRS": krs, "dataRejestracjiWKRS": registered},
+            "dane": {"dzial1": {"danePodmiotu": {"nazwa": "PRZYKŁAD INSTALACJE SP. Z O.O.", "formaPrawna": form,
+                                                 "identyfikatory": {"nip": "0000000000", "regon": "000000000"}},
+                                "siedzibaIAdres": {"siedziba": {"miejscowosc": "PRZYKŁADOWO", "wojewodztwo": "MAZOWIECKIE"}},
+                                "kapital": {"wysokoscKapitaluZakladowego": {"wartosc": "50000,00", "waluta": "PLN"}},
+                                "wspolnicySpzoo": holders},
+                     "dzial2": {"reprezentacja": {"nazwaOrganu": "ZARZĄD", "sklad": [
+                         {"nazwisko": {"nazwiskoICzlon": "PRZYKŁADOWY"}, "imiona": {"imie": "JAN"},
+                          "identyfikator": {"pesel": pesel}, "funkcjaWOrganie": "PREZES ZARZĄDU"}]}},
+                     "dzial3": {"przedmiotDzialalnosci": {
+                         "przedmiotPrzewazajacejDzialalnosci": [{"opis": "TEST", "kodDzial": pkd[0], "kodKlasa": pkd[1],
+                                                                 "kodPodklasa": pkd[2]}]},
+                         "wzmiankiOZlozonychDokumentach": {"wzmiankaOZlozeniuRocznegoSprawozdaniaFinansowego": [
+                             {"dataZlozenia": f, "zaOkresOdDo": f"01.01.{int(f[-4:]) - 1} - 31.12.{int(f[-4:]) - 1}"}
+                             for f in filed]}},
+                     "dzial6": {"likwidacja": {"likwidatorzy": []}} if not troubled else
+                               {"postepowanieUpadlosciowe": {"data": "01.02.2026"}}}}
+
+
+def test_krs_extract_parses_identity_codes_owners_and_filings():
+    p = pl.parse(_odpis())
+    assert p["krs"] == "0000099999" and p["registered"] == "2001-06-05" and p["pkd_main"] == ["43.22.Z"]
+    assert p["capital_pln"] == 50000 and p["filed_accounts"][0] == {"filed": "2026-06-12", "period_end": "2025-12-31"}
+    jan = p["shareholders"][0]
+    assert jan["name"] == "JAN PRZYKŁADOWY" and jan["shares"] == 80 and (jan["birth_year"], jan["birth_month"]) == (1955, 3)
+    assert p["shareholders"][1]["corporate"] and not p["troubled"]
+    assert "pesel" not in str(p).lower() and "55031512345" not in str(p)    # never kept
+
+
+def test_pesel_birth_handles_centuries_and_masks():
+    assert pl.pesel_birth("02270812345") == (2002, 7)
+    assert pl.pesel_birth("55*********") == (None, None)
+
+
+def test_pl_sieve1_caps_at_review_without_numbers_and_fails_group_owned():
+    sieve = load_client("eta") and store.load_eta(load_client("eta"))["pl"]["sieve1"]
+    verdict, score, fails, _ = pl.evaluate(pl.parse(_odpis()), sieve, TODAY)
+    assert verdict == "review" and score >= sieve["pass"] and not fails     # would pass; size unknown
+    assert "no_motivated_owner_group_owned" in pl.evaluate(pl.parse(_odpis(corporate_owner=True)), sieve, TODAY)[2]
+    assert "liquidation_bankruptcy_or_restructuring" in pl.evaluate(pl.parse(_odpis(troubled=True)), sieve, TODAY)[2]
+    assert "accounts_not_filed_recently" in pl.evaluate(pl.parse(_odpis(filed=("10.06.2023",))), sieve, TODAY)[2]
+
+
+class FakeKRS:
+    def __init__(self, extracts, bulletin):
+        self.extracts, self.days, self.requests_made, self.calls = extracts, bulletin, 0, []
+
+    def bulletin(self, day):
+        self.requests_made += 1
+        return self.days.get(day, [])
+
+    def extract(self, krs):
+        self.requests_made += 1
+        self.calls.append(krs)
+        return self.extracts.get(krs)
+
+
+def test_pl_discovery_keeps_target_pkd_and_never_rereads_a_number(env):
+    cfg, eta, conn, _ = env
+    krs = FakeKRS({"0000099999": _odpis(), "0000077777": _odpis("0000077777", pkd=("47", "11", "Z")),
+                   "0000066666": _odpis("0000066666", form="SPÓŁKA JAWNA")},
+                  {"2026-11-20": ["0000099999", "0000099999", "0000077777", "0000066666", "0000055555"]})
+    out = pl.run(conn, cfg.slug, eta, krs, ["2026-11-20"], today=TODAY)
+    assert out["kept"] == 1 and out["review"] == 1
+    assert out["skipped"] == {"pkd": 1, "legal_form": 1, "not_in_register_p": 1}
+    row = conn.execute("SELECT * FROM eta_companies WHERE company_number='PL-0000099999'").fetchone()
+    assert row["search_code"] == "43.22.Z" and row["stage"] == "screened"
+    assert len(store.owners(conn, cfg.slug, "PL-0000099999")) == 3
+    pl.run(conn, cfg.slug, eta, krs, ["2026-11-20"], today=TODAY)
+    assert len(krs.calls) == 4                                              # second run fetched nothing
+
+
+def test_pl_maintenance_page_stops_cleanly(env):
+    cfg, eta, conn, _ = env
+
+    class Down(FakeKRS):
+        def bulletin(self, day):
+            raise pl.KRSUnavailable("KRS API Biuletyn -> 200 (maintenance page)")
+
+    out = pl.run(conn, cfg.slug, eta, Down({}, {}), ["2026-11-20"])
+    assert "maintenance" in out["stopped"] and out["read"] == 0
+
+
+def test_polish_site_is_verified_by_krs_number():
+    row = {"company_number": "PL-0000099999", "name": "PRZYKŁAD INSTALACJE SP. Z O.O.", "postal_code": None,
+           "locality": "PRZYKŁADOWO"}
+    assert qualify.belongs("Sąd Rejonowy, KRS 0000099999, NIP 000-000-00-00", row)
+    assert not qualify.belongs("KRS 0000099998", row)
+    assert qualify.domain_candidates("PRZYKŁAD INSTALACJE SP. Z O.O.", "PL")[0].endswith(".pl")

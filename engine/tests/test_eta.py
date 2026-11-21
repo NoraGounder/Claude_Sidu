@@ -380,7 +380,7 @@ def test_industry_scorecard_is_one_decision_per_code_and_cached(screened):
     qualify.score_industries(conn, cfg, eta, {"71200": "Technical testing"}, jev)
     assert len(jev.calls) == 1
     state, questions = jev.calls[0]
-    assert set(questions) == set(eta["industry_scorecard"]["criteria"]) and state["uk_sic_2007_code"] == "71200"
+    assert set(questions) == set(eta["industry_scorecard"]["criteria"]) and state["industry_code"] == "UK SIC 2007 71200"
 
 
 def test_qualify_finds_verified_site_and_counts_clear_powers(screened):

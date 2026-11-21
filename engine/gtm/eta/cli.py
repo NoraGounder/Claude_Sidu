@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import csv
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import yaml
@@ -131,19 +131,90 @@ def cmd_qualify(args, jev=None, fetcher=None) -> int:
     from gtm.eta import qualify
 
     cfg, eta, conn = _setup(args)
-    rows = qualify.candidates(conn, cfg.slug)[: args.limit or None]
+    rows = qualify.candidates(conn, cfg.slug, market=args.market)[: args.limit or None]
     print(f"Sieve 2 for {cfg.slug}: {len(rows)} sieve-1 survivors (pass/review). Stanford industry scorecard per SIC "
           f"code and Hamilton Helmer's 7 Powers per company, with TypeSafe Jev 1.14.")
     if args.dry_run:
         print("Dry run: no website fetched, no Jev call made.")
         return 0
-    r = qualify.run(conn, cfg, eta, fetcher=fetcher, jev=jev, limit=args.limit)
+    r = qualify.run(conn, cfg, eta, fetcher=fetcher, jev=jev, limit=args.limit, market=args.market)
     print(f"Industries scored {r['industries_scored']}; websites found {r['websites_found']}; 7 Powers decided "
           f"{r['powers_decided']}. Qualified {r['qualified']}, watch {r['watch']}, not qualified {r['not_qualified']}.")
     for i, q in enumerate(qualify.qualified(conn, cfg.slug)[:10], 1):
         b = q["breakdown"]
         print(f"  {i:>2}. {q['score']:>5} {q['verdict']:<9} {q['company_number']} {q['name'][:38]:<38} "
               f"industry {b.get('industry_score') or '?'}/30, powers {', '.join(b.get('clear_powers') or []) or '-'}")
+    return 0
+
+
+def cmd_us(args) -> int:
+    """US: SBA PPP file -> borrowers in the target NAICS codes -> sieve 1 on payroll and revenue estimates."""
+    from gtm.eta import us
+
+    cfg, eta, conn = _setup(args)
+    conf = eta.get("us") or {}
+    path = us.cache_path()
+    if not path.exists():
+        if args.dry_run:
+            print(f"Dry run: would download {conf.get('ppp_url')} (about 450 MB, free) to {path}.")
+            return 0
+        print("Downloading the SBA PPP file (about 450 MB, free, once)...")
+        us.download(conf["ppp_url"], path)
+    if args.dry_run:
+        print(f"Dry run: {len(conf.get('naics_codes') or {})} NAICS codes, file cached at {path}. Nothing written.")
+        return 0
+    run_id = db.start_run(conn, cfg.slug, "eta_us", "sba_ppp", "PPP discovery + sieve 1", 0.0,
+                          {"limit": args.limit})
+    r = us.run(conn, cfg.slug, eta, path, limit=args.limit)
+    db.finish_run(conn, run_id, "ok", r["kept"], 0.0, json.dumps(r)[:500])
+    print(f"US: {r['kept']} borrowers kept ({r['new']} new). Sieve 1: pass {r['pass']}, review {r['review']}, "
+          f"fail {r['fail']}.")
+    if r["fails"]:
+        print("  fail reasons: " + ", ".join(f"{k} {v}" for k, v in sorted(r["fails"].items(), key=lambda x: -x[1])))
+    out = data_dir() / "eta" / f"us-shortlist-{date.today():%Y%m%d}.csv"
+    rows = conn.execute("SELECT c.company_number, c.name, c.locality, c.postal_code, s.verdict, s.score, s.metrics"
+                        " FROM eta_companies c JOIN eta_screen s ON s.client=c.client AND s.company_number=c.company_number"
+                        " AND s.sieve=1 WHERE c.client=? AND c.company_number LIKE 'US-%' AND s.verdict IN"
+                        " ('pass','review') ORDER BY s.score DESC", (cfg.slug,)).fetchall()
+    cols = ["rank", "verdict", "score", "company_id", "name", "locality", "zip", "naics", "industry", "jobs",
+            "payroll_est", "revenue_est", "second_draw", "business_type", "business_age"]
+    with open(out, "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(cols)
+        for i, row in enumerate(rows, 1):
+            m = json.loads(row["metrics"])
+            w.writerow([i, row["verdict"], row["score"], row["company_number"], row["name"], row["locality"],
+                        row["postal_code"], m.get("naics"), m.get("industry"), m.get("jobs"), m.get("payroll_est"),
+                        m.get("revenue_est"), m.get("second_draw"), m.get("business_type"), m.get("business_age")])
+    print(f"Shortlist: {len(rows)} US companies in {out}")
+    return 0
+
+
+def cmd_pl(args, krs=None) -> int:
+    """Poland: KRS daily bulletin -> current extracts -> target PKD companies -> sieve 1 (free)."""
+    from gtm.eta import pl
+
+    cfg, eta, conn = _setup(args)
+    conf = eta.get("pl") or {}
+    end = date.fromisoformat(args.until) if args.until else date.today() - timedelta(days=1)
+    days = pl.days_back(end, args.days)
+    print(f"Poland: KRS bulletin for {len(days)} working days ({days[-1]} to {days[0]}), "
+          f"{len(conf.get('pkd_codes') or {})} PKD codes, {conf.get('requests_per_second', 2)} requests a second.")
+    if args.dry_run:
+        print("Dry run: nothing fetched.")
+        return 0
+    krs = krs or pl.KRSClient(conf.get("api", "https://api-krs.ms.gov.pl/api/krs"),
+                              float(conf.get("requests_per_second", 2)), max_requests=args.max_requests)
+    run_id = db.start_run(conn, cfg.slug, "eta_pl", "krs", "KRS discovery + sieve 1", 0.0,
+                          {"days": days, "max_new": args.max_new})
+    r = pl.run(conn, cfg.slug, eta, krs, days, max_new=args.max_new)
+    db.finish_run(conn, run_id, "stopped" if r.get("stopped") else "ok", krs.requests_made, 0.0, json.dumps(r)[:500])
+    print(f"Read {r['read']} extracts of {r['numbers']} new numbers; kept {r['kept']}. Sieve 1: pass {r['pass']}, "
+          f"review {r['review']}, fail {r['fail']}.")
+    if r["fails"]:
+        print("  fail reasons: " + ", ".join(f"{k} {v}" for k, v in r["fails"].items()))
+    if r.get("stopped"):
+        print(f"Stopped: {r['stopped']}. Re-run later: numbers already read are not fetched again.")
     return 0
 
 
@@ -262,7 +333,21 @@ def register(sub) -> None:
     q = sub.add_parser("eta-qualify", help="ETA sieve 2: Stanford industry scorecard + 7 Powers (Jev 1.14)")
     q.add_argument("--limit", type=int, help="companies to qualify this run")
     q.add_argument("--dry-run", action="store_true", help="show how many would be qualified, call nothing")
+    q.add_argument("--market", choices=["GB", "US", "PL"], help="only companies in this country")
     q.set_defaults(func=cmd_qualify)
+
+    u = sub.add_parser("eta-us", help="ETA US: SBA PPP file -> target NAICS borrowers -> sieve 1 (free)")
+    u.add_argument("--limit", type=int, help="borrowers to keep this run (default us.max_per_run)")
+    u.add_argument("--dry-run", action="store_true", help="show the plan, write nothing")
+    u.set_defaults(func=cmd_us)
+
+    pp = sub.add_parser("eta-pl", help="ETA Poland: KRS bulletin -> target PKD companies -> sieve 1 (free)")
+    pp.add_argument("--days", type=int, default=1, help="working days of the bulletin to read (default 1)")
+    pp.add_argument("--until", help="last bulletin day, YYYY-MM-DD (default yesterday)")
+    pp.add_argument("--max-new", type=int, help="extracts to read this run")
+    pp.add_argument("--max-requests", type=int, default=20000, help="request cap for this run")
+    pp.add_argument("--dry-run", action="store_true", help="show the plan, fetch nothing")
+    pp.set_defaults(func=cmd_pl)
 
     st = sub.add_parser("eta-stats", help="ETA: companies per stage, sieve verdicts, requests this month")
     st.set_defaults(func=cmd_stats)

@@ -17,7 +17,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import date
 
-from gtm.eta import store
+from gtm.eta import markets, store
 from gtm.eta.enrich import months_since, years_between
 
 UNKNOWN_STEPS = {
@@ -285,7 +285,8 @@ def ledger(conn, client: str, row, m: Metrics) -> None:
 def run(conn, client: str, eta: dict, rescreen: bool = False, today: date | None = None) -> dict:
     sieve = eta.get("sieve1") or {}
     stages = ("owners_read", "screened") if rescreen else ("owners_read",)
-    rows = [r for s in stages for r in store.companies_at(conn, client, s)]
+    rows = [r for s in stages for r in store.companies_at(conn, client, s)
+            if markets.market_of(r["company_number"]) == "GB"]   # US and PL have their own sieve 1
     out = {"pass": 0, "review": 0, "fail": 0}
     for row in rows:
         m = gather(conn, client, row, today)

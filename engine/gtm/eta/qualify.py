@@ -21,7 +21,7 @@ import re
 
 from gtm import budget, db
 from gtm.config import ClientConfig
-from gtm.eta import store
+from gtm.eta import markets, store
 from gtm.sources.jev import JevClient, JevResult, check_policy, scrub
 
 VENDOR = "openrouter"
@@ -114,7 +114,9 @@ def score_industries(conn, cfg: ClientConfig, eta: dict, codes: dict[str, str], 
         jev = jev or JevClient(cfg.ai)
         questions = industry_questions(eta)
         for code, label in todo.items():
-            state = {"country": "United Kingdom", "uk_sic_2007_code": code, "industry": label,
+            market, bare = markets.split_key(code)
+            state = {"country": markets.COUNTRY[market], "industry_code": f"{markets.CODE_SYSTEM[market]} {bare}",
+                     "industry": label,
                      "buyer": "a first-time CEO buying one company to own and run for the long term (search fund)"}
             result = _ask(jev, conn, cfg, state, questions)
             answers = {k: round(1 + float(v["score"]), 2) for k, v in result.answers.items()}
@@ -129,17 +131,20 @@ def score_industries(conn, cfg: ClientConfig, eta: dict, codes: dict[str, str], 
 
 # ---------- 2b: the company's website ----------
 
-_SUFFIXES = {"limited", "ltd", "plc", "llp", "the", "uk", "co", "company", "and", "&"}
+_SUFFIXES = {"limited", "ltd", "plc", "llp", "the", "uk", "co", "company", "and", "&", "inc", "llc", "corp",
+             "corporation", "incorporated", "sp", "z", "o", "oo", "spółka", "spolka", "s", "a", "sa", "ograniczoną",
+             "odpowiedzialnością"}
+_TLDS = {"GB": ("co.uk", "com", "uk"), "US": ("com", "net", "us"), "PL": ("pl", "com.pl", "com", "eu")}
 
 
-def domain_candidates(name: str) -> list[str]:
+def domain_candidates(name: str, market: str = "GB") -> list[str]:
     words = [w for w in re.split(r"[^a-z0-9]+", name.lower().replace("&", " and ")) if w]
     core = [w for w in words if w not in _SUFFIXES] or words
     stems = []
     for stem in ("".join(core), "-".join(core), "".join(core[:2]), "".join(core[:1])):
         if stem and len(stem) >= 3 and stem not in stems:
             stems.append(stem)
-    return [f"{s}.{tld}" for s in stems for tld in ("co.uk", "com", "uk")]
+    return [f"{s}.{tld}" for s in stems for tld in _TLDS.get(market, _TLDS["GB"])]
 
 
 def shows_number(text: str, number: str) -> bool:
@@ -150,22 +155,43 @@ def shows_number(text: str, number: str) -> bool:
 _LEGAL_LINKS = ("privacy", "terms", "legal", "contact", "about", "cookie", "imprint")
 
 
-def find_website(fetcher, name: str, number: str, max_candidates: int = 8) -> tuple[str | None, list[str]]:
-    """First candidate domain whose site shows the registered company number, on the home page or a
+def belongs(text: str, row) -> bool:
+    """Does this page show it is the company's own site? UK: the company number. Poland: the KRS number
+    (Polish law requires it on company websites). US: a name word plus the ZIP code or the city and state."""
+    number = row["company_number"]
+    market = markets.market_of(number)
+    if market == "GB":
+        return shows_number(text, number)
+    if market == "PL":
+        return shows_number(text, number[3:])
+    low = (text or "").lower()
+    words = [w for w in re.split(r"[^a-z0-9]+", (row["name"] or "").lower()) if len(w) > 2 and w not in _SUFFIXES]
+    if not words or words[0] not in low:
+        return False
+    zip5 = (row["postal_code"] or "")[:5]
+    city, _, state = (row["locality"] or "").partition(", ")
+    return bool(zip5 and re.search(rf"(?<!\d){zip5}(?!\d)", low)) or bool(city and city.lower() in low and state
+                                                                          and state.lower() in low)
+
+
+def find_website(fetcher, name: str, number: str, max_candidates: int = 8, row=None) -> tuple[str | None, list[str]]:
+    """First candidate domain whose site shows it belongs to the company (belongs()), on the home page or a
     legal/contact/about page linked from it. Returns (website or None, domains tried)."""
+    row = row or {"company_number": number, "name": name, "postal_code": None, "locality": None}
+    check = lambda text: belongs(text, row)
     tried = []
-    for domain in domain_candidates(name)[:max_candidates]:
+    for domain in domain_candidates(name, markets.market_of(number))[:max_candidates]:
         url = f"https://www.{domain}/"
         tried.append(domain)
         page = fetcher.get(url)
         if not page.ok:
             continue
-        if shows_number(page.text, number):
+        if check(page.text):
             return url, tried
         for link, anchor in page.links[:200]:
             if any(k in (link + " " + anchor).lower() for k in _LEGAL_LINKS) and domain in link:
                 sub = fetcher.get(link)
-                if sub.ok and shows_number(sub.text, number):
+                if sub.ok and check(sub.text):
                     return url, tried
     return None, tried
 
@@ -196,21 +222,23 @@ def powers_questions(eta: dict) -> dict:
 
 # ---------- run ----------
 
-def candidates(conn, client: str, verdicts=("pass", "review")) -> list:
+def candidates(conn, client: str, verdicts=("pass", "review"), market: str | None = None) -> list:
     marks = ",".join("?" for _ in verdicts)
-    return conn.execute(
+    rows = conn.execute(
         f"SELECT c.*, s.verdict, s.score FROM eta_companies c JOIN eta_screen s ON s.client=c.client"
         f" AND s.company_number=c.company_number AND s.sieve=1 WHERE c.client=? AND s.verdict IN ({marks})"
         f" ORDER BY s.score DESC", (client, *verdicts)).fetchall()
+    return [r for r in rows if not market or markets.market_of(r["company_number"]) == market]
 
 
 def run(conn, cfg: ClientConfig, eta: dict, fetcher=None, jev: JevClient | None = None,
-        limit: int | None = None) -> dict:
+        limit: int | None = None, market: str | None = None) -> dict:
     ensure_schema(conn)
     check_policy(cfg.ai)
-    rows = candidates(conn, cfg.slug)[: limit or (eta.get("qualification") or {}).get("max_websites_per_run", 200)]
-    labels = {str(k): v for k, v in (eta.get("search", {}).get("sic_codes") or {}).items()}
-    codes = {r["search_code"]: labels.get(r["search_code"], r["search_code"]) for r in rows if r["search_code"]}
+    rows = candidates(conn, cfg.slug, market=market)[: limit or (eta.get("qualification") or {}).get("max_websites_per_run", 200)]
+    labels = markets.code_labels(eta)
+    key = lambda r: markets.industry_key(r["company_number"], r["search_code"])
+    codes = {key(r): labels.get(key(r), r["search_code"]) for r in rows if r["search_code"]}
     out = {"companies": len(rows), "industries_scored": 0, "websites_found": 0, "powers_decided": 0,
            "qualified": 0, "watch": 0, "not_qualified": 0}
     if not rows:
@@ -231,7 +259,7 @@ def run(conn, cfg: ClientConfig, eta: dict, fetcher=None, jev: JevClient | None 
         if cached:
             website = cached["website"]
         else:
-            website, tried = find_website(fetcher, row["name"], number)
+            website, tried = find_website(fetcher, row["name"], number, row=row)
             conn.execute("INSERT OR REPLACE INTO eta_websites(client, company_number, website, tried, checked_at)"
                          " VALUES (?,?,?,?,?)", (cfg.slug, number, website, json.dumps(tried), db.now_iso()))
         clear: list[str] | None = None
@@ -244,8 +272,10 @@ def run(conn, cfg: ClientConfig, eta: dict, fetcher=None, jev: JevClient | None 
             else:
                 budget.check(conn, cfg, VENDOR, budget.estimate(cfg, price_key(cfg), 1))
                 title, text = site_text(fetcher, website)
-                state = {"company": row["name"], "uk_sic_2007_code": row["search_code"],
-                         "industry": labels.get(row["search_code"]), "website": website, "website_title": title, "website_text": text}
+                market = markets.market_of(number)
+                state = {"company": row["name"], "country": markets.COUNTRY[market],
+                         "industry_code": f"{markets.CODE_SYSTEM[market]} {row['search_code']}",
+                         "industry": labels.get(key(row)), "website": website, "website_title": title, "website_text": text}
                 result = _ask(jev, conn, cfg, state, questions)
                 scores = {k: round(float(v["score"]), 2) for k, v in result.answers.items()}
                 clear = [k for k, v in scores.items() if v >= CLEAR]
@@ -260,12 +290,12 @@ def run(conn, cfg: ClientConfig, eta: dict, fetcher=None, jev: JevClient | None 
                                       "Test with the owner: what is the Benefit, and why can competitors not copy it?")
         else:
             store.record_evidence(conn, cfg.slug, number, "Website", None, "unknown", None,
-                                  "No site found that shows the company number; ask the owner")
+                                  "No site found that shows it is the company's own; ask the owner")
 
-        ind = industry.get(row["search_code"])
+        ind = industry.get(key(row))
         if ind is not None:
             store.record_evidence(conn, cfg.slug, number, "Stanford industry score", f"{ind:g} of 30", "public",
-                                  f"Jev 1.14 industry scorecard for SIC {row['search_code']}")
+                                  f"Jev 1.14 industry scorecard for {codes.get(key(row))} ({key(row)})")
         min_ind, min_pow = sc.get("min_score", 22), sp.get("min_clear_powers", 1)
         if ind is not None and ind < min_ind - 4:
             verdict = "not_qualified"
