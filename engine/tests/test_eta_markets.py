@@ -77,14 +77,17 @@ def test_ppp_prefilter_drops_franchises_nonprofits_and_other_industries(env):
 
 SF_FIELDS = ["ACK_ID", "SF_PLAN_EFF_DATE", "SF_SPONSOR_NAME", "SF_SPONSOR_DFE_DBA_NAME", "SF_SPONS_US_CITY",
              "SF_SPONS_US_STATE", "SF_SPONS_US_ZIP", "SF_SPONS_EIN", "SF_BUSINESS_CODE", "SF_TOT_ACT_PARTCP_EOY_CNT",
-             "SF_FINAL_FILING_IND", "SF_SPONS_SIGNED_NAME", "SF_SPONS_PHONE_NUM"]
+             "SF_FINAL_FILING_IND", "SF_SPONS_SIGNED_NAME", "SF_SPONS_PHONE_NUM", "SF_ADMIN_SIGNED_NAME",
+             "SF_ADMIN_EIN", "SF_ADMIN_NAME_SAME_SPON_IND"]
 
 
-def _sf(ein, name, active, since="1992-01-01", naics="238220", zip_code="55401", final="0", signer="PAT EXAMPLE"):
+def _sf(ein, name, active, since="1992-01-01", naics="238220", zip_code="55401", final="0", signer="PAT EXAMPLE",
+        admin_signer="", admin_ein=""):
     return {"ACK_ID": "x", "SF_PLAN_EFF_DATE": since, "SF_SPONSOR_NAME": name, "SF_SPONSOR_DFE_DBA_NAME": "",
             "SF_SPONS_US_CITY": "EXAMPLETON", "SF_SPONS_US_STATE": "MN", "SF_SPONS_US_ZIP": zip_code,
             "SF_SPONS_EIN": ein, "SF_BUSINESS_CODE": naics, "SF_TOT_ACT_PARTCP_EOY_CNT": str(active),
-            "SF_FINAL_FILING_IND": final, "SF_SPONS_SIGNED_NAME": signer, "SF_SPONS_PHONE_NUM": ""}
+            "SF_FINAL_FILING_IND": final, "SF_SPONS_SIGNED_NAME": signer, "SF_SPONS_PHONE_NUM": "",
+            "SF_ADMIN_SIGNED_NAME": admin_signer, "SF_ADMIN_EIN": admin_ein, "SF_ADMIN_NAME_SAME_SPON_IND": ""}
 
 
 def _write_sf(year, rows):
@@ -342,3 +345,32 @@ def test_no_leader_found_means_owner_age_unknown(env):
     owners_us.run(conn, cfg, FakeFE([_person("Vice President Operations", edu_start=1970)]), today=date(2026, 11, 23))
     ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "US-900000010")}
     assert ledger["Owner age (estimate)"]["status"] == "unknown" and ledger["Owner or CEO found"]["value"] == "no"
+
+
+def test_admin_signer_counts_only_when_the_administrator_is_the_employer(env):
+    _write_sf(2024, [_sf("900000020", "SELF RUN HEATING INC", 60, signer="", admin_signer="LEE OWNER"),
+                     _sf("900000021", "TPA RUN HEATING INC", 60, signer="", admin_signer="TPA CLERK",
+                         admin_ein="800000000")])
+    emp = dol.employers([2024], {"238220"})
+    assert emp["900000020"].signer == "LEE OWNER" and emp["900000021"].signer is None
+
+
+def test_us_rebuild_keeps_sieve2_and_paid_owner_lookups(env):
+    cfg, eta, conn, tmp = env
+    _write_sf(2024, [_sf("900000010", "STRONG MECHANICAL INC", 75)])
+    emp = dol.employers([2024], {"238220"})
+    us.run(conn, cfg.slug, eta, None, emp)
+    cid = "US-900000010"
+    store.save_screen(conn, cfg.slug, cid, 2, "qualified", 80, [], {}, {})
+    store.save_owner(conn, cfg.slug, cid, {"person_key": "fullenrich:p1", "kind": "director", "name": "Test Owner",
+                                            "role": "Owner", "birth_year": 1960, "birth_month": None,
+                                            "appointed_on": "1990", "ceased_on": None, "ownership": None,
+                                            "source": "fullenrich people search (x.com); age: test"})
+    store.record_evidence(conn, cfg.slug, cid, "Owner age (estimate)", "about 66 (Owner)", "unverified", "FullEnrich")
+    us.clear_rebuildable(conn, cfg.slug)
+    us.run(conn, cfg.slug, eta, None, emp)
+    names = {o["name"] for o in store.owners(conn, cfg.slug, cid)}
+    assert names == {"Test Owner", "PAT EXAMPLE"}
+    ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, cid)}
+    assert ledger["Owner age (estimate)"]["value"] == "about 66 (Owner)" and "Active plan participants (2024)" in ledger
+    assert conn.execute("SELECT verdict FROM eta_screen WHERE company_number=? AND sieve=2", (cid,)).fetchone()[0] == "qualified"

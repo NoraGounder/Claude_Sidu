@@ -16,7 +16,10 @@ description: Run the ETA search (clients/eta), Sidarth's own search for a busine
    `us.max_per_run`, writes `data/eta/us-shortlist-*.csv`). Then `eta-qualify --market US --limit 25`.
 7. Poland: `python -m gtm --client eta eta-pl --dry-run`, then `--days 1 --max-new 500`. Polish companies stop at
    "review" until filed numbers are available (rejestr.io is paid and not approved; decisions.md E7).
-8. Report: found, dropped (with reasons), pass/review/fail, the top 10 with score, owner age and size, per country.
+8. US leaders: `eta-owners --verdict qualified --dry-run`, then live within the FullEnrich cap (limits.yaml). Then
+   `eta-packs`: one page per qualified company in data/eta/packs/ with index.md, for Sidarth's yes, no or more.
+   `eta-us` rebuilds sieve 1 but keeps sieve 2 and paid owner lookups; `eta-us --signers-only` refreshes plan signers.
+9. Report: found, dropped (with reasons), pass/review/fail, the top 10 with score, owner age and size, per country.
 
 Rules
 - Free API, 600 requests per 5 minutes; the client paces itself and stops at `limits.yaml` `max_requests_per_run`.

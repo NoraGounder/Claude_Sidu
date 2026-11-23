@@ -315,6 +315,35 @@ def ledger(conn, client: str, c: Candidate, band: float) -> None:
         put(claim, None, "unknown", None, "Ask the owner or broker")
 
 
+def save_signer(conn, client: str, company_id: str, e) -> bool:
+    if not e.signer:
+        return False
+    store.save_owner(conn, client, company_id, {
+        "person_key": f"form5500:signer:{e.ein}", "kind": "director", "name": e.signer,
+        "role": f"signed the {e.year} Form 5500 for the employer", "birth_year": None, "birth_month": None,
+        "appointed_on": None, "ceased_on": None, "ownership": None, "source": f"{DOL_PAGE} (EIN {e.ein})"})
+    return True
+
+
+# Claims written by sieve 2 and the owner lookup (paid or Jev-decided): a US rebuild keeps them.
+KEEP_CLAIMS = ("7 Powers:%", "Stanford industry score", "Website", "Owner or CEO found", "Owner age (estimate)",
+               "Leader since")
+
+
+def clear_rebuildable(conn, client: str) -> None:
+    """Remove what eta-us rebuilds from local files (sieve 1, PPP/Form 5500 claims, plan signers) and keep what
+    sieve 2 and the paid owner lookup produced. Companies with neither are removed and re-added if still kept."""
+    like = " AND ".join("claim NOT LIKE ?" for _ in KEEP_CLAIMS)
+    conn.execute(f"DELETE FROM eta_evidence WHERE client=? AND company_number LIKE 'US-%' AND {like}",
+                 (client, *KEEP_CLAIMS))
+    conn.execute("DELETE FROM eta_screen WHERE client=? AND company_number LIKE 'US-%' AND sieve=1", (client,))
+    conn.execute("DELETE FROM eta_owners WHERE client=? AND company_number LIKE 'US-%' AND person_key LIKE 'form5500:%'",
+                 (client,))
+    conn.execute("DELETE FROM eta_companies WHERE client=? AND company_number LIKE 'US-%' AND company_number NOT IN"
+                 " (SELECT company_number FROM eta_screen WHERE client=? AND sieve=2) AND company_number NOT IN"
+                 " (SELECT company_number FROM eta_owners WHERE client=?)", (client, client, client))
+
+
 def run(conn, client: str, eta: dict, ppp_path: Path | None, employers: dict | None = None,
         limit: int | None = None) -> dict:
     """Screen every candidate; store the survivors (pass and review), best first, up to the cap.
@@ -349,12 +378,8 @@ def run(conn, client: str, eta: dict, ppp_path: Path | None, employers: dict | N
         metrics = c.metrics() | {"industry": labels.get(c.naics)}
         store.save_screen(conn, client, c.company_id, 1, verdict, score, fails, breakdown, metrics)
         ledger(conn, client, c, band)
-        if c.employer and c.employer.signer:
-            store.save_owner(conn, client, c.company_id, {
-                "person_key": f"form5500:signer:{c.employer.ein}", "kind": "director", "name": c.employer.signer,
-                "role": f"signed the {c.employer.year} Form 5500 for the employer", "birth_year": None,
-                "birth_month": None, "appointed_on": None, "ceased_on": None, "ownership": None,
-                "source": f"{DOL_PAGE} (EIN {c.employer.ein})"})
+        if c.employer:
+            save_signer(conn, client, c.company_id, c.employer)
         if out["kept"] % 500 == 0:
             conn.commit()
     conn.commit()

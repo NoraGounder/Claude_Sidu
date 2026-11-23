@@ -42,6 +42,9 @@ COLS = {
     "effective": ("SF_PLAN_EFF_DATE", "PLAN_EFF_DATE"),
     "final": ("SF_FINAL_FILING_IND", "FINAL_FILING_IND"),
     "signer": ("SF_SPONS_SIGNED_NAME", "SPONS_SIGNED_NAME"),
+    "admin_signer": ("SF_ADMIN_SIGNED_NAME", "ADMIN_SIGNED_NAME"),
+    "admin_ein": ("SF_ADMIN_EIN", "ADMIN_EIN"),
+    "admin_same": ("SF_ADMIN_NAME_SAME_SPON_IND", "ADMIN_NAME_SAME_SPON_IND"),
     "phone": ("SF_SPONS_PHONE_NUM", "SPONS_DFE_PHONE_NUM"),
 }
 
@@ -135,6 +138,12 @@ def read_year(year: int, codes: set[str] | None = None) -> dict[str, Employer]:
                     e.plan_since = min(e.plan_since or 9999, int(eff))
                 finals.setdefault(ein, []).append((row.get(col["final"]) or "").strip() == "1")
                 signer = (row.get(col["signer"]) or "").strip()
+                if not signer:
+                    # the plan administrator signs most filings; take it only when the administrator is the
+                    # employer itself (same EIN, "same as sponsor" ticked, or no separate administrator named)
+                    admin_ein = (row.get(col["admin_ein"]) or "").strip()
+                    if admin_ein in ("", ein) or (row.get(col["admin_same"]) or "").strip() == "1":
+                        signer = (row.get(col["admin_signer"]) or "").strip()
                 if signer and not e.signer:
                     e.signer = signer
     for ein, flags in finals.items():

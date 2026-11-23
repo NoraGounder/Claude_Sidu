@@ -170,9 +170,15 @@ def cmd_us(args) -> int:
         us.download(conf["ppp_url"], ppp)
     codes = {str(c) for c in conf.get("naics_codes") or {}}
     employers = dol.employers(years, codes) if years else {}
-    # a full rebuild: US rows are derived from local files only, so they are replaced, not merged
-    for table in ("eta_screen", "eta_evidence", "eta_owners", "eta_companies"):
-        conn.execute(f"DELETE FROM {table} WHERE client=? AND company_number LIKE 'US-%'", (cfg.slug,))
+    if args.signers_only:
+        n = sum(us.save_signer(conn, cfg.slug, f"US-{e.ein}", e) for e in employers.values()
+                if conn.execute("SELECT 1 FROM eta_companies WHERE client=? AND company_number=?",
+                                (cfg.slug, f"US-{e.ein}")).fetchone())
+        conn.commit()
+        print(f"Plan-filing signers saved for {n} stored US companies (no rebuild).")
+        return 0
+    # rebuild sieve 1 from the local files; sieve 2 results and paid owner lookups are kept
+    us.clear_rebuildable(conn, cfg.slug)
     run_id = db.start_run(conn, cfg.slug, "eta_us", "dol+sba", "Form 5500 + PPP discovery and sieve 1", 0.0,
                           {"limit": args.limit, "years": years})
     r = us.run(conn, cfg.slug, eta, ppp, employers, limit=args.limit)
@@ -246,6 +252,17 @@ def cmd_owners(args, fe=None) -> int:
     print(f"Looked up {r['companies']} companies: people found at {r['with_people']}, {r['people']} people; "
           f"owner, president or CEO identified at {r.get('leaders', 0)}, age estimated for {r['ages']}. "
           f"{r['credits']:g} credits, ${r['cost_usd']:.2f}.")
+    return 0
+
+
+def cmd_packs(args) -> int:
+    """One-page deal packs for the qualified companies, in data/eta/packs/ (free; names people, so never committed)."""
+    from gtm.eta import packs
+
+    cfg, eta, conn = _setup(args)
+    verdicts = tuple(v.strip() for v in args.verdict.split(","))
+    r = packs.build(conn, cfg.slug, eta, market=None if args.market == "all" else args.market, verdicts=verdicts)
+    print(f"Wrote {r['packs']} deal packs and index.md to {r['folder']}")
     return 0
 
 
@@ -398,6 +415,7 @@ def register(sub) -> None:
     u = sub.add_parser("eta-us", help="ETA US: Form 5500 + SBA PPP files -> target NAICS employers -> sieve 1 (free)")
     u.add_argument("--limit", type=int, help="borrowers to keep this run (default us.max_per_run)")
     u.add_argument("--dry-run", action="store_true", help="show the plan, write nothing")
+    u.add_argument("--signers-only", action="store_true", help="only refresh the Form 5500 signers of stored companies")
     u.set_defaults(func=cmd_us)
 
     pp = sub.add_parser("eta-pl", help="ETA Poland: KRS bulletin -> target PKD companies -> sieve 1 (free)")
@@ -416,6 +434,11 @@ def register(sub) -> None:
     ow.add_argument("--verdict", default="qualified,watch", help="sieve-2 verdicts to look up (comma list)")
     ow.add_argument("--resummarize", action="store_true", help="re-pick the owner from people already found (free)")
     ow.set_defaults(func=cmd_owners)
+
+    pk = sub.add_parser("eta-packs", help="ETA: one-page deal pack per qualified company (data/eta/packs/, free)")
+    pk.add_argument("--market", default="US", help="GB, US or PL (default US); 'all' for every market")
+    pk.add_argument("--verdict", default="qualified", help="sieve-2 verdicts to include (comma list)")
+    pk.set_defaults(func=cmd_packs)
 
     st = sub.add_parser("eta-stats", help="ETA: companies per stage, sieve verdicts, requests this month")
     st.set_defaults(func=cmd_stats)

@@ -75,6 +75,8 @@ python -m gtm --client eta eta-evidence <company number>       # evidence ledger
 python -m gtm --client eta eta-us                               # US (primary market, E8): Form 5500 + PPP -> sieve 1
 python -m gtm --client eta eta-pl --days 5 --max-new 2000       # Poland: KRS bulletin -> extracts -> sieve 1 (E7)
 python -m gtm --client eta eta-qualify --market US --limit 25   # sieve 2 for one country
+python -m gtm --client eta eta-owners --verdict qualified --dry-run   # US leader, age and tenure (FullEnrich, cap in limits.yaml)
+python -m gtm --client eta eta-packs                            # one-page deal pack per qualified company (data/eta/packs/)
 ```
 
 Three countries share the tables: UK ids are Companies House numbers, US ids `US-<loan number>`, Polish ids
