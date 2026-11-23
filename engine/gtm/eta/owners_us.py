@@ -112,16 +112,55 @@ def estimate(person: dict, domain: str, today: date) -> AgeEstimate:
     return AgeEstimate(None, "no dated history", True, tenure)
 
 
-def _is_owner(person: dict) -> int:
-    """Rank for picking the likely owner: founder/owner first, then president/CEO."""
-    current = (person.get("employment") or {}).get("current") or {}
-    text = " ".join(str(x) for x in (current.get("title"), current.get("seniority"),
-                                      json.dumps(current.get("job_functions") or []))).lower()
-    for rank, words in enumerate((("owner", "founder"), ("president", "ceo", "chief executive"),
+_NOT_TOP = ("vice", "vp", "assistant", "associate", "deputy", "regional", "division", "branch", "sales",
+            "office manager", "project")
+
+
+def title_rank(title: str | None) -> int:
+    """0 owner/founder, 1 president/CEO, 2 principal/chairman/managing partner, 9 anyone else.
+    'Vice President', 'Assistant to the President', 'Project Principal' and the like are never the owner."""
+    t = f" {(title or '').lower()} "
+    if any(w in t for w in _NOT_TOP):
+        return 9
+    for rank, words in enumerate((("owner", "founder"), ("president", " ceo", "chief executive"),
                                   ("principal", "managing partner", "chairman"))):
-        if any(w in text for w in words):
+        if any(w in t for w in words):
             return rank
     return 9
+
+
+def _is_owner(person: dict) -> int:
+    current = (person.get("employment") or {}).get("current") or {}
+    return title_rank(current.get("title"))
+
+
+def summarize(conn, client: str, number: str, today: date) -> dict | None:
+    """Write the ledger's owner claims from the people stored for this company: the top-ranked leader only.
+    Re-runnable at no cost (eta-owners --resummarize)."""
+    people = [dict(r) for r in conn.execute(
+        "SELECT name, role, birth_year, appointed_on, source FROM eta_owners WHERE client=? AND company_number=?"
+        " AND source LIKE 'fullenrich%'", (client, number))]
+    conn.execute("DELETE FROM eta_evidence WHERE client=? AND company_number=? AND claim IN"
+                 " ('Owner age (estimate)', 'Leader since', 'Owner or CEO found')", (client, number))
+    people.sort(key=lambda p: (title_rank(p["role"]), -(today.year - p["birth_year"]) if p["birth_year"] else 0))
+    top = people[0] if people and title_rank(people[0]["role"]) <= 2 else None
+    put = lambda claim, value, status, step=None: store.record_evidence(
+        conn, client, number, claim, value, status, "FullEnrich work history", step)
+    if not top:
+        put("Owner or CEO found", "no" if people else "no people", "unknown",
+            "Ask the owner's name from the website, state registry or the Form 5500 signer")
+        put("Owner age (estimate)", None, "unknown", "Ask the owner")
+        return None
+    age = today.year - top["birth_year"] if top["birth_year"] else None
+    floor = "(a floor)" in (top["source"] or "")
+    if age is not None and floor and age < 35:
+        age = None                       # a history that starts recently says nothing about age
+    put("Owner or CEO found", top["role"], "unverified")
+    put("Owner age (estimate)", None if age is None else f"{'at least' if floor else 'about'} {age} ({top['role']})",
+        "unverified" if age is not None else "unknown", "Confirm with the owner")
+    if top["appointed_on"]:
+        put("Leader since", top["appointed_on"], "unverified", "Confirm with the owner")
+    return {"role": top["role"], "age": age, "floor": floor, "since": top["appointed_on"]}
 
 
 # ---------- run ----------
@@ -149,7 +188,7 @@ def run(conn, cfg, fe, limit: int | None = None, per_company: int = 3, today: da
             out["companies"] += 1
             out["credits"] += result.credits
             people = sorted(result.people, key=_is_owner)
-            for i, person in enumerate(people):
+            for person in people:
                 est = estimate(person, row["domain"], today)
                 current = (person.get("employment") or {}).get("current") or {}
                 name = person.get("full_name") or " ".join(x for x in (person.get("first_name"), person.get("last_name")) if x)
@@ -157,18 +196,11 @@ def run(conn, cfg, fe, limit: int | None = None, per_company: int = 3, today: da
                     "person_key": f"fullenrich:{person.get('id') or name}", "kind": "director", "name": name,
                     "role": current.get("title"), "birth_year": today.year - est.age if est.age else None,
                     "birth_month": None, "appointed_on": str(est.tenure_since) if est.tenure_since else None,
-                    "ceased_on": None, "ownership": None, "source": f"fullenrich people search ({row['domain']})"})
-                if i == 0:
-                    value = None if est.age is None else (f"at least {est.age}" if est.floor else f"about {est.age}")
-                    store.record_evidence(conn, cfg.slug, row["company_number"], "Owner age (estimate)",
-                                          value and f"{value} ({current.get('title')}; {est.basis})",
-                                          "unverified" if value else "unknown", "FullEnrich work history",
-                                          "Confirm with the owner")
-                    if est.tenure_since:
-                        store.record_evidence(conn, cfg.slug, row["company_number"], "Leader since",
-                                              str(est.tenure_since), "unverified", "FullEnrich work history",
-                                              "Confirm with the owner")
-                    out["ages"] += est.age is not None
+                    "ceased_on": None, "ownership": None,
+                    "source": f"fullenrich people search ({row['domain']}); age: {est.basis}"})
+            top = summarize(conn, cfg.slug, row["company_number"], today)
+            out["leaders"] = out.get("leaders", 0) + bool(top)
+            out["ages"] += bool(top and top["age"] is not None)
             out["people"] += len(people)
             out["with_people"] += bool(people)
             conn.execute("INSERT OR REPLACE INTO eta_owner_lookups(client, company_number, domain, people_found,"

@@ -4,7 +4,7 @@
 month_budget_usd:
   companies_house: 0     # free API: the cap stays 0 and every call is logged at $0
   openrouter: 2          # TypeSafe Jev 1.14 for sieve 2
-  fullenrich: 0          # US owner lookup (eta-owners). 0 until Sidarth sets a cap: the dry run shows the cost
+  fullenrich: 5          # US owner lookup (eta-owners); set by Sidarth 2026-11-23
 
 unit_price_usd:
   "companies_house:request": 0.0

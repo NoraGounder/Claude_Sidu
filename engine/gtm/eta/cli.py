@@ -209,6 +209,14 @@ def cmd_owners(args, fe=None) -> int:
     from gtm.eta import owners_us
 
     cfg, _, conn = _setup(args)
+    if getattr(args, "resummarize", False):
+        done = [r["company_number"] for r in conn.execute("SELECT company_number FROM eta_owner_lookups WHERE client=?",
+                                                          (cfg.slug,))]
+        tops = [owners_us.summarize(conn, cfg.slug, n, date.today()) for n in done]
+        conn.commit()
+        print(f"Re-read {len(done)} lookups (no calls): owner, president or CEO identified at "
+              f"{sum(1 for t in tops if t)}, age estimated for {sum(1 for t in tops if t and t['age'] is not None)}.")
+        return 0
     p = owners_us.plan(conn, cfg, args.limit, args.per_company)
     print(f"US owner lookup: {p['companies']} companies with a verified website and no lookup yet "
           f"(sieve 2 qualified or watch). Up to {args.per_company} people each: at most {p['max_people']} people, "
@@ -234,8 +242,9 @@ def cmd_owners(args, fe=None) -> int:
         from gtm.sources.fullenrich import FullEnrichClient
         fe = FullEnrichClient()
     r = owners_us.run(conn, cfg, fe, args.limit, args.per_company)
-    print(f"Looked up {r['companies']} companies: people found at {r['with_people']}, {r['people']} people, "
-          f"age estimated for {r['ages']}. {r['credits']:g} credits, ${r['cost_usd']:.2f}.")
+    print(f"Looked up {r['companies']} companies: people found at {r['with_people']}, {r['people']} people; "
+          f"owner, president or CEO identified at {r.get('leaders', 0)}, age estimated for {r['ages']}. "
+          f"{r['credits']:g} credits, ${r['cost_usd']:.2f}.")
     return 0
 
 
@@ -403,6 +412,7 @@ def register(sub) -> None:
     ow.add_argument("--limit", type=int, help="companies to look up")
     ow.add_argument("--per-company", type=int, default=3, help="people per company (default 3)")
     ow.add_argument("--dry-run", action="store_true", help="show companies, request and cost; call nothing")
+    ow.add_argument("--resummarize", action="store_true", help="re-pick the owner from people already found (free)")
     ow.set_defaults(func=cmd_owners)
 
     st = sub.add_parser("eta-stats", help="ETA: companies per stage, sieve verdicts, requests this month")

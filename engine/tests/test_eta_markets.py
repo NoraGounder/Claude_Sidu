@@ -301,6 +301,7 @@ def test_owner_lookup_dry_run_spends_nothing_and_zero_cap_blocks_live(env, capsy
     from gtm.eta import cli as eta_cli
     from types import SimpleNamespace
     monkeypatch.setattr(eta_cli, "_setup", lambda a: (cfg, eta, conn))
+    cfg.limits.month_budget_usd["fullenrich"] = 0             # no cap set: a live run must be refused
     fe = FakeFE([_person("Owner", edu_start=1978, since=1990)])
     eta_cli.cmd_owners(SimpleNamespace(client="eta", limit=None, per_company=3, dry_run=True), fe=fe)
     out = capsys.readouterr().out
@@ -318,8 +319,26 @@ def test_owner_lookup_saves_likely_owner_first_and_marks_estimates(env):
     out = owners_us.run(conn, cfg, fe, per_company=3, today=date(2026, 11, 23))
     assert out["companies"] == 1 and out["people"] == 2 and fe.calls[0][0] == "strongmechanical.com"
     ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "US-900000010")}
-    assert ledger["Owner age (estimate)"]["value"].startswith("about 66 (Owner")
+    assert ledger["Owner age (estimate)"]["value"] == "about 66 (Owner)"
+    assert ledger["Owner or CEO found"]["value"] == "Owner"
     assert ledger["Owner age (estimate)"]["status"] == "unverified" and ledger["Leader since"]["value"] == "1990"
     assert owners_us.targets(conn, cfg.slug) == []                          # never looked up twice
     run = conn.execute("SELECT * FROM runs WHERE vendor='fullenrich' ORDER BY id DESC").fetchone()
     assert run["actual_cost"] == round(0.5 * 0.055, 4)
+
+
+def test_vice_presidents_are_never_the_owner():
+    assert owners_us.title_rank("Vice President of Finance") == 9
+    assert owners_us.title_rank("Executive Vice President") == 9
+    assert owners_us.title_rank("President and CEO") == 1
+    assert owners_us.title_rank("Owner / President") == 0
+    assert owners_us.title_rank("Managing Principal") == 2
+
+
+def test_no_leader_found_means_owner_age_unknown(env):
+    cfg, eta, conn, _ = env
+    _shortlisted(conn, cfg.slug)
+    cfg.limits.month_budget_usd["fullenrich"] = 1.0
+    owners_us.run(conn, cfg, FakeFE([_person("Vice President Operations", edu_start=1970)]), today=date(2026, 11, 23))
+    ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "US-900000010")}
+    assert ledger["Owner age (estimate)"]["status"] == "unknown" and ledger["Owner or CEO found"]["value"] == "no"
