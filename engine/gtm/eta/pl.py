@@ -50,7 +50,7 @@ class KRSClient:
             self._sleep(self.gap)
         self.requests_made += 1
         resp = self.http.get(f"{self.api}{path}", timeout=60)
-        if resp.status_code == 404:
+        if resp.status_code in (204, 404):      # not in this register (e.g. an association) or removed
             return None
         if resp.status_code >= 500 or "json" not in resp.headers.get("content-type", ""):
             raise KRSUnavailable(f"KRS API {path.split('/')[1]} -> {resp.status_code} "
