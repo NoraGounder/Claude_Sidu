@@ -163,3 +163,18 @@ far this month): a leader identified at 10, four of them long-tenured and about 
 
 **What would change it.** Owner calls that show the website-based Power evidence is noise would make Powers a
 ranking signal only; more industries scoring well above 19 would let the bar go back up.
+
+## E11. First yes decisions; outreach is prepared, never sent automatically (2026-11-23)
+
+**Decision (Sidarth, 2026-11-23).** Yes to three of the first 22 US deal packs (the names are in data/engine.db,
+table eta_decisions, not in this repository). `eta-outreach` prepares each "yes": the leader's work email
+(FullEnrich, budget-guarded), the mailing address and phone from the company's Form 5500 filing, and a draft email
+and letter in data/eta/outreach/.
+
+**Rules.** Nothing is sent by the engine. Sidarth fills the placeholders (name, background, funding, contact
+details, postal address), approves the exact text, and chooses the channel: his own mailbox or post. The
+Quailworks and Marble Jar mailboxes are never used (a sending domain belongs to one client). Every email carries
+a postal address and a one-line opt-out (US CAN-SPAM), and there is at most one follow-up.
+
+**What would change it.** More yes decisions than Sidarth can write to by hand would justify a sending setup of
+its own (a separate domain and mailbox, warmed up), as a separate decision.

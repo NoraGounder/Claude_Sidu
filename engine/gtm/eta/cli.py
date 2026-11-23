@@ -266,6 +266,41 @@ def cmd_packs(args) -> int:
     return 0
 
 
+def cmd_decide(args) -> int:
+    from gtm.eta import outreach
+
+    cfg, _, conn = _setup(args)
+    for number in args.company_number:
+        outreach.decide(conn, cfg.slug, number, args.decision, args.note)
+    print(f"Recorded '{args.decision}' for {len(args.company_number)} companies.")
+    return 0
+
+
+def cmd_outreach(args, fe=None) -> int:
+    """Prepare outreach for every company Sidarth said yes to: contact details and drafts. Never sends."""
+    from gtm.eta import outreach
+
+    cfg, eta, conn = _setup(args)
+    outreach.ensure_schema(conn)
+    yes = outreach.decided(conn, cfg.slug, "yes")
+    todo = [n for n in yes if not conn.execute("SELECT 1 FROM eta_contacts WHERE client=? AND company_number=?",
+                                               (cfg.slug, n)).fetchone()]
+    est = 0.0 if args.no_emails else len(todo) * 0.055
+    print(f"Outreach prep: {len(yes)} companies with a yes, {len(todo)} not prepared yet. Work email lookups: "
+          f"{0 if args.no_emails else len(todo)} (FullEnrich, about ${est:.2f}, charged only when found). Nothing is sent.")
+    if args.dry_run:
+        return 0
+    if fe is None and not args.no_emails and todo:
+        from gtm.sources.fullenrich import FullEnrichClient
+        fe = FullEnrichClient()
+    r = outreach.prepare(conn, cfg, eta, fe, find_emails=not args.no_emails)
+    print(f"Prepared {r['companies']}: work email found for {r['emails']}, mailing address for {r['addresses']}; "
+          f"{r['credits']:g} credits. Drafts (not sent):")
+    for f in r["files"]:
+        print(f"  {f}")
+    return 0
+
+
 def cmd_pl(args, krs=None) -> int:
     """Poland: KRS daily bulletin -> current extracts -> target PKD companies -> sieve 1 (free)."""
     from gtm.eta import pl
@@ -439,6 +474,17 @@ def register(sub) -> None:
     pk.add_argument("--market", default="US", help="GB, US or PL (default US); 'all' for every market")
     pk.add_argument("--verdict", default="qualified", help="sieve-2 verdicts to include (comma list)")
     pk.set_defaults(func=cmd_packs)
+
+    de = sub.add_parser("eta-decide", help="ETA: record Sidarth's call on deal packs (yes, no, more)")
+    de.add_argument("decision", choices=["yes", "no", "more"])
+    de.add_argument("company_number", nargs="+")
+    de.add_argument("--note", help="why, or what to find out first")
+    de.set_defaults(func=cmd_decide)
+
+    ou = sub.add_parser("eta-outreach", help="ETA: contact details and draft email/letter for every 'yes' (never sends)")
+    ou.add_argument("--dry-run", action="store_true", help="show what would be looked up and the cost")
+    ou.add_argument("--no-emails", action="store_true", help="skip the paid work-email lookup")
+    ou.set_defaults(func=cmd_outreach)
 
     st = sub.add_parser("eta-stats", help="ETA: companies per stage, sieve verdicts, requests this month")
     st.set_defaults(func=cmd_stats)

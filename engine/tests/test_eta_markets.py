@@ -374,3 +374,36 @@ def test_us_rebuild_keeps_sieve2_and_paid_owner_lookups(env):
     ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, cid)}
     assert ledger["Owner age (estimate)"]["value"] == "about 66 (Owner)" and "Active plan participants (2024)" in ledger
     assert conn.execute("SELECT verdict FROM eta_screen WHERE company_number=? AND sieve=2", (cid,)).fetchone()[0] == "qualified"
+
+
+# ---------- decisions and outreach prep ----------
+
+from gtm.eta import outreach
+
+
+class FakeEnrich(FakeFE):
+    def start_enrichment(self, name, contacts):
+        self.calls.append(("enrich", contacts))
+        return "e1"
+
+    def wait_enrichment(self, eid):
+        return {"cost": {"credits": 1}, "data": [{"contact_info": {"most_probable_work_email": {
+            "email": "owner@strongmechanical.com", "status": "DELIVERABLE"}}}]}
+
+
+def test_yes_prepares_contact_and_drafts_but_sends_nothing(env):
+    cfg, eta, conn, tmp = env
+    _write_sf(2024, [_sf("900000010", "STRONG MECHANICAL INC", 75)])
+    us.run(conn, cfg.slug, eta, None, dol.employers([2024], {"238220"}))
+    _shortlisted(conn, cfg.slug)
+    cfg.limits.month_budget_usd["fullenrich"] = 1.0
+    owners_us.run(conn, cfg, FakeFE([_person("Owner", edu_start=1978, since=1990)]), today=date(2026, 11, 23))
+    outreach.decide(conn, cfg.slug, "US-900000010", "yes")
+    fe = FakeEnrich([])
+    r = outreach.prepare(conn, cfg, eta, fe, today=date(2026, 11, 23))
+    assert r["companies"] == 1 and r["emails"] == 1 and r["addresses"] == 1
+    text = open(r["files"][0]).read()
+    assert "draft, not sent" in text and "owner@strongmechanical.com" in text and "Dear Test," in text
+    assert "{{YOUR FULL NAME}}" in text and "reply \"no\"" in text
+    outreach.prepare(conn, cfg, eta, fe, today=date(2026, 11, 23))
+    assert len([c for c in fe.calls if c[0] == "enrich"]) == 1                # never looked up twice

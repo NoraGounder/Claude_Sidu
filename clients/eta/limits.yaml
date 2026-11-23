@@ -11,6 +11,7 @@ unit_price_usd:
   "openrouter:typesafe/jev-1.14:request": 0.0001
   "fullenrich:credit": 0.055
   "fullenrich:person_returned": 0.01375   # people search: 0.25 credit per person returned
+  "fullenrich:work_email": 0.055          # 1 credit, charged only when an email is found
 
 # Companies House allows 600 requests per 5 minutes per key. The client paces itself below that and
 # backs off on 429. Daily request ceiling for this client, so one run cannot eat the whole quota.
