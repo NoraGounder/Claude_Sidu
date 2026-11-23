@@ -132,3 +132,18 @@ $16M, most with a plan since 2000 or earlier and headcount up from 2021.
 
 **What would change it.** Owner-age data (a paid people-data source) would replace plan age as the seller signal;
 the 2025 filings (complete in late 2026) replace 2024 as the base.
+
+## E9. Industry bar lowered to 20; US owner lookup built, not yet funded (2026-11-23)
+
+**Decision (Sidarth, 2026-11-23).** `industry_scorecard.min_score` goes from 22 to 20. Every industry Jev 1.14
+scored so far landed between 18.9 and 21.5, so 22 qualified nothing; 20 is still inside the Primer's example range
+(20-28).
+
+**Owner lookup.** `eta-owners` takes each US sieve-2 survivor with a verified website and asks FullEnrich's people
+search (paid, 0.25 credit, about $0.014, per person returned) for its owner, president or CEO. Age is estimated from
+the first degree's start year (about 18) or end year (about 22), else from the first listed job (about 22, a floor);
+tenure is the start of the current role. Both are "unverified" in the ledger. The ETA FullEnrich cap is $0 until
+Sidarth sets one: the dry run shows the cost.
+
+**What would change it.** Low hit rates on small firms (owners often have thin LinkedIn histories) would move the
+lookup to BlitzAPI's profile enrichment, or to the Form 5500 signer plus a people-data match on name.

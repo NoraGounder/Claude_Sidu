@@ -204,6 +204,41 @@ def cmd_us(args) -> int:
     return 0
 
 
+def cmd_owners(args, fe=None) -> int:
+    """US: who leads each shortlisted company, estimated age and tenure (FullEnrich people search, paid)."""
+    from gtm.eta import owners_us
+
+    cfg, _, conn = _setup(args)
+    p = owners_us.plan(conn, cfg, args.limit, args.per_company)
+    print(f"US owner lookup: {p['companies']} companies with a verified website and no lookup yet "
+          f"(sieve 2 qualified or watch). Up to {args.per_company} people each: at most {p['max_people']} people, "
+          f"{p['max_credits']:g} FullEnrich credits, about ${p['estimate_usd']:.2f} (only people returned are charged).")
+    print(f"FullEnrich budget for {cfg.slug}: cap ${p['cap_usd'] or 0:.2f} a month, spent ${p['spent_usd']:.2f}.")
+    if args.dry_run:
+        for row in p["rows"][:5]:
+            print(f"  {row['company_number']}  {row['name'][:40]:<40} {row['domain']}")
+        if p["rows"]:
+            print("First request (POST /people/search):")
+            print(json.dumps(owners_us.search_body(p["rows"][0]["domain"], args.per_company), indent=2))
+        need = p["estimate_usd"] - ((p["cap_usd"] or 0) - p["spent_usd"])
+        if need > 0:
+            print(f"A live run needs the monthly cap raised by at least ${need:.2f} (limits.yaml fullenrich). "
+                  f"Nothing was called.")
+        else:
+            print("Dry run: nothing was called.")
+        db.finish_run(conn, db.start_run(conn, cfg.slug, "eta_owners", "fullenrich", "US owner lookup (dry run)",
+                                         p["estimate_usd"], {"limit": args.limit}), "dry_run", 0, 0.0, "")
+        conn.commit()
+        return 0
+    if fe is None:
+        from gtm.sources.fullenrich import FullEnrichClient
+        fe = FullEnrichClient()
+    r = owners_us.run(conn, cfg, fe, args.limit, args.per_company)
+    print(f"Looked up {r['companies']} companies: people found at {r['with_people']}, {r['people']} people, "
+          f"age estimated for {r['ages']}. {r['credits']:g} credits, ${r['cost_usd']:.2f}.")
+    return 0
+
+
 def cmd_pl(args, krs=None) -> int:
     """Poland: KRS daily bulletin -> current extracts -> target PKD companies -> sieve 1 (free)."""
     from gtm.eta import pl
@@ -362,6 +397,13 @@ def register(sub) -> None:
     pp.add_argument("--max-requests", type=int, default=20000, help="request cap for this run")
     pp.add_argument("--dry-run", action="store_true", help="show the plan, fetch nothing")
     pp.set_defaults(func=cmd_pl)
+
+    ow = sub.add_parser("eta-owners", help="ETA US: owner, estimated age and tenure per shortlisted company "
+                                           "(FullEnrich, paid; dry run first)")
+    ow.add_argument("--limit", type=int, help="companies to look up")
+    ow.add_argument("--per-company", type=int, default=3, help="people per company (default 3)")
+    ow.add_argument("--dry-run", action="store_true", help="show companies, request and cost; call nothing")
+    ow.set_defaults(func=cmd_owners)
 
     st = sub.add_parser("eta-stats", help="ETA: companies per stage, sieve verdicts, requests this month")
     st.set_defaults(func=cmd_stats)

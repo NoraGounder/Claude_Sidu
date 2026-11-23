@@ -101,7 +101,7 @@ sieve1:
 # Ten criteria, each 1 (low fit) to 3 (high fit), out of 30. Scored once per industry code and reused for every
 # company in it. The Primer's example industries scored 20-28.
 industry_scorecard:
-  min_score: 22
+  min_score: 20                # lowered from 22 on 2026-11-23 (decisions.md E9)
   criteria:
     fragmented: "Fragmented industry: many small players, no dominant consolidator"
     growing: "Industry growing, ideally with a tailwind"

@@ -246,3 +246,80 @@ def test_polish_site_is_verified_by_krs_number():
     assert qualify.belongs("Sąd Rejonowy, KRS 0000099999, NIP 000-000-00-00", row)
     assert not qualify.belongs("KRS 0000099998", row)
     assert qualify.domain_candidates("PRZYKŁAD INSTALACJE SP. Z O.O.", "PL")[0].endswith(".pl")
+
+
+# ---------- US owner lookup ----------
+
+from gtm.eta import owners_us
+from gtm.sources.fullenrich import SearchResult
+
+
+def _person(title, edu_start=None, first_job=None, since=None, domain="strongmechanical.com"):
+    jobs = [{"title": "Apprentice", "start_at": f"{first_job}-06-01T00:00:00Z", "is_current": False,
+             "company": {"domain": "other.com"}}] if first_job else []
+    jobs.append({"title": title, "start_at": f"{since}-01-01T00:00:00Z" if since else None, "is_current": True,
+                 "company": {"domain": domain}})
+    return {"id": f"p-{title}", "full_name": f"Test {title}", "educations":
+            [{"start_at": f"{edu_start}-09-01T00:00:00Z", "end_at": f"{edu_start + 4}-06-01T00:00:00Z"}] if edu_start else [],
+            "employment": {"current": {"title": title, "start_at": f"{since}-01-01T00:00:00Z" if since else None},
+                           "all": jobs}}
+
+
+def test_owner_age_from_degree_or_first_job():
+    today = date(2026, 11, 23)
+    e = owners_us.estimate(_person("Owner", edu_start=1978, since=1990), "strongmechanical.com", today)
+    assert (e.age, e.floor, e.tenure_since) == (66, False, 1990)            # 1978 - 18 = born 1960
+    e = owners_us.estimate(_person("President", first_job=1985), "strongmechanical.com", today)
+    assert (e.age, e.floor) == (63, True)                                    # at least 63
+    assert owners_us.estimate(_person("CEO"), "x.com", today).age is None
+
+
+class FakeFE:
+    def __init__(self, people):
+        self.people, self.calls = people, []
+
+    def search_people(self, domain, titles, limit=4):
+        self.calls.append((domain, titles, limit))
+        return SearchResult(people=self.people[:limit], credits=0.25 * min(limit, len(self.people)),
+                            total=len(self.people))
+
+
+def _shortlisted(conn, client, number="US-900000010", website="https://www.strongmechanical.com/"):
+    store.upsert_company(conn, client, {"company_number": number, "name": "STRONG MECHANICAL INC",
+                                        "stage": "screened", "source": "form5500"})
+    store.save_screen(conn, client, number, 1, "pass", 90, [], {}, {})
+    store.save_screen(conn, client, number, 2, "watch", 70, [], {}, {})
+    qualify.ensure_schema(conn)
+    conn.execute("INSERT INTO eta_websites(client, company_number, website, tried, checked_at) VALUES (?,?,?,?,?)",
+                 (client, number, website, "[]", "2026-11-23"))
+    conn.commit()
+
+
+def test_owner_lookup_dry_run_spends_nothing_and_zero_cap_blocks_live(env, capsys, monkeypatch):
+    cfg, eta, conn, _ = env
+    _shortlisted(conn, cfg.slug)
+    from gtm.eta import cli as eta_cli
+    from types import SimpleNamespace
+    monkeypatch.setattr(eta_cli, "_setup", lambda a: (cfg, eta, conn))
+    fe = FakeFE([_person("Owner", edu_start=1978, since=1990)])
+    eta_cli.cmd_owners(SimpleNamespace(client="eta", limit=None, per_company=3, dry_run=True), fe=fe)
+    out = capsys.readouterr().out
+    assert "1 companies" in out and "strongmechanical.com" in out and fe.calls == []
+    with pytest.raises(Exception, match="budget"):
+        eta_cli.cmd_owners(SimpleNamespace(client="eta", limit=None, per_company=3, dry_run=False), fe=fe)
+    assert fe.calls == []
+
+
+def test_owner_lookup_saves_likely_owner_first_and_marks_estimates(env):
+    cfg, eta, conn, _ = env
+    _shortlisted(conn, cfg.slug)
+    cfg.limits.month_budget_usd["fullenrich"] = 1.0          # a test cap; the real one is Sidarth's to set
+    fe = FakeFE([_person("Vice President Operations", edu_start=1995), _person("Owner", edu_start=1978, since=1990)])
+    out = owners_us.run(conn, cfg, fe, per_company=3, today=date(2026, 11, 23))
+    assert out["companies"] == 1 and out["people"] == 2 and fe.calls[0][0] == "strongmechanical.com"
+    ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "US-900000010")}
+    assert ledger["Owner age (estimate)"]["value"].startswith("about 66 (Owner")
+    assert ledger["Owner age (estimate)"]["status"] == "unverified" and ledger["Leader since"]["value"] == "1990"
+    assert owners_us.targets(conn, cfg.slug) == []                          # never looked up twice
+    run = conn.execute("SELECT * FROM runs WHERE vendor='fullenrich' ORDER BY id DESC").fetchone()
+    assert run["actual_cost"] == round(0.5 * 0.055, 4)
