@@ -148,27 +148,38 @@ def cmd_qualify(args, jev=None, fetcher=None) -> int:
 
 
 def cmd_us(args) -> int:
-    """US: SBA PPP file -> borrowers in the target NAICS codes -> sieve 1 on payroll and revenue estimates."""
-    from gtm.eta import us
+    """US: Form 5500 filings (current headcount, plan age, growth) + SBA PPP file -> sieve 1 (free)."""
+    from gtm.eta import dol, us
 
     cfg, eta, conn = _setup(args)
     conf = eta.get("us") or {}
-    path = us.cache_path()
-    if not path.exists():
-        if args.dry_run:
-            print(f"Dry run: would download {conf.get('ppp_url')} (about 450 MB, free) to {path}.")
-            return 0
-        print("Downloading the SBA PPP file (about 450 MB, free, once)...")
-        us.download(conf["ppp_url"], path)
+    years = [int(y) for y in conf.get("form5500_years") or []]
+    ppp = us.cache_path()
+    missing = [f"Form 5500 {y}" for y in years if not dol.csv_path(y, "sf").exists()] + \
+              ([] if ppp.exists() else ["SBA PPP file"])
     if args.dry_run:
-        print(f"Dry run: {len(conf.get('naics_codes') or {})} NAICS codes, file cached at {path}. Nothing written.")
+        print(f"Dry run: {len(conf.get('naics_codes') or {})} NAICS codes, Form 5500 years {years}, PPP file. "
+              f"To download (free): {', '.join(missing) or 'nothing'}. Nothing written.")
         return 0
-    run_id = db.start_run(conn, cfg.slug, "eta_us", "sba_ppp", "PPP discovery + sieve 1", 0.0,
-                          {"limit": args.limit})
-    r = us.run(conn, cfg.slug, eta, path, limit=args.limit)
+    for y in years:
+        if not dol.csv_path(y, "sf").exists():
+            print(f"Downloading Form 5500 plan year {y} (free, about 300 MB zipped)...")
+            dol.download(y)
+    if not ppp.exists():
+        print("Downloading the SBA PPP file (about 450 MB, free, once)...")
+        us.download(conf["ppp_url"], ppp)
+    codes = {str(c) for c in conf.get("naics_codes") or {}}
+    employers = dol.employers(years, codes) if years else {}
+    # a full rebuild: US rows are derived from local files only, so they are replaced, not merged
+    for table in ("eta_screen", "eta_evidence", "eta_owners", "eta_companies"):
+        conn.execute(f"DELETE FROM {table} WHERE client=? AND company_number LIKE 'US-%'", (cfg.slug,))
+    run_id = db.start_run(conn, cfg.slug, "eta_us", "dol+sba", "Form 5500 + PPP discovery and sieve 1", 0.0,
+                          {"limit": args.limit, "years": years})
+    r = us.run(conn, cfg.slug, eta, ppp, employers, limit=args.limit)
     db.finish_run(conn, run_id, "ok", r["kept"], 0.0, json.dumps(r)[:500])
-    print(f"US: {r['kept']} borrowers kept ({r['new']} new). Sieve 1: pass {r['pass']}, review {r['review']}, "
-          f"fail {r['fail']}.")
+    print(f"US: {r['form5500']} employers with a plan (Form 5500 {years[-1] if years else '-'}), {r['ppp']} PPP "
+          f"borrowers, {r['both']} in both; {r['candidates']} candidates. Sieve 1: pass {r['pass']}, review "
+          f"{r['review']}, fail {r['fail']}. Stored the best {r['kept']}.")
     if r["fails"]:
         print("  fail reasons: " + ", ".join(f"{k} {v}" for k, v in sorted(r["fails"].items(), key=lambda x: -x[1])))
     out = data_dir() / "eta" / f"us-shortlist-{date.today():%Y%m%d}.csv"
@@ -176,16 +187,19 @@ def cmd_us(args) -> int:
                         " FROM eta_companies c JOIN eta_screen s ON s.client=c.client AND s.company_number=c.company_number"
                         " AND s.sieve=1 WHERE c.client=? AND c.company_number LIKE 'US-%' AND s.verdict IN"
                         " ('pass','review') ORDER BY s.score DESC", (cfg.slug,)).fetchall()
-    cols = ["rank", "verdict", "score", "company_id", "name", "locality", "zip", "naics", "industry", "jobs",
-            "payroll_est", "revenue_est", "second_draw", "business_type", "business_age"]
+    cols = ["rank", "verdict", "score", "company_id", "name", "locality", "zip", "naics", "industry", "headcount",
+            "headcount_source", "headcount_before", "plan_since", "revenue_est", "revenue_basis", "sources",
+            "ppp_jobs", "second_draw", "business_age"]
     with open(out, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(cols)
         for i, row in enumerate(rows, 1):
             m = json.loads(row["metrics"])
             w.writerow([i, row["verdict"], row["score"], row["company_number"], row["name"], row["locality"],
-                        row["postal_code"], m.get("naics"), m.get("industry"), m.get("jobs"), m.get("payroll_est"),
-                        m.get("revenue_est"), m.get("second_draw"), m.get("business_type"), m.get("business_age")])
+                        row["postal_code"], m.get("naics"), m.get("industry"), m.get("headcount"),
+                        m.get("headcount_source"), m.get("active_before"), m.get("plan_since"), m.get("revenue_est"),
+                        m.get("revenue_basis"), "+".join(m.get("sources") or []), m.get("ppp_jobs"),
+                        m.get("second_draw"), m.get("business_age")])
     print(f"Shortlist: {len(rows)} US companies in {out}")
     return 0
 
@@ -336,7 +350,7 @@ def register(sub) -> None:
     q.add_argument("--market", choices=["GB", "US", "PL"], help="only companies in this country")
     q.set_defaults(func=cmd_qualify)
 
-    u = sub.add_parser("eta-us", help="ETA US: SBA PPP file -> target NAICS borrowers -> sieve 1 (free)")
+    u = sub.add_parser("eta-us", help="ETA US: Form 5500 + SBA PPP files -> target NAICS employers -> sieve 1 (free)")
     u.add_argument("--limit", type=int, help="borrowers to keep this run (default us.max_per_run)")
     u.add_argument("--dry-run", action="store_true", help="show the plan, write nothing")
     u.set_defaults(func=cmd_us)

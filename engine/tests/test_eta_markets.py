@@ -8,7 +8,7 @@ import pytest
 
 from gtm.config import load_client
 from gtm.crawl import Page
-from gtm.eta import markets, pl, qualify, store, us
+from gtm.eta import dol, markets, pl, qualify, store, us
 
 TODAY = date(2026, 11, 21)
 PPP_FIELDS = ["LoanNumber", "DateApproved", "ProcessingMethod", "BorrowerName", "BorrowerCity", "BorrowerState",
@@ -75,23 +75,66 @@ def test_ppp_prefilter_drops_franchises_nonprofits_and_other_industries(env):
     assert list(us.stream(_ppp(tmp, rows), eta["us"])) == []
 
 
-def test_us_sieve1_ranks_survivors_and_keeps_no_fails(env):
+SF_FIELDS = ["ACK_ID", "SF_PLAN_EFF_DATE", "SF_SPONSOR_NAME", "SF_SPONSOR_DFE_DBA_NAME", "SF_SPONS_US_CITY",
+             "SF_SPONS_US_STATE", "SF_SPONS_US_ZIP", "SF_SPONS_EIN", "SF_BUSINESS_CODE", "SF_TOT_ACT_PARTCP_EOY_CNT",
+             "SF_FINAL_FILING_IND", "SF_SPONS_SIGNED_NAME", "SF_SPONS_PHONE_NUM"]
+
+
+def _sf(ein, name, active, since="1992-01-01", naics="238220", zip_code="55401", final="0", signer="PAT EXAMPLE"):
+    return {"ACK_ID": "x", "SF_PLAN_EFF_DATE": since, "SF_SPONSOR_NAME": name, "SF_SPONSOR_DFE_DBA_NAME": "",
+            "SF_SPONS_US_CITY": "EXAMPLETON", "SF_SPONS_US_STATE": "MN", "SF_SPONS_US_ZIP": zip_code,
+            "SF_SPONS_EIN": ein, "SF_BUSINESS_CODE": naics, "SF_TOT_ACT_PARTCP_EOY_CNT": str(active),
+            "SF_FINAL_FILING_IND": final, "SF_SPONS_SIGNED_NAME": signer, "SF_SPONS_PHONE_NUM": ""}
+
+
+def _write_sf(year, rows):
+    path = dol.csv_path(year, "sf")
+    with open(path, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=SF_FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+
+
+def test_form5500_reads_headcount_plan_age_growth_and_final_filings(env):
+    _write_sf(2021, [_sf("900000001", "STRONG MECHANICAL INC", 50)])
+    _write_sf(2024, [_sf("900000001", "STRONG MECHANICAL INC", 64),
+                     _sf("900000001", "STRONG MECHANICAL INC", 12, since="2015-01-01"),     # second plan
+                     _sf("900000002", "CLOSED HEATING INC", 40, final="1"),
+                     _sf("900000003", "DENTIST PC", 40, naics="621210")])
+    emp = dol.employers([2021, 2024], {"238220"})
+    assert set(emp) == {"900000001", "900000002"}
+    e = emp["900000001"]
+    assert (e.active, e.active_before, e.plan_since, e.plans) == (64, 50, 1992, 2)
+    assert emp["900000002"].final_filing
+    assert "signer" not in e.as_dict()
+
+
+def test_us_sieve1_joins_form5500_and_ppp_and_keeps_no_fails(env):
     cfg, eta, conn, tmp = env
-    rows = [_loan("9000000010", "STRONG MECHANICAL INC", 1_000_000, 120),          # revenue est $19.2M
-            _loan("9000000011", "SHAKY MECHANICAL INC", 1_000_000, 120),
-            _loan("9000000012", "SHAKY MECHANICAL INC", 800_000, 110, method="PPS"),
-            _loan("9000000013", "NEW OWNER MECHANICAL INC", 1_000_000, 120, age="Change of Ownership"),
-            _loan("9000000014", "SMALLER MECHANICAL INC", 300_000, 30)]             # revenue est $5.8M
-    out = us.run(conn, cfg.slug, eta, _ppp(tmp, rows))
-    assert out["fails"] == {"recent_change_of_ownership": 1, "too_small_revenue_estimate": 1}
+    _write_sf(2021, [_sf("900000010", "STRONG MECHANICAL INC", 60)])
+    _write_sf(2024, [_sf("900000010", "STRONG MECHANICAL INC", 75),
+                     _sf("900000011", "PLAN ONLY MECHANICAL INC", 70, since="2012-01-01"),
+                     _sf("900000012", "ENDED MECHANICAL INC", 70, final="1")])
+    ppp = _ppp(tmp, [_loan("9000000010", "STRONG MECHANICAL, INC.", 1_000_000, 70, zip_code="55401-0001"),
+                     _loan("9000000013", "NO PLAN MECHANICAL INC", 1_000_000, 120),
+                     _loan("9000000014", "NEW OWNER MECHANICAL INC", 1_000_000, 120, age="Change of Ownership")])
+    emp = dol.employers([2021, 2024], {"238220"})
+    out = us.run(conn, cfg.slug, eta, ppp, emp)
+    assert out["both"] == 1 and out["fails"]["plan_ended_final_filing"] == 1
+    assert out["fails"]["recent_change_of_ownership"] == 1
     kept = {r["company_number"]: r for r in conn.execute("SELECT * FROM eta_screen WHERE sieve=1")}
-    assert set(kept) == {"US-9000000010", "US-9000000011"}
-    assert kept["US-9000000010"]["score"] > kept["US-9000000011"]["score"]    # second draw = 25% revenue fall
-    ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "US-9000000010")}
+    assert {"US-900000010", "US-9000000013"} <= set(kept)                  # EIN id for filers, loan id otherwise
+    assert kept["US-900000010"]["score"] > kept["US-9000000013"]["score"]  # current, growing, both sources
+    import json
+    m = json.loads(kept["US-900000010"]["metrics"])
+    assert m["headcount"] == 75 and m["headcount_source"] == "form5500 2024" and m["sources"] == ["form5500", "ppp"]
+    typical = 75 * 230_000
+    assert typical * 0.6 <= m["revenue_est"] <= typical * 1.6                 # clamped around the industry norm
+    ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "US-900000010")}
+    assert ledger["Active plan participants (2024)"]["value"] == "75"
     assert ledger["Revenue (estimate)"]["status"] == "unverified"
-    assert ledger["Jobs reported (PPP, 2020-21)"]["status"] == "public"
     assert ledger["Owner age"]["status"] == "unknown"
-    cols = [r[1] for r in conn.execute("PRAGMA table_info(eta_screen)")]
+    assert store.owners(conn, cfg.slug, "US-900000010")[0]["name"] == "PAT EXAMPLE"
     assert "Race" not in str(list(conn.execute("SELECT metrics FROM eta_screen")))
 
 

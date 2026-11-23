@@ -1,4 +1,4 @@
-"""United States: discovery and sieve 1 from the SBA's public Paycheck Protection Program file.
+"""United States: discovery and sieve 1 from Form 5500 filings (current) and the SBA's PPP file (2020-21).
 
 The US has no public register of private-company accounts. The SBA's PPP file (loans of $150k+, 2020-21,
 public domain, free) lists every borrower with its NAICS code, jobs reported, loan amount, business type and
@@ -27,6 +27,7 @@ from gtm.eta import store
 
 SOURCE = "sba:ppp_foia"
 DATASET_URL = "https://data.sba.gov/dataset/ppp-foia"
+DOL_PAGE = "https://www.dol.gov/agencies/ebsa/about-ebsa/our-activities/public-disclosure/foia/form-5500-datasets"
 
 
 def cache_path() -> Path:
@@ -159,48 +160,131 @@ def stream(path: Path, us: dict):
         yield b
 
 
+# ---------- one candidate = a Form 5500 employer, a PPP borrower, or both ----------
+
+@dataclass
+class Candidate:
+    company_id: str
+    name: str
+    naics: str
+    city: str
+    state: str
+    zip5: str
+    headcount: int
+    headcount_source: str            # "form5500 2024" or "ppp 2020-21"
+    revenue_est: float
+    revenue_basis: str
+    employer: object | None = None   # dol.Employer
+    borrower: Borrower | None = None
+
+    @property
+    def sources(self) -> list[str]:
+        return [x for x, v in (("form5500", self.employer), ("ppp", self.borrower)) if v]
+
+    def metrics(self) -> dict:
+        e, b = self.employer, self.borrower
+        return {"naics": self.naics, "headcount": self.headcount, "headcount_source": self.headcount_source,
+                "revenue_est": self.revenue_est, "revenue_basis": self.revenue_basis, "sources": self.sources,
+                "plan_since": e.plan_since if e else None, "active_before": e.active_before if e else None,
+                "years_compared": list(e.years_compared) if e else None, "final_filing": e.final_filing if e else None,
+                "ppp_jobs": b.jobs if b else None, "ppp_payroll_est": b.payroll_est if b else None,
+                "second_draw": b.second_draw if b else None, "business_age": b.business_age if b else None,
+                "business_type": b.business_type if b else None}
+
+
+def revenue_per_employee(naics: str, table: dict) -> float:
+    best = None
+    for prefix, value in (table or {}).items():
+        if naics.startswith(str(prefix)) and (best is None or len(str(prefix)) > len(best[0])):
+            best = (str(prefix), float(value))
+    return best[1] if best else 150_000.0
+
+
+def combine(employers: dict, borrowers: list[Borrower], us: dict) -> list[Candidate]:
+    """Join Form 5500 employers and PPP borrowers on name + ZIP; keep both kinds."""
+    shares, rpe = us.get("payroll_share") or {}, us.get("revenue_per_employee") or {}
+    wage_growth = float(us.get("wage_growth_since_2020", 1.2))
+    by_key = {}
+    for b in borrowers:
+        by_key.setdefault(borrower_key(b.name, b.zip5), b)
+    used, out = set(), []
+    for e in employers.values():
+        b = by_key.get(borrower_key(e.name, e.zip5)) or (by_key.get(borrower_key(e.dba, e.zip5)) if e.dba else None)
+        if b:
+            used.add(id(b))
+        head = e.active or (b.jobs if b else 0)
+        typical = head * revenue_per_employee(e.naics, rpe)
+        if b and b.jobs:
+            pay_head = b.payroll_est / b.jobs * wage_growth
+            from_pay = pay_head * head / payroll_share(e.naics, shares)
+            # PPP jobs are often under-reported, which inflates pay per head: blend with the industry norm and
+            # keep the result inside a sane band around it
+            lo, hi = (float(x) for x in us.get("revenue_clamp", [0.6, 1.6]))
+            revenue = min(max((from_pay + typical) / 2, typical * lo), typical * hi)
+            basis = "mean of (PPP pay per head x 2024 headcount / payroll share) and (2024 headcount x industry revenue per employee), clamped"
+        else:
+            revenue = typical
+            basis = "2024 headcount x industry revenue per employee"
+        out.append(Candidate(f"US-{e.ein}", e.name, e.naics, e.city, e.state, e.zip5, head,
+                             f"form5500 {e.year}", round(revenue), basis, e, b))
+    for b in borrowers:
+        if id(b) not in used:
+            out.append(Candidate(b.company_id, b.name, b.naics, b.city, b.state, b.zip5, b.jobs, "ppp 2020-21",
+                                 b.revenue_est, "PPP payroll / industry payroll share (2020)", None, b))
+    return out
+
+
 # ---------- sieve 1 ----------
 
-def hard_fails(b: Borrower, hard: dict) -> list[str]:
+def hard_fails(c: Candidate, hard: dict) -> list[str]:
     fails = []
-    if b.revenue_est < hard.get("revenue_min_usd", 0):
+    if c.revenue_est < hard.get("revenue_min_usd", 0):
         fails.append("too_small_revenue_estimate")
-    if b.revenue_est > hard.get("revenue_max_usd", 10**12):
+    if c.revenue_est > hard.get("revenue_max_usd", 10**12):
         fails.append("too_large_revenue_estimate")
-    if b.jobs < hard.get("jobs_min", 0):
+    if c.headcount < hard.get("jobs_min", 0):
         fails.append("too_few_employees")
-    if b.jobs > hard.get("jobs_max", 10**9):
+    if c.headcount > hard.get("jobs_max", 10**9):
         fails.append("too_many_employees")
-    if hard.get("exclude_change_of_ownership", True) and "change of ownership" in b.business_age.lower():
+    if c.employer and c.employer.final_filing:
+        fails.append("plan_ended_final_filing")
+    age = (c.borrower.business_age if c.borrower else "").lower()
+    if hard.get("exclude_change_of_ownership", True) and "change of ownership" in age:
         fails.append("recent_change_of_ownership")
-    if b.business_age.lower().startswith(("new business", "startup")):
+    if age.startswith(("new business", "startup")) and not (c.employer and c.employer.plan_since
+                                                             and c.employer.plan_since <= 2015):
         fails.append("short_history")
     return fails
 
 
-def components(b: Borrower, bars: dict, weights: dict) -> dict[str, float]:
+def components(c: Candidate, bars: dict, weights: dict) -> dict[str, float]:
     lo, hi = bars.get("revenue_target_usd", [10e6, 30e6])
-    jlo, jhi = bars.get("jobs_target", [20, 200])
-    pay = b.payroll_est / b.jobs if b.jobs else 0
-    base = b.first_draw or b.second_draw
     clo, chi = bars.get("revenue_core_usd", [12e6, 25e6])
-    size = 1.0 if clo <= b.revenue_est <= chi else 0.7 if lo <= b.revenue_est <= hi else 0.3
+    jlo, jhi = bars.get("jobs_target", [20, 200])
+    e, b = c.employer, c.borrower
+    since = e.plan_since if e else None
+    if e and e.active_before:
+        ratio = e.active / e.active_before
+        growth = 1.0 if ratio >= 1.0 else 0.8 if ratio >= 0.9 else 0.4 if ratio >= 0.75 else 0.1
+    else:
+        growth = 0.5
+    pay = (b.payroll_est / b.jobs) if b and b.jobs else None
     out = {
-        "size": size,
-        "jobs": 1.0 if jlo <= b.jobs <= jhi else 0.4,
-        "skilled_pay": min(pay / bars.get("payroll_per_job_good_usd", 50000), 1.0),
-        # a second draw needed a 25% fall in quarterly revenue in 2020
-        "resilience": 0.3 if b.second_draw else 1.0,
-        "forgiven": 1.0 if base and b.forgiven >= 0.95 * (b.first_draw + b.second_draw) else 0.3,
-        "entity": 1.0 if "corporation" in b.business_type.lower() or "llc" in b.business_type.lower() else 0.5,
-        "history": 1.0 if b.business_age.lower().startswith("existing") else 0.4,
+        "size": 1.0 if clo <= c.revenue_est <= chi else 0.7 if lo <= c.revenue_est <= hi else 0.3,
+        "jobs": 1.0 if jlo <= c.headcount <= jhi else 0.4,
+        "longevity": (1.0 if since and since <= bars.get("plan_since_long", 2000)
+                      else 0.6 if since and since <= bars.get("plan_since_mid", 2010) else 0.3),
+        "growth": growth,
+        "evidence": 1.0 if len(c.sources) == 2 else 0.5,
+        "resilience": 0.3 if b and b.second_draw else 1.0 if b else 0.8,
+        "skilled_pay": min(pay / bars.get("payroll_per_job_good_usd", 50000), 1.0) if pay else 0.5,
     }
     return {k: round(v * float(weights.get(k, 0)), 1) for k, v in out.items()}
 
 
-def evaluate(b: Borrower, sieve: dict) -> tuple[str, float, list[str], dict]:
-    fails = hard_fails(b, sieve.get("hard") or {})
-    breakdown = components(b, sieve.get("bars") or {}, sieve.get("weights") or {})
+def evaluate(c: Candidate, sieve: dict) -> tuple[str, float, list[str], dict]:
+    fails = hard_fails(c, sieve.get("hard") or {})
+    breakdown = components(c, sieve.get("bars") or {}, sieve.get("weights") or {})
     score = round(sum(breakdown.values()), 1)
     if fails:
         return "fail", score, fails, breakdown
@@ -208,53 +292,70 @@ def evaluate(b: Borrower, sieve: dict) -> tuple[str, float, list[str], dict]:
     return verdict, score, fails, breakdown
 
 
-def ledger(conn, client: str, b: Borrower, band: float) -> None:
-    src = f"{DATASET_URL} (loans {', '.join(x for x in b.loans if x)})"
-    put = lambda claim, value, status, step=None: store.record_evidence(conn, client, b.company_id, claim, value,
-                                                                         status, src, step)
-    put("Jobs reported (PPP, 2020-21)", str(b.jobs), "public")
-    put("PPP first-draw loan", f"${b.first_draw:,.0f}", "public")
-    if b.second_draw:
-        put("PPP second-draw loan", f"${b.second_draw:,.0f} (needed a 25% revenue fall in 2020)", "public")
-    put("Annual payroll (estimate)", f"${b.payroll_est:,.0f}", "unverified", "Payroll register or W-3 from the seller")
-    put("Revenue (estimate)", f"${b.revenue_est * (1 - band):,.0f} - ${b.revenue_est * (1 + band):,.0f}",
-        "unverified", "Three years of tax returns and P&L from the seller")
-    put("Business age (PPP)", b.business_age, "public")
+def ledger(conn, client: str, c: Candidate, band: float) -> None:
+    e, b = c.employer, c.borrower
+    def put(claim, value, status, source, step=None):
+        store.record_evidence(conn, client, c.company_id, claim, value, status, source, step)
+    if e:
+        src = f"{DOL_PAGE} (Form 5500 plan year {e.year}, EIN {e.ein})"
+        put(f"Active plan participants ({e.year})", str(e.active), "public", src)
+        if e.active_before is not None:
+            put(f"Active plan participants ({e.years_compared[0]})", str(e.active_before), "public", src)
+        put("Retirement plan since", str(e.plan_since) if e.plan_since else None, "public" if e.plan_since else "unknown", src)
+    if b:
+        src = f"{DATASET_URL} (loans {', '.join(x for x in b.loans if x)})"
+        put("Jobs reported (PPP, 2020-21)", str(b.jobs), "public", src)
+        put("PPP first-draw loan", f"${b.first_draw:,.0f}", "public", src)
+        if b.second_draw:
+            put("PPP second-draw loan", f"${b.second_draw:,.0f} (needed a 25% revenue fall in 2020)", "public", src)
+        put("Business age (PPP)", b.business_age, "public", src)
+    put("Revenue (estimate)", f"${c.revenue_est * (1 - band):,.0f} - ${c.revenue_est * (1 + band):,.0f}",
+        "unverified", c.revenue_basis, "Three years of tax returns and P&L from the seller")
     for claim in ("EBITDA", "Owner age", "Owner earnings", "Customer concentration", "Recurring revenue"):
-        put(claim, None, "unknown", "Ask the owner or broker")
+        put(claim, None, "unknown", None, "Ask the owner or broker")
 
 
-def run(conn, client: str, eta: dict, path: Path, limit: int | None = None) -> dict:
-    """Screen every borrower in the file; store the survivors (pass and review), best first, up to the cap.
-    Failed borrowers are only counted: there is no reason to keep them."""
+def run(conn, client: str, eta: dict, ppp_path: Path | None, employers: dict | None = None,
+        limit: int | None = None) -> dict:
+    """Screen every candidate; store the survivors (pass and review), best first, up to the cap.
+    Failed candidates are only counted."""
     us = eta.get("us") or {}
     sieve, band = us.get("sieve1") or {}, float(us.get("revenue_band", 0.3))
     labels = {str(k): v for k, v in (us.get("naics_codes") or {}).items()}
-    out = {"kept": 0, "new": 0, "pass": 0, "review": 0, "fail": 0, "fails": {}}
-    cap = limit or us.get("max_per_run", 2000)
+    borrowers = list(stream(ppp_path, us)) if ppp_path and ppp_path.exists() else []
+    cands = combine(employers or {}, borrowers, us)
+    out = {"candidates": len(cands), "form5500": len(employers or {}), "ppp": len(borrowers),
+           "both": sum(1 for c in cands if len(c.sources) == 2), "kept": 0, "new": 0,
+           "pass": 0, "review": 0, "fail": 0, "fails": {}}
     scored = []
-    for b in stream(path, us):
-        verdict, score, fails, breakdown = evaluate(b, sieve)
+    for c in cands:
+        verdict, score, fails, breakdown = evaluate(c, sieve)
         out[verdict] += 1
-        out["screened"] = out.get("screened", 0) + 1
         for f in fails:
             out["fails"][f] = out["fails"].get(f, 0) + 1
         if verdict != "fail":
-            scored.append((score, b, verdict, fails, breakdown))
+            scored.append((score, c, verdict, fails, breakdown))
     scored.sort(key=lambda x: (-x[0], -x[1].revenue_est))
-    for score, b, verdict, fails, breakdown in scored[:cap]:
+    for score, c, verdict, fails, breakdown in scored[: limit or us.get("max_per_run", 3000)]:
         out["kept"] += 1
         status = store.upsert_company(conn, client, {
-            "company_number": b.company_id, "name": b.name, "company_status": b.loan_status,
-            "company_type": b.business_type, "sic_codes": [b.naics], "search_code": b.naics,
-            "locality": f"{b.city}, {b.state}", "postal_code": b.zip5, "region": b.state,
-            "stage": "screened", "source": SOURCE})
+            "company_number": c.company_id, "name": c.name, "company_status": "active",
+            "company_type": c.borrower.business_type if c.borrower else None,
+            "incorporated": str(c.employer.plan_since) if c.employer and c.employer.plan_since else None,
+            "sic_codes": [c.naics], "search_code": c.naics, "locality": f"{c.city}, {c.state}",
+            "postal_code": c.zip5, "region": c.state, "stage": "screened",
+            "source": "+".join(c.sources)})
         out["new"] += status == "new"
-        metrics = {k: v for k, v in b.as_dict().items() if k not in ("loans",)}
-        metrics["industry"] = labels.get(b.naics)
-        store.save_screen(conn, client, b.company_id, 1, verdict, score, fails, breakdown, metrics)
-        ledger(conn, client, b, band)
-        if out["kept"] % 200 == 0:
+        metrics = c.metrics() | {"industry": labels.get(c.naics)}
+        store.save_screen(conn, client, c.company_id, 1, verdict, score, fails, breakdown, metrics)
+        ledger(conn, client, c, band)
+        if c.employer and c.employer.signer:
+            store.save_owner(conn, client, c.company_id, {
+                "person_key": f"form5500:signer:{c.employer.ein}", "kind": "director", "name": c.employer.signer,
+                "role": f"signed the {c.employer.year} Form 5500 for the employer", "birth_year": None,
+                "birth_month": None, "appointed_on": None, "ceased_on": None, "ownership": None,
+                "source": f"{DOL_PAGE} (EIN {c.employer.ein})"})
+        if out["kept"] % 500 == 0:
             conn.commit()
     conn.commit()
     return out

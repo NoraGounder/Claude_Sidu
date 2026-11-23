@@ -143,6 +143,15 @@ qualification:
 # share. These are estimates (ledger status "unverified"): real numbers come from the seller.
 # ==================================================================================================
 us:
+  # Form 5500 (Department of Labor, free): current headcount, plan age and growth for every employer with a
+  # retirement plan. The latest year is the base; the earlier year gives growth. decisions.md E8.
+  form5500_years: [2021, 2024]
+  # revenue per employee by NAICS prefix, for employers with no PPP match (rough Census Economic Census averages)
+  revenue_per_employee: {"22": 600000, "23": 230000, "31": 280000, "32": 300000, "33": 260000, "3327": 180000,
+                         "42": 700000, "48": 160000, "53": 350000, "54": 190000, "56": 75000, "562": 260000,
+                         "81": 150000}
+  wage_growth_since_2020: 1.2
+  revenue_clamp: [0.6, 1.6]        # a payroll-based estimate stays within 0.6x-1.6x of the industry norm      # PPP payroll is 2019-20 pay; 2024 pay is about 20% higher
   ppp_url: https://data.sba.gov/sites/default/files/distribution/SBA-OCA-2022-07-001/public_150k_plus_240930.csv
   naics_codes:                     # the same "boring B2B" profile as the UK list
     811310: Commercial and industrial machinery repair
@@ -194,9 +203,12 @@ us:
       revenue_core_usd: [12000000, 25000000]   # full size points; the rest of the target band gets 70%
       jobs_target: [20, 200]
       payroll_per_job_good_usd: 50000
-    weights: {size: 30, jobs: 15, skilled_pay: 10, resilience: 15, forgiven: 10, entity: 10, history: 10}
-    pass: 90                       # proxies are thin, so "pass" asks for nearly everything to line up
-    review: 75
+      plan_since_long: 2000        # retirement plan since 2000 or earlier: long-tenured, likely older owner
+      plan_since_mid: 2010
+    # size from the estimate; longevity = plan age; growth = 2024 vs 2021 headcount; evidence = both sources agree
+    weights: {size: 25, jobs: 10, longevity: 20, growth: 15, evidence: 10, resilience: 10, skilled_pay: 10}
+    pass: 80
+    review: 65
   max_per_run: 3000               # survivors stored per run, best first (the rest are counted, not kept)
 
 # ==================================================================================================

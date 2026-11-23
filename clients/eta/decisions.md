@@ -111,3 +111,24 @@ page (Przerwa techniczna) all day, so there is no live run yet: `eta-pl` stops c
 **What would change it.** Sidarth approving rejestr.io (then a `rejestr_io` source fills Revenue, EBITDA, employees
 and net assets, and Polish companies can pass), or the bulletin turning out not to list accounts filings (then
 discovery moves to rejestr.io's PKD search).
+
+## E8. The US is the primary market; Form 5500 is the US base (2026-11-23)
+
+**Decision.** Sidarth's next business is to be found in the US first (his call, 2026-11-23); the UK and Poland run
+in the background. The US search now starts from the Department of Labor's Form 5500 filings (free, public, every
+employer with a retirement plan, filed each year): 2024 active participants are the headcount, the earliest plan
+effective year is a floor on company age, 2021 vs 2024 participants is growth, and a final filing (plan ended)
+drops the company. The PPP file (E6) is joined on name + ZIP for a firm-specific payroll; PPP borrowers with no
+plan stay in as a second, weaker tier. Revenue = headcount x industry revenue per employee, blended with the PPP
+payroll estimate when there is one and kept within 0.6x-1.6x of the industry norm (`us.revenue_clamp`). The person
+who signed the filing for the employer is stored as a contact (data/ only), usually the owner or president.
+
+**Why.** PPP alone was 2020-21 and estimated size from a loan. Form 5500 is current (2024), counts people directly,
+shows growth, and a plan started in 2000 or earlier is the best free sign of a long-tenured, older owner.
+
+**First run.** 48,041 employers with a plan in the 25 NAICS codes and 33,785 PPP borrowers (6,373 in both): 75,475
+candidates; sieve 1 pass 2,585, review 10,280. Among passes: median 71 employees, median revenue estimate about
+$16M, most with a plan since 2000 or earlier and headcount up from 2021.
+
+**What would change it.** Owner-age data (a paid people-data source) would replace plan age as the seller signal;
+the 2025 filings (complete in late 2026) replace 2024 as the base.
