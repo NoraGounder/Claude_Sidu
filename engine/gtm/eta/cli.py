@@ -143,7 +143,7 @@ def cmd_qualify(args, jev=None, fetcher=None) -> int:
     for i, q in enumerate(qualify.qualified(conn, cfg.slug)[:10], 1):
         b = q["breakdown"]
         print(f"  {i:>2}. {q['score']:>5} {q['verdict']:<9} {q['company_number']} {q['name'][:38]:<38} "
-              f"industry {b.get('industry_score') or '?'}/30, powers {', '.join(b.get('clear_powers') or []) or '-'}")
+              f"industry {b.get('industry_score') or '?'}/30, powers {', '.join(b.get('powers') or []) or '-'}")
     return 0
 
 
@@ -217,9 +217,10 @@ def cmd_owners(args, fe=None) -> int:
         print(f"Re-read {len(done)} lookups (no calls): owner, president or CEO identified at "
               f"{sum(1 for t in tops if t)}, age estimated for {sum(1 for t in tops if t and t['age'] is not None)}.")
         return 0
-    p = owners_us.plan(conn, cfg, args.limit, args.per_company)
+    verdicts = tuple(v.strip() for v in (getattr(args, "verdict", None) or "qualified,watch").split(","))
+    p = owners_us.plan(conn, cfg, args.limit, args.per_company, verdicts)
     print(f"US owner lookup: {p['companies']} companies with a verified website and no lookup yet "
-          f"(sieve 2 qualified or watch). Up to {args.per_company} people each: at most {p['max_people']} people, "
+          f"(sieve 2 {'/'.join(verdicts)}). Up to {args.per_company} people each: at most {p['max_people']} people, "
           f"{p['max_credits']:g} FullEnrich credits, about ${p['estimate_usd']:.2f} (only people returned are charged).")
     print(f"FullEnrich budget for {cfg.slug}: cap ${p['cap_usd'] or 0:.2f} a month, spent ${p['spent_usd']:.2f}.")
     if args.dry_run:
@@ -241,7 +242,7 @@ def cmd_owners(args, fe=None) -> int:
     if fe is None:
         from gtm.sources.fullenrich import FullEnrichClient
         fe = FullEnrichClient()
-    r = owners_us.run(conn, cfg, fe, args.limit, args.per_company)
+    r = owners_us.run(conn, cfg, fe, args.limit, args.per_company, verdicts=verdicts)
     print(f"Looked up {r['companies']} companies: people found at {r['with_people']}, {r['people']} people; "
           f"owner, president or CEO identified at {r.get('leaders', 0)}, age estimated for {r['ages']}. "
           f"{r['credits']:g} credits, ${r['cost_usd']:.2f}.")
@@ -412,6 +413,7 @@ def register(sub) -> None:
     ow.add_argument("--limit", type=int, help="companies to look up")
     ow.add_argument("--per-company", type=int, default=3, help="people per company (default 3)")
     ow.add_argument("--dry-run", action="store_true", help="show companies, request and cost; call nothing")
+    ow.add_argument("--verdict", default="qualified,watch", help="sieve-2 verdicts to look up (comma list)")
     ow.add_argument("--resummarize", action="store_true", help="re-pick the owner from people already found (free)")
     ow.set_defaults(func=cmd_owners)
 

@@ -251,6 +251,10 @@ def run(conn, cfg: ClientConfig, eta: dict, fetcher=None, jev: JevClient | None 
         fetcher = default_fetcher()
 
     sc, sp = eta.get("industry_scorecard") or {}, eta.get("seven_powers") or {}
+    min_ind = sc.get("min_score", 22)
+    # a Power counts toward "qualified" at this Jev score (0-2); 1.5 = clear evidence, 1.0 = some evidence
+    min_evidence = float(sp.get("min_evidence", CLEAR))
+    min_pow = sp.get("min_powers", sp.get("min_clear_powers", 1))
     questions = powers_questions(eta)
     for row in rows:
         number = row["company_number"]
@@ -263,12 +267,13 @@ def run(conn, cfg: ClientConfig, eta: dict, fetcher=None, jev: JevClient | None 
             conn.execute("INSERT OR REPLACE INTO eta_websites(client, company_number, website, tried, checked_at)"
                          " VALUES (?,?,?,?,?)", (cfg.slug, number, website, json.dumps(tried), db.now_iso()))
         clear: list[str] | None = None
+        scores: dict | None = None
         if website:
             out["websites_found"] += 1
-            prev = conn.execute("SELECT clear_powers FROM eta_powers WHERE client=? AND company_number=?",
+            prev = conn.execute("SELECT answers, clear_powers FROM eta_powers WHERE client=? AND company_number=?",
                                 (cfg.slug, number)).fetchone()
             if prev:
-                clear = json.loads(prev["clear_powers"])
+                clear, scores = json.loads(prev["clear_powers"]), json.loads(prev["answers"])
             else:
                 budget.check(conn, cfg, VENDOR, budget.estimate(cfg, price_key(cfg), 1))
                 title, text = site_text(fetcher, website)
@@ -284,10 +289,12 @@ def run(conn, cfg: ClientConfig, eta: dict, fetcher=None, jev: JevClient | None 
                              (cfg.slug, number, website, json.dumps(scores), json.dumps(clear), result.model_id,
                               db.now_iso()))
                 out["powers_decided"] += 1
-            for power in clear:
-                store.record_evidence(conn, cfg.slug, number, f"7 Powers: {power.replace('_', ' ')}",
-                                      "website suggests it", "unverified", website,
-                                      "Test with the owner: what is the Benefit, and why can competitors not copy it?")
+            for power, value in scores.items():
+                if value >= min_evidence:
+                    store.record_evidence(conn, cfg.slug, number, f"7 Powers: {power.replace('_', ' ')}",
+                                          "website shows clear evidence" if value >= CLEAR else "some evidence on the website",
+                                          "unverified", website,
+                                          "Test with the owner: what is the Benefit, and why can competitors not copy it?")
         else:
             store.record_evidence(conn, cfg.slug, number, "Website", None, "unknown", None,
                                   "No site found that shows it is the company's own; ask the owner")
@@ -296,17 +303,20 @@ def run(conn, cfg: ClientConfig, eta: dict, fetcher=None, jev: JevClient | None 
         if ind is not None:
             store.record_evidence(conn, cfg.slug, number, "Stanford industry score", f"{ind:g} of 30", "public",
                                   f"Jev 1.14 industry scorecard for {codes.get(key(row))} ({key(row)})")
-        min_ind, min_pow = sc.get("min_score", 22), sp.get("min_clear_powers", 1)
+        powers = None if scores is None else sorted(k for k, v in scores.items() if v >= min_evidence)
         if ind is not None and ind < min_ind - 4:
             verdict = "not_qualified"
         elif (row["verdict"] == "pass" and ind is not None and ind >= min_ind
-              and clear is not None and len(clear) >= min_pow):
+              and powers is not None and len(powers) >= min_pow):
             verdict = "qualified"
         else:
             verdict = "watch"
-        score = round((row["score"] * 0.5) + ((ind or 0) / 30 * 30) + (min(len(clear or []), 2) * 10), 1)
+        # ranking: half the sieve-1 score, the industry score, and up to 20 points of Power evidence
+        evidence = sum(sorted((scores or {}).values(), reverse=True)[:2]) * 5
+        score = round((row["score"] * 0.5) + ((ind or 0) / 30 * 30) + evidence, 1)
         store.save_screen(conn, cfg.slug, number, 2, verdict, score, [],
-                          {"sieve1_score": row["score"], "industry_score": ind, "clear_powers": clear},
+                          {"sieve1_score": row["score"], "industry_score": ind, "clear_powers": clear,
+                           "powers": powers, "power_scores": scores},
                           {"website": website})
         out[verdict] += 1
         conn.commit()

@@ -165,8 +165,8 @@ def summarize(conn, client: str, number: str, today: date) -> dict | None:
 
 # ---------- run ----------
 
-def plan(conn, cfg, limit: int | None, per_company: int) -> dict:
-    rows = targets(conn, cfg.slug, limit)
+def plan(conn, cfg, limit: int | None, per_company: int, verdicts=("qualified", "watch")) -> dict:
+    rows = targets(conn, cfg.slug, limit, verdicts)
     max_people = len(rows) * per_company
     est = budget.estimate(cfg, PRICE_KEY, max_people)
     cap = cfg.limits.month_budget_usd.get(VENDOR)
@@ -175,9 +175,10 @@ def plan(conn, cfg, limit: int | None, per_company: int) -> dict:
             "estimate_usd": est, "cap_usd": cap, "spent_usd": spent, "rows": rows}
 
 
-def run(conn, cfg, fe, limit: int | None = None, per_company: int = 3, today: date | None = None) -> dict:
+def run(conn, cfg, fe, limit: int | None = None, per_company: int = 3, today: date | None = None,
+        verdicts=("qualified", "watch")) -> dict:
     today = today or date.today()
-    p = plan(conn, cfg, limit, per_company)
+    p = plan(conn, cfg, limit, per_company, verdicts)
     budget.check(conn, cfg, VENDOR, p["estimate_usd"])
     out = {"companies": 0, "with_people": 0, "people": 0, "credits": 0.0, "ages": 0}
     run_id = db.start_run(conn, cfg.slug, "eta_owners", VENDOR, "US owner lookup", p["estimate_usd"],

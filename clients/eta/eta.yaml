@@ -101,7 +101,7 @@ sieve1:
 # Ten criteria, each 1 (low fit) to 3 (high fit), out of 30. Scored once per industry code and reused for every
 # company in it. The Primer's example industries scored 20-28.
 industry_scorecard:
-  min_score: 20                # lowered from 22 on 2026-11-23 (decisions.md E9)
+  min_score: 19                # 22 -> 20 -> 19 on 2026-11-23 (decisions.md E9, E10)
   criteria:
     fragmented: "Fragmented industry: many small players, no dominant consolidator"
     growing: "Industry growing, ideally with a tailwind"
@@ -119,7 +119,10 @@ industry_scorecard:
 # Small private firms rarely show more than one or two; the website is weak evidence, so this ranks rather than
 # drops, and every Power found becomes a claim in the evidence ledger, status "unverified", to test with the owner.
 seven_powers:
-  min_clear_powers: 1          # at least one Power with clear evidence to count as "qualified"
+  # A website cannot show a Barrier, so no company ever had "clear" evidence (Jev >= 1.5). Powers now rank and
+  # need only "some evidence" (Jev >= 1.0) to qualify; each one is a question for the first owner call (E10).
+  min_powers: 1
+  min_evidence: 1.0
   powers:
     scale_economies: "Scale economies: unit cost falls as volume grows (route density, shared depots, purchasing)"
     network_economies: "Network economies: the service is worth more to each customer as more customers use it"
@@ -130,7 +133,7 @@ seven_powers:
     process_power: "Process power: embedded ways of working that give lower cost or better quality and take years to copy"
 
 # ---------- Qualification ----------
-# qualified  = sieve 1 pass + industry score >= min_score + at least min_clear_powers Power with clear evidence
+# qualified  = sieve 1 pass + industry score >= min_score + verified website + min_powers Power at min_evidence
 # watch      = sieve 1 pass or review, but sieve 2 short of the bar or unknown
 qualification:
   max_websites_per_run: 200

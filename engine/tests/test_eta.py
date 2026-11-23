@@ -445,3 +445,14 @@ def test_real_frs102_tagging_of_reserves_creditors_and_depreciation():
     assert p["retained_earnings"] == 412_000
     assert p["creditors_after_one_year"] == 55_000
     assert p["depreciation"] == 21_000
+
+
+def test_some_evidence_of_a_power_qualifies_and_ranks(screened):
+    cfg, eta, conn = screened
+    jev = FakeJev(industry=1.6, powers={"switching_costs": 1.1, "branding": 0.6})   # no clear Power
+    out = qualify.run(conn, cfg, eta, fetcher=FakeFetcher(_site("99999901")), jev=jev)
+    assert out["qualified"] == 1
+    top = qualify.qualified(conn, cfg.slug)[0]
+    assert top["breakdown"]["powers"] == ["switching_costs"] and top["breakdown"]["clear_powers"] == []
+    ledger = {r["claim"]: r for r in store.evidence(conn, cfg.slug, "99999901")}
+    assert ledger["7 Powers: switching costs"]["value"] == "some evidence on the website"

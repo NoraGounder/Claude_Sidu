@@ -147,3 +147,19 @@ Sidarth sets one: the dry run shows the cost.
 
 **What would change it.** Low hit rates on small firms (owners often have thin LinkedIn histories) would move the
 lookup to BlitzAPI's profile enrichment, or to the Form 5500 signer plus a people-data match on name.
+
+## E10. 7 Powers rank instead of gate; industry bar 19 (2026-11-23)
+
+**Decision (Sidarth, 2026-11-23).** A company is "qualified" with sieve 1 pass, industry score >= 19, a verified
+website, and at least one of the 7 Powers with "some evidence" (Jev 1.14 >= 1.0 of 2; `seven_powers.min_evidence`).
+Clear evidence (>= 1.5) is still recorded, and Power evidence adds up to 20 points to the sieve-2 ranking.
+
+**Why.** Of the first 78 US websites, none showed clear evidence of a Power: a small trade firm's website shows a
+Benefit at best, never the Barrier. A gate no company can pass is not a filter. HVAC (19.9) and engineering (19.3)
+sat just under 20, inside Jev's scoring noise. Each Power found becomes the first question for the owner call.
+
+**Result.** Top 200 US companies: 21 qualified (no new Jev calls). Owner lookup on those 21 (FullEnrich, $0.66 so
+far this month): a leader identified at 10, four of them long-tenured and about 60 or older.
+
+**What would change it.** Owner calls that show the website-based Power evidence is noise would make Powers a
+ranking signal only; more industries scoring well above 19 would let the bar go back up.
