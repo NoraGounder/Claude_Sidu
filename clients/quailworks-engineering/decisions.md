@@ -103,6 +103,24 @@ Sources: the founder's CV (shared 2026-11-19, kept out of this repository), Quai
   no export-controlled data to anyone the client has not approved. The founder checks every drawing until
   the bench is proven. Recorded here so the offer never promises what delivery cannot keep.
 
+- **E2 update (2026-11-24): no new domain; lend two of Quailworks' own (proposed, waiting for the user's OK).**
+  The user does not want to buy more domains. Quailworks now has 16 mailboxes on 6 domains (quailworks Q50), all
+  in the founder's name, active and at 97-100% warm-up reputation except one at 89% (Smartlead, read 2026-11-24).
+  Quailworks GTM's ramp is a campaign total of 30 a day in week 1, 60 in week 2 and 90 after, so it needs about six
+  mailboxes at 15 a day. Proposed: move **quailworks.work** (3 Google, warm from 30 November) and **quailworks.dev**
+  (3 Outlook, warm from 4 December) to this client. Quailworks GTM keeps getquailworks.com, quailworksforward.com,
+  teamquailworks.com and quailworkshq.com: 10 mailboxes, 150 a day of headroom for a 90-a-day ramp. Each domain
+  still belongs to one client, so replies, bounces and reputation stay separate per offer. Sharing all 16 between
+  both offers was rejected: the engine's per-mailbox ramp would be counted twice and one offer's bounces would hurt
+  the other. Needs: the user's OK, then `mailbox_domains` moves from `clients/quailworks/sending.yaml` to this
+  folder, and the Quailworks chat is told before its next push (its uploads link newly warm mailboxes by
+  themselves, the first of these on 30 November). Would change: GTM replies needing more volume than 10 mailboxes.
+- **E9 update (2026-11-24): the page is built.** `site/engineering.html` (quailworks.co/engineering): the offer,
+  the two ways to buy, the one-page profile, the engineer, an FAQ (CAD, remote work, IP, export control, cost) and
+  an enquiry form tagged "Engineering: ..." in the email to hello@. Linked from the homepage founder section and
+  footer and listed in the sitemap. It ships with the site's new dark "studio" theme. Not live until the user says
+  "deploy".
+
 ## Needed from the user (only what we cannot do ourselves)
 
 See `client.yaml needed_from_client`. In one message: the domain and three mailboxes (E2), the one-page

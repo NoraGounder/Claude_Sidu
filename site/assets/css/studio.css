@@ -1,0 +1,192 @@
+/* ==========================================================================
+   Quailworks — "studio" theme (2026-11-24)
+   A dark, cinematic layer over styles.css: one animated object per hero, a thin serif
+   headline set on two staggered lines, pill controls, minimal chrome. Loaded after
+   styles.css on every page; remove the <link> to fall back to the paper theme.
+   ========================================================================== */
+
+:root {
+  --bg: #070709;
+  --bg-2: #0C0C0F;
+  --surface: #111115;
+  --ink: #EEECE6;
+  --ink-2: #B4B1A9;
+  --ink-3: #78756F;
+  --line: #1D1D22;
+  --line-2: #2E2E35;
+  --accent: #FF5A12;
+  --accent-ink: #FF7A3D;
+  --night: #0B0B0E;
+  --night-2: #121216;
+  --night-3: #18181D;
+  --night-line: #23232A;
+  --night-text: #EEECE6;
+  --night-muted: #8F8C85;
+  --accent-night: #FF6A26;
+  --chip: rgba(255, 255, 255, .07);
+  --chip-line: rgba(255, 255, 255, .11);
+  --chip-hover: rgba(255, 255, 255, .13);
+  --section-y: 152px;
+}
+
+body { background: var(--bg); color: var(--ink); }
+::selection { background: var(--accent); color: #0B0B0D; }
+
+/* ── Frame: no rails, no crosshairs; space does the work ─────────────────── */
+.section { border-top: 1px solid var(--line); }
+.wrap { border-left: 0; border-right: 0; }
+.section > .wrap::before, .section > .wrap::after { display: none; }
+.tint { background: var(--bg-2); }
+.dark { background: var(--night); border-top-color: var(--line); }
+
+/* ── Type ────────────────────────────────────────────────────────────────── */
+.display { font-weight: 400; letter-spacing: -0.02em; }
+.muted-em em, .statement em { color: var(--ink-3); }
+.label { color: var(--ink-2); }
+.lede { color: var(--ink-2); }
+.inline-link { color: var(--ink); border-bottom: 1px solid var(--line-2); transition: border-color .2s; }
+.inline-link:hover { border-color: var(--accent); }
+
+/* ── Pills ───────────────────────────────────────────────────────────────── */
+.btn { border-radius: 999px; height: 46px; padding: 0 20px; font-size: 14.5px; font-weight: 500; }
+.btn-ink, .btn-line, .btn-ghost-dark {
+  background: var(--chip); border: 1px solid var(--chip-line); color: var(--ink);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.btn-ink:hover, .btn-line:hover, .btn-ghost-dark:hover { background: var(--chip-hover); border-color: var(--chip-line); }
+.btn-ink .arr { color: var(--accent); }
+.btn-accent { background: var(--accent); color: #0B0B0D; border: 0; }
+.btn-accent:hover { background: #FF7A3D; }
+.btn-sm { height: 36px; padding: 0 14px; font-size: 13.5px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 15px; border-radius: 999px;
+  background: var(--chip); border: 1px solid var(--chip-line); color: var(--ink);
+  font-size: 14px; line-height: 1; white-space: nowrap;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  transition: background .2s ease, color .2s ease, transform .3s var(--ease);
+}
+.chip:hover { background: var(--chip-hover); }
+.chip .arr { color: var(--accent); }
+
+/* ── Top bar: Menu · wordmark · local time ───────────────────────────────── */
+.nav {
+  position: fixed; left: 0; right: 0; top: 0;
+  background: transparent; border-bottom: 0;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  transition: background .3s ease;
+}
+.nav.scrolled { background: linear-gradient(rgba(7, 7, 9, .88), rgba(7, 7, 9, .55)); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.nav .wrap { display: grid; grid-template-columns: 1fr auto 1fr; height: 72px; max-width: none; padding: 0 24px; }
+.nav .brand { grid-column: 2; font-weight: 500; font-size: 19px; }
+.nav .brand svg { width: 22px; height: 22px; }
+.nav-links { display: none !important; }
+.nav-cta { grid-column: 3; justify-self: end; gap: 10px; }
+.nav-cta > .btn { display: none; }
+.clock { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--ink-2); }
+.chip-icon { width: 34px; height: 34px; padding: 0; justify-content: center; }
+.chip-icon svg { width: 15px; height: 15px; }
+
+.menu-btn {
+  grid-column: 1; grid-row: 1; justify-self: start;
+  display: inline-flex; align-items: center; width: auto; height: 34px; padding: 0 15px;
+  border-radius: 999px; background: var(--chip); border: 1px solid var(--chip-line); color: var(--ink);
+  font-size: 14px; cursor: pointer; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.menu-btn:hover { background: var(--chip-hover); }
+.menu-btn > span { display: none; }
+.menu-btn b { font-weight: 400; }
+.menu-btn .m-close, .nav.open .menu-btn .m-open { display: none; }
+.nav.open .menu-btn .m-close { display: inline; }
+
+/* The menu is a full-screen overlay at every width. */
+.mobile-menu {
+  display: flex !important; flex-direction: column; justify-content: center; gap: 2px;
+  position: fixed; inset: 0; z-index: -1; padding: 96px max(24px, 8vw) 48px;
+  background: rgba(7, 7, 9, .94); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border: 0; visibility: hidden; opacity: 0; transform: none;
+  transition: opacity .3s ease, visibility 0s .3s;
+}
+.nav.open .mobile-menu { visibility: visible; opacity: 1; transition: opacity .3s ease; }
+.mobile-menu a:not(.btn) {
+  display: block; padding: 4px 0; border: 0; color: var(--ink);
+  font-family: var(--serif); font-size: clamp(40px, 6.4vw, 84px); line-height: 1.08; letter-spacing: -0.02em;
+  transform: translateY(14px); opacity: 0; transition: transform .5s var(--ease), opacity .5s ease, color .2s;
+}
+.mobile-menu a:not(.btn):hover { color: var(--accent); }
+.nav.open .mobile-menu a:not(.btn) { transform: none; opacity: 1; }
+.nav.open .mobile-menu a:nth-child(2) { transition-delay: .04s; }
+.nav.open .mobile-menu a:nth-child(3) { transition-delay: .08s; }
+.nav.open .mobile-menu a:nth-child(4) { transition-delay: .12s; }
+.nav.open .mobile-menu a:nth-child(5) { transition-delay: .16s; }
+.nav.open .mobile-menu a:nth-child(6) { transition-delay: .2s; }
+.mobile-menu .btn { align-self: flex-start; margin-top: 32px; width: auto; }
+.mobile-menu .menu-note { margin-top: 28px; font-size: 13px; color: var(--ink-3); font-family: var(--mono); }
+
+/* ── Hero: one object, one line, one paragraph ───────────────────────────── */
+.studio-hero { border-top: 0; min-height: 100vh; min-height: 100svh; overflow: hidden; isolation: isolate;
+  background: radial-gradient(60% 55% at 58% 48%, rgba(255, 90, 18, .10), transparent 70%), var(--bg); }
+.studio-hero > .wrap { position: relative; min-height: 100vh; min-height: 100svh; max-width: none; padding: 0 24px; }
+.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; display: block; }
+.studio-hero::after { content: ''; position: absolute; inset: auto 0 0 0; height: 30%; z-index: -1;
+  background: linear-gradient(transparent, var(--bg)); pointer-events: none; }
+
+.hero-pills { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.hero-pills .chip { font-size: 15px; height: 36px; color: var(--ink-2); }
+.hero-pills .chip:hover { color: var(--ink); transform: translateX(3px); }
+
+.hero-intro { position: absolute; top: 23vh; left: 61%; max-width: 372px; }
+.hero-intro p { font-size: 16.5px; line-height: 1.5; color: var(--ink); }
+.hero-intro .label { margin-bottom: 18px; }
+.hero-intro .hero-ctas { margin-top: 24px; gap: 8px; }
+
+.studio-hero h1 {
+  position: absolute; left: 34%; bottom: 15vh; margin: 0;
+  font-size: clamp(64px, 8.2vw, 136px); line-height: .98; letter-spacing: -0.03em; font-weight: 400;
+}
+.studio-hero h1 .l2 { display: block; padding-left: 1.1em; }
+.studio-hero h1 em { color: var(--ink); }
+.studio-hero h1 .dot { color: var(--accent); }
+.hero-scroll { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--ink); opacity: .8; }
+
+/* ── The engine console now lives in its own section below the hero ───────── */
+.console-section > .wrap { padding-top: 96px; }
+.console-section.compact > .wrap { padding-top: 36px; padding-bottom: 36px; }
+.console-section.compact .hero-meta { margin: 0; }
+.console-section .hero-meta { margin: 0 0 28px; border-color: var(--line); }
+.console { border-color: var(--line-2); }
+
+/* ── Cards, lists and forms on dark ──────────────────────────────────────── */
+.gap-list li:first-child, .principles li:first-child, .services-grid, .svc ul { border-top-color: var(--line-2); }
+.svc li::before { border-color: var(--ink-3); }
+.plan { background: var(--surface); border-color: var(--line); border-radius: 22px; }
+.plan.featured { background: #16161B; border-color: rgba(255, 90, 18, .45); box-shadow: 0 0 0 1px rgba(255, 90, 18, .12), 0 40px 120px -60px rgba(255, 90, 18, .45); }
+.form-card { border-radius: 22px; }
+.field input, .field select, .field textarea { border-radius: 12px; }
+details { border-color: var(--line); }
+.footer { background: var(--bg); border-top: 1px solid var(--line); }
+.wordmark { color: #121216; }
+.founder-card img { border-radius: 50%; }
+
+/* ── Smaller screens: the hero stacks, the pills become a scroll row ─────── */
+@media (max-width: 1100px) {
+  .hero-intro { left: auto; right: 24px; }
+  .studio-hero h1 { left: 24px; }
+}
+@media (max-width: 860px) {
+  .nav .wrap { height: 64px; padding: 0 16px; }
+  .clock { display: none; }
+  .studio-hero > .wrap { display: flex; flex-direction: column; justify-content: flex-end; padding: 96px 16px 40px; gap: 26px; }
+  .hero-pills, .hero-intro, .studio-hero h1 { position: static; transform: none; }
+  .studio-hero h1 { order: 1; font-size: clamp(52px, 15vw, 88px); }
+  .studio-hero h1 .l2 { padding-left: .9em; }
+  .hero-intro { order: 2; max-width: 520px; }
+  .hero-intro .label { display: none; }
+  .hero-pills { order: 3; flex-direction: row; overflow-x: auto; max-width: 100%; padding-bottom: 4px; scrollbar-width: none; }
+  .hero-pills::-webkit-scrollbar { display: none; }
+  .hero-scroll { display: none; }
+  .studio-hero::after { height: 70%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mobile-menu a:not(.btn) { transform: none; transition: none; }
+}

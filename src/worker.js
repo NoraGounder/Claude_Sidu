@@ -40,6 +40,9 @@ const FOCUS_OPTIONS = new Set([
   "A conversation about the Signal Engine",
   "Inbound routing or CRM data",
   "Not sure yet",
+  "Engineering: send me the one-page profile",
+  "Engineering: a design engineer on our team",
+  "Engineering: a fixed-price design package",
 ]);
 const MIN_FILL_MS = 3000; // humans take longer than this to fill the form
 const URL_RE = /(https?:\/\/|www\.)\S+/gi;
