@@ -95,8 +95,9 @@ Sources: the founder's CV (shared 2026-11-19, kept out of this repository), Quai
   industrial-software and aerospace companies; this offer sells to engineering leaders, sometimes at the
   same companies. `sending.yaml avoid_overlap_with: [quailworks]` holds any company Quailworks GTM emailed
   in the last 90 days (engine change of 2026-11-19, `l6_send.overlap_companies`, company names and domains
-  only). Quailworks GTM can add the mirror rule (`avoid_overlap_with: [quailworks-engineering]`) in its own
-  `sending.yaml`; noted for its chat. Would change: never, while one person sends both.
+  only). Since 2026-11-24 `push` also reads Quailworks GTM's `QW` campaigns in the shared Smartlead account,
+  because each chat has its own database (the GTM chat's question). Quailworks GTM can add the mirror rule
+  (`avoid_overlap_with: [quailworks-engineering]`) in its own `sending.yaml` once this engine code is on its branch. Would change: never, while one person sends both.
 - **E13. Delivery as it grows.** The user plans to hire engineers and outsource the work. Before the first
   hire: a contractor agreement with NDA, IP assignment and flow-down of each client's terms; professional
   indemnity insurance for Quailworks sp. z o.o.; client consent where a contract restricts subcontracting;
@@ -112,7 +113,10 @@ Sources: the founder's CV (shared 2026-11-19, kept out of this repository), Quai
   teamquailworks.com and quailworkshq.com: 10 mailboxes, 150 a day of headroom for a 90-a-day ramp. Each domain
   still belongs to one client, so replies, bounces and reputation stay separate per offer. Sharing all 16 between
   both offers was rejected: the engine's per-mailbox ramp would be counted twice and one offer's bounces would hurt
-  the other. Done: `mailbox_domains` moved from `clients/quailworks/sending.yaml` (quailworks Q51) to this folder,
+  the other. Final split, confirmed by the user in the GTM chat the same day (quailworks Q51, commit 6adb4aa):
+  Quailworks GTM keeps getquailworks.com, quailworksforward.com and teamquailworks.com (8 mailboxes, 120 a day
+  of capacity for its 90-a-day ramp), this client has quailworks.work and quailworks.dev, and quailworkshq.com
+  sends the founder's acquisition outreach (clients/eta). Done: `mailbox_domains` moved to this folder,
   sender consent recorded, and the Quailworks chat told before its next push (its uploads link newly warm
   mailboxes by themselves, the first of these on 30 November). Would change: GTM replies needing more volume than 10 mailboxes.
 - **E9 update (2026-11-24): the page is built.** `site/engineering.html` (quailworks.co/engineering): the offer,

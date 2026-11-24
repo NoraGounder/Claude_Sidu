@@ -254,7 +254,18 @@ def cmd_push(args) -> int:
 
     cfg = load_client(args.client)
     conn = db.connect()
-    plan = l6_send.plan_push(cfg, conn)
+    sl = None
+    if l6_send.load_sending(cfg).get("avoid_overlap_with"):
+        # The other offers' campaigns live in the shared Smartlead account, not in this machine's database.
+        from gtm.sources.smartlead import SmartleadClient
+        try:
+            sl = SmartleadClient()
+        except SmartleadError as exc:
+            if args.live:
+                print(f"Stopped: {exc} Needed to check the other offers' campaigns (sending.yaml avoid_overlap_with).")
+                return 5
+            print(f"Note: {exc} The overlap check uses this machine's database only.")
+    plan = l6_send.plan_push(cfg, conn, sl=sl)
     eligible = sum(len(v) for v in plan.eligible.values())
     regions = ", ".join(f"{k} {len(v)}" for k, v in plan.eligible.items()) or "none"
     held = ", ".join(f"{k} {v}" for k, v in sorted(plan.held.items())) or "none"
@@ -265,7 +276,7 @@ def cmd_push(args) -> int:
     if not _backup_guard(args.client):
         return 8
     try:
-        t = l6_send.push(cfg, conn, plan=plan)
+        t = l6_send.push(cfg, conn, sl=sl, plan=plan)
     except (SmartleadError, RuntimeError) as exc:
         print(f"Stopped: {exc}")
         return 5

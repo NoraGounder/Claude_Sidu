@@ -167,7 +167,8 @@ them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks
   `min_warmup_days` / `min_warmup_reputation` (mailboxes join a campaign only when warm; every upload
   links newly ready ones), `spread_daily_cap` (the per-mailbox cap is kept by the campaign total),
   `avoid_overlap_with` / `overlap_days` (hold companies another of the sender's own offers emailed
-  recently; company domains and names only, for offers run by one company under one founder's name)
+  recently; company domains and names only, for offers run by one company under one founder's name;
+  `push` also reads the other offers' campaigns in the shared Smartlead account by their `campaign_prefix`)
 - `sample.yaml`: the Signal Sample (`sample` command): signals and weights for a prospect's market
 - `markets.yaml` + `sequence.yaml` `market_line` / `cta_market`: name three hiring companies in the
   prospect's market in email 1 (`markets --refresh` weekly; `never_name` keeps vendors and recruiters out)

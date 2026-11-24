@@ -100,16 +100,41 @@ class PushPlan:
     held: dict[str, int] = field(default_factory=dict)                # reason -> count
 
 
-def overlap_companies(conn, sending: dict, now: datetime) -> dict[str, set[str]]:
+def overlap_companies(conn, sending: dict, now: datetime, sl: SmartleadClient | None = None) -> dict[str, set[str]]:
     """Companies that other offers of the same sender emailed recently (sending.yaml `avoid_overlap_with`,
     a list of client slugs, and `overlap_days`, default 90). Opt-in: for clients run by one company under one
     founder's name (Quailworks' GTM and engineering offers), so one company never hears two pitches from
-    the same person at once. Only company domains and names are compared; no contact data crosses over."""
+    the same person at once. Only company domains and names are compared; no contact data crosses over.
+
+    Each client usually runs in its own chat with its own database, so with a Smartlead client the check also
+    reads the shared account: every campaign named with another client's `campaign_prefix` and the company
+    (email domain and company name) of each lead added to it within the window."""
     others = [str(c) for c in sending.get("avoid_overlap_with") or []]
     found: dict[str, set[str]] = {"domain": set(), "company": set()}
     if not others:
         return found
     since = (now - timedelta(days=int(sending.get("overlap_days", 90)))).isoformat()
+    if sl is not None:
+        from gtm.config import clients_dir
+        prefixes = []
+        for other in others:
+            path = clients_dir() / other / "sending.yaml"
+            prefix = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("campaign_prefix") if path.exists() else None
+            if prefix:
+                prefixes.append(f"{prefix} |")
+        for camp in sl.campaigns() if prefixes else []:
+            if not str(camp.get("name") or "").startswith(tuple(prefixes)):
+                continue
+            for lead in sl.leads(camp["id"]):
+                obj = lead.get("lead") or lead
+                added = str(lead.get("created_at") or obj.get("created_at") or "")[:19]
+                if added and added < since[:19]:
+                    continue
+                email = str(obj.get("email") or "").lower()
+                if "@" in email:
+                    found["domain"].add(email.split("@")[-1])
+                if obj.get("company_name"):
+                    found["company"].add(str(obj["company_name"]).lower())
     marks = ",".join("?" * len(others))
     for r in conn.execute(f"SELECT a.domain, a.name FROM outbound o JOIN accounts a ON a.id=o.account_id"
                           f" WHERE o.client IN ({marks}) AND (o.pushed_at >= ? OR o.status='replied')",
@@ -121,11 +146,11 @@ def overlap_companies(conn, sending: dict, now: datetime) -> dict[str, set[str]]
     return found
 
 
-def plan_push(cfg: ClientConfig, conn, now: datetime | None = None) -> PushPlan:
+def plan_push(cfg: ClientConfig, conn, now: datetime | None = None, sl: SmartleadClient | None = None) -> PushPlan:
     now = now or datetime.now(timezone.utc)
     sending = load_sending(cfg)
     plan = PushPlan()
-    overlap = overlap_companies(conn, sending, now)
+    overlap = overlap_companies(conn, sending, now, sl)
 
     def hold(reason):
         plan.held[reason] = plan.held.get(reason, 0) + 1
@@ -252,10 +277,10 @@ def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushP
     if clash := shared_domains(cfg):
         raise RuntimeError(f"Sending domains listed for another client too: {', '.join(clash)}. "
                            "Each domain belongs to one client (sending.yaml mailbox_domains).")
-    plan = plan or plan_push(cfg, conn, now)
+    sl = sl or SmartleadClient()
+    plan = plan or plan_push(cfg, conn, now, sl)
     if not plan.eligible:
         return {"pushed": 0, "held": plan.held, "campaigns": {}}
-    sl = sl or SmartleadClient()
     mailbox_ids, problems = check_mailboxes(cfg, sending, sl.email_accounts(), now)
     if not mailbox_ids:
         raise RuntimeError("No usable mailboxes: " + ("; ".join(problems) or "none on this client's mailbox_domains "
