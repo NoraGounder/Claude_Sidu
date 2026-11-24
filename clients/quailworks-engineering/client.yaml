@@ -1,0 +1,40 @@
+# Layer 0: client identity and operating model. Quailworks Engineering is Quailworks' second offer
+# (2026-11-19): mechanical design engineering for hardware teams, sold with the same engine and tools as
+# Quailworks' own GTM outbound (decisions.md E1). Same company, same founder, its own campaigns.
+# Public repo: real names, contact details and contracts belong in ./private/ (gitignored).
+
+client: quailworks-engineering
+display_name: Quailworks Engineering   # HubSpot deals read "Quailworks Engineering | <company>" (E1)
+website: https://quailworks.co         # no engineering page yet (decisions.md E9)
+offices: [Gowarczów (PL)]   # Quailworks sp. z o.o., public company register (KRS 0001108506)
+
+operating_model: own_outbound   # Quailworks sells its own engineering work; the founder takes the meetings
+
+language:
+  default: en        # UK and US (decisions.md E4)
+  by_country: {}
+  fallback: en
+
+sender:
+  mode: founder
+  details: private/sender.yaml   # name, title, booking link (copy sender.example.yaml)
+  # 2026-11-24: the founder agreed that quailworks.work and quailworks.dev, whose mailboxes already carry his
+  # name as sender (quailworks Q45, Q50), send this offer (decisions.md E2). Sending still needs his "go".
+  consent_to_send_in_name: granted
+  consent_scope: send in the founder's own name, from Quailworks Engineering's own sending domains only
+
+handoff:
+  channel: Smartlead inbox + calendar invite
+  outcome_capture: one word after each call (qualified / not a fit / follow up)
+
+crm:
+  # Same company, same portal as Quailworks' GTM offer: one CRM, deals told apart by display_name (E1).
+  hubspot_token_env: HUBSPOT_TOKEN_QUAILWORKS
+
+# Quailworks decides (decisions.md). Only these need the user, in one message at launch:
+needed_from_client:
+  - DONE 2026-11-24: quailworks.work and quailworks.dev lent by Quailworks GTM, consent recorded (decisions.md E2)
+  - private/sender.yaml (name, title, booking link) on the machine that runs the engine
+  - DONE 2026-11-24: the engineering page approved for deploy (decisions.md E9)
+  - The warm list: 20-30 people from past programmes, written to personally (decisions.md E10)
+  - The "go" to start sending (CLAUDE.md rule 3)

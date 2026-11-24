@@ -499,6 +499,13 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   weekly supply of fresh-signal leads outgrowing 120 a day (then buy a domain for Quailworks, about $15 a
   month for 3 mailboxes, rather than take one back).
 
+- **Q52. No company gets both offers within 90 days (2026-11-24).** Quailworks and Quailworks Engineering
+  write in the same founder's name. A company that either offer emailed in the last 90 days is held by the
+  other (company domain and name only; `avoid_overlap_with`, `overlap_days`; the engine also reads the
+  other offer's campaigns in the shared Smartlead account by its prefix). Only the engine code and the
+  Engineering client folder came over from its branch; its website files stay on its own branch. Would
+  change: a reply showing a company wants both services (then hand over by hand).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

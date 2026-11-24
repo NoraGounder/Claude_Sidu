@@ -1,0 +1,143 @@
+# Layer 0: ideal customer profile. Layer 1 turns segments into searches; Layer 3 uses personas.
+# Industry IDs are LinkedIn industry codes (v2), checked against
+# github.com/HarvestAPI/linkedin-industry-codes-v2 on 2026-11-19.
+
+version: 1
+
+# Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md E4-E5).
+buyer_profile: >-
+  UK and US companies with 11-500 employees that design and build their own physical products and
+  need mechanical design capacity: motorsport teams and race-car constructors, performance, EV and
+  low-volume vehicle makers, commercial space, launch, satellite, aerospace and eVTOL companies, and
+  robotics, automation and machine builders. Strong fit: an in-house engineering team working in
+  CATIA, Siemens NX or Creo, a new vehicle, aircraft or machine programme, venture funding or growth,
+  and parts that are weight- or packaging-critical (chassis, suspension, structures, housings,
+  composites). Poor fit: build-to-print machine shops and fabricators that do not design, engineering
+  consultancies and staffing firms (they sell the same service), software-only companies, distributors
+  and dealerships, and US defence contractors whose work is export-controlled (ITAR).
+# What we offer, in one line, for Jev's contact-relevance question.
+offer_summary: >-
+  Contract mechanical design engineering: a senior design engineer working in the client's CAD from
+  concept to released, toleranced drawings, on a day rate or as a fixed-price design package.
+
+company:
+  employees_min: 11
+  employees_max: 500
+  linkedin_company_sizes: ["11-50", "51-200", "201-500"]
+
+industry_groups:
+  vehicles:
+    label: Performance, EV and low-volume vehicles
+    ids: [53, 3253]          # Motor Vehicle Manufacturing; Alternative Fuel Vehicle Manufacturing
+  motorsport:
+    label: Motorsport teams and race-car constructors
+    ids: [53, 33]            # Motor Vehicle Manufacturing; Spectator Sports. Always narrowed by a motorsport word
+  aerospace_space:
+    label: Space, aerospace and eVTOL
+    ids: [1, 52, 94]         # Defense and Space Manufacturing; Aviation and Aerospace Component Manufacturing; Airlines and Aviation
+  robotics_machines:
+    label: Robotics, automation and machine builders
+    ids: [147, 3247, 3248, 135]   # Automation Machinery; Robot Manufacturing; Robotics Engineering; Industrial Machinery
+  energy_hardware:
+    label: Energy hardware
+    ids: [3241]              # Renewable Energy Equipment Manufacturing
+  # Parked (decisions.md E5): tier suppliers buy on price through preferred-supplier lists.
+  vehicle_parts:
+    label: Motor vehicle parts suppliers
+    ids: [1042]
+  # Not prospects: they sell the same service. A partner channel later, by hand (decisions.md E11).
+  engineering_services:
+    label: Engineering services
+    ids: [3242]
+
+# Segments name the markets. Since 2026-11-24 (decisions.md E14) every search runs on the flat BlitzAPI plan
+# (hiring.yaml: hiring searches and company_searches), so the Harvest/Apify searches below are all disabled. One-word search words match
+# company names, so the motorsport group (which includes "Spectator Sports") always carries a search word (quailworks Q29 lesson).
+segments:
+  # United Kingdom first (decisions.md E4)
+  - {name: motorsport_uk,        enabled: false,  industry_group: motorsport,          locations: [United Kingdom], max_items: 300, search_query: motorsport}
+  - {name: vehicles_uk,          enabled: false,  industry_group: vehicles,            locations: [United Kingdom], max_items: 300}
+  - {name: aerospace_space_uk,   enabled: false,  industry_group: aerospace_space,     locations: [United Kingdom], max_items: 300}
+  - {name: robotics_machines_uk, enabled: false,  industry_group: robotics_machines,   locations: [United Kingdom], max_items: 200}
+  - {name: energy_hardware_uk,   enabled: false, industry_group: energy_hardware,     locations: [United Kingdom], max_items: 100}   # 100-company test once the core segments are read
+  # United States: commercial programmes only (E5); hiring searches carry most of the volume
+  - {name: motorsport_us,        enabled: false,  industry_group: motorsport,          locations: [United States], max_items: 200, search_query: racing}
+  - {name: ev_vehicles_us,       enabled: false,  industry_group: vehicles,            locations: [United States], max_items: 300, search_query: electric vehicle}
+  - {name: space_evtol_us,       enabled: false, industry_group: aerospace_space,     locations: [United States], max_items: 300}   # 11,000+ companies, mostly build-to-print (quailworks Q29): hiring search only
+  - {name: robotics_machines_us, enabled: false, industry_group: robotics_machines,   locations: [United States], max_items: 300}   # Quailworks GTM reads this market: hiring search only
+  - {name: energy_hardware_us,   enabled: false, industry_group: energy_hardware,     locations: [United States], max_items: 100}
+  # Parked
+  - {name: vehicle_parts_uk,     enabled: false, industry_group: vehicle_parts,       locations: [United Kingdom], max_items: 200}
+  - {name: engineering_services_uk, enabled: false, industry_group: engineering_services, locations: [United Kingdom], max_items: 200}
+
+# UK PECR allows business email to corporate subscribers (limited companies) with an opt-out; US
+# CAN-SPAM with an opt-out and postal address. Germany, Poland and other consent-first countries: no
+# cold email (decisions.md E4; quailworks Q8).
+allowed_countries: [GB, US]
+
+exclusions:
+  # Company names containing any of these are dropped in Layer 1 (case-insensitive substring).
+  name_keywords:
+    - staffing
+    - recruiting
+    - recruitment
+    - consultancy
+    - consultants
+    - consulting
+    - design agency
+    - engineering services
+    - university
+    - college
+    - school
+    - academy
+    - association
+    - foundation
+    - circuit
+    - raceway
+    - speedway
+    - karting
+    - dealership
+  # Quailworks itself and its client. Real do-not-contact list (former employers, who are the warm list,
+  # current clients): private/exclusions.csv
+  domains: [quailworks.co, quailworks.xyz, themarblejar.io]
+
+# Layer 3: who we contact, in priority order. Max 2 per account (scoring.yaml enrichment_policy).
+personas:
+  engineering_leader:
+    - Chief Engineer
+    - Head of Engineering
+    - VP Engineering
+    - VP of Engineering
+    - Vice President of Engineering
+    - Vice President Engineering
+    - Engineering Director
+    - Director of Engineering
+    - Head of Mechanical Engineering
+    - Director of Mechanical Engineering
+    - Mechanical Engineering Manager
+    - Head of Mechanical
+    - Head of Design
+    - Chief Designer           # the head of the design office in motorsport
+    - Design Manager
+    - Design Office Manager
+    - Technical Director       # the usual UK motorsport and SME title for the head of engineering
+    - Head of Vehicle Engineering
+    - Head of Chassis
+    - Chassis Manager
+    - Head of Hardware
+    - Head of Product Development
+    - Engineering Manager
+    - CTO
+    - Chief Technology Officer
+  owner_led:          # used only for companies under about 150 employees (Layer 3)
+    - CEO
+    - Chief Executive Officer
+    - Founder
+    - Co-Founder
+    - Owner
+    - Managing Director
+    - President
+    - General Manager
+  # An entry matches at a word end but not inside a longer word.
+  exclude_titles: [Intern, Internship, Student, Trainee, Graduate, Apprentice, Assistant, Coordinator, Recruiter,
+                   Talent, Sales, Marketing, Electrical, Electronics, Software, Firmware, Quality, Test, Finance]

@@ -80,6 +80,11 @@ class SmartleadClient:
     def link_email_accounts(self, campaign_id: int, account_ids: list[int]) -> dict:
         return self._req("POST", f"/campaigns/{campaign_id}/email-accounts", json={"email_account_ids": account_ids})
 
+    def campaigns(self) -> list[dict]:
+        """Every campaign in the account: [{id, name, status, created_at, ...}]."""
+        data = self._req("GET", "/campaigns")
+        return data if isinstance(data, list) else data.get("data", data.get("campaigns", []))
+
     # email accounts
     def email_accounts(self) -> list[dict]:
         data = self._req("GET", "/email-accounts", params={"limit": 100})

@@ -55,3 +55,9 @@ auto_pause: {on_complaint: true, max_bounce_rate: 0.03, min_sent: 20}
 
 # `push --live` and `start` run only when the current database is backed up to the off-site vault (Q47).
 require_backup: true
+
+# Quailworks Engineering (campaigns QWE) is the founder's second offer. A company either offer emailed in the
+# last 90 days is held, so nobody gets two pitches from the same founder at once; push also reads QWE's
+# campaigns in the shared Smartlead account (Q52).
+avoid_overlap_with: [quailworks-engineering]
+overlap_days: 90

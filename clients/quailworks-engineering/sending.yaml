@@ -1,0 +1,56 @@
+# Layer 6: Smartlead sending settings (engine/gtm/layers/l6_send.py).
+# Mailbox limits come from limits.yaml. The Smartlead account (and SMARTLEAD_API_KEY) is the one every
+# Quailworks client already uses; this offer is kept apart by its own domains, mailboxes and `QWE`
+# campaigns (decisions.md E1, E2).
+
+campaign_prefix: "QWE"
+
+# Only mailboxes on these domains are linked to this offer's campaigns. A domain listed here and in another
+# client's sending.yaml stops push for both. Lent by Quailworks GTM on 2026-11-24 with the user's OK
+# (decisions.md E2): quailworks.work (3 Google, warm from 30 November) and quailworks.dev (3 Outlook, warm
+# from 4 December), all in the founder's name.
+mailbox_domains: [quailworks.work, quailworks.dev]
+
+# Never pitch a company that Quailworks' GTM offer emailed in the last 90 days: one founder, one company,
+# one conversation at a time (decisions.md E12). Company domains and names only; no contact data is shared.
+avoid_overlap_with: [quailworks]
+overlap_days: 90
+
+# UK first (decisions.md E4). US Central time keeps sends inside working hours from coast to coast.
+regions:
+  uk: {countries: [GB], timezone: Europe/London}
+  us: {countries: [US], timezone: America/Chicago}
+
+schedule:
+  days_of_the_week: [1, 2, 3, 4]   # Monday-Thursday
+  start_hour: "09:00"
+  end_hour: "16:30"
+  min_time_btw_emails: 8           # minutes between sends per mailbox
+
+settings:
+  track_open: false                # pixels hurt deliverability and are unreliable
+  track_click: false
+  stop_on_reply: true
+  stop_on_auto_reply: false
+  send_as_plain_text: true
+
+# Smartlead sends in upload order: the strongest companies first.
+send_order: best_first
+
+# Launch: only these tiers are uploaded. Add tier_3 once Tier 1-2 results prove the message.
+send_tiers: [tier_1, tier_2]
+
+# A second contact at the same company waits until the first one's sequence is over.
+stagger_days_same_account: 21
+
+# Mailboxes join a campaign only after 14 days of warm-up with a reputation of 95% or more.
+require_warmup: true
+min_warmup_days: 14
+min_warmup_reputation: 95
+spread_daily_cap: true
+
+# `sync` pauses an active campaign on any spam complaint, or when more than 3% of uploaded leads bounced.
+auto_pause: {on_complaint: true, max_bounce_rate: 0.03, min_sent: 20}
+
+# `push --live` and `start` run only when the current database is backed up to the off-site vault.
+require_backup: true

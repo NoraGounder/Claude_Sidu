@@ -1,0 +1,57 @@
+# Layer 1 by signal (engine/gtm/layers/l1_hiring.py): companies that posted a mechanical design job in
+# the last 30 days, found with BlitzAPI's "companies hiring" search on the flat plan Quailworks already
+# pays for (decisions.md E1). A company hiring a designer has budget for the work and a gap right now:
+# the same logic as Quailworks' own sales-hiring signal (quailworks Q12). Each search names the icp.yaml
+# segment its companies count towards. Layer 2 and Jev 1.14 still confirm each role before it is quoted.
+#   python -m gtm --client quailworks-engineering discover-hiring --dry-run
+
+# Jev 1.14 decides per title whether it is a mechanical design role (ai.yaml job_titles), so a wide list
+# here does not loosen the signal.
+job_titles: [Mechanical Design Engineer, Design Engineer, Senior Design Engineer, Lead Design Engineer,
+             Mechanical Engineer, Senior Mechanical Engineer, CAD Engineer, CAD Designer, Mechanical Designer,
+             Chassis Engineer, Suspension Design Engineer, Vehicle Design Engineer, Composites Design Engineer,
+             Structures Design Engineer, Product Design Engineer, Design Draughtsman]
+posted_last_days: 30
+job_countries: [GB, US]
+
+# `discover-hiring --postings`: live postings stored as evidence on accounts we already have, so a company
+# that starts hiring after its first crawl moves up (quailworks Q48). Weekly.
+postings: {max_postings: 1500}
+
+searches:
+  # United Kingdom
+  - {name: hiring_vehicles_uk, segment: vehicles_uk, max_items: 200, hq_countries: [GB],
+     industries: [Motor Vehicle Manufacturing, Alternative Fuel Vehicle Manufacturing]}
+  - {name: hiring_motorsport_uk, segment: motorsport_uk, max_items: 100, hq_countries: [GB],
+     industries: [Spectator Sports, Motor Vehicle Manufacturing], keywords: [motorsport, racing, race car]}
+  - {name: hiring_aerospace_space_uk, segment: aerospace_space_uk, max_items: 200, hq_countries: [GB],
+     industries: [Defense and Space Manufacturing, Aviation and Aerospace Component Manufacturing, Airlines and Aviation]}
+  - {name: hiring_robotics_machines_uk, segment: robotics_machines_uk, max_items: 150, hq_countries: [GB],
+     industries: [Automation Machinery Manufacturing, Robot Manufacturing, Robotics Engineering, Industrial Machinery Manufacturing]}
+  # United States (commercial programmes; Jev's ICP fit marks ITAR-bound defence work a poor fit, E5)
+  - {name: hiring_vehicles_us, segment: ev_vehicles_us, max_items: 200, hq_countries: [US],
+     industries: [Motor Vehicle Manufacturing, Alternative Fuel Vehicle Manufacturing, Spectator Sports]}
+  - {name: hiring_space_evtol_us, segment: space_evtol_us, max_items: 200, hq_countries: [US],
+     industries: [Defense and Space Manufacturing, Aviation and Aerospace Component Manufacturing, Airlines and Aviation],
+     keywords: [space, launch, satellite, eVTOL, electric aircraft, drone, propulsion]}
+  - {name: hiring_robotics_machines_us, segment: robotics_machines_us, max_items: 150, hq_countries: [US],
+     industries: [Automation Machinery Manufacturing, Robot Manufacturing, Robotics Engineering]}
+  - {name: hiring_energy_hardware, segment: energy_hardware_uk, enabled: false, max_items: 100, hq_countries: [GB, US],
+     industries: [Renewable Energy Equipment Manufacturing]}
+
+# `discover-companies` (decisions.md E14): the same markets by firmographics alone, on the flat BlitzAPI plan.
+# These replace the industry searches on Apify (icp.yaml segments, now disabled), so this client spends
+# nothing on Apify. Each company still goes through Layer 2 (crawl, signals, Jev) before anyone is contacted.
+company_searches:
+  - {name: companies_motorsport_uk, segment: motorsport_uk, max_items: 300, hq_countries: [GB],
+     industries: [Motor Vehicle Manufacturing, Spectator Sports], keywords: [motorsport, racing, race car]}
+  - {name: companies_vehicles_uk, segment: vehicles_uk, max_items: 300, hq_countries: [GB],
+     industries: [Motor Vehicle Manufacturing, Alternative Fuel Vehicle Manufacturing]}
+  - {name: companies_aerospace_space_uk, segment: aerospace_space_uk, max_items: 300, hq_countries: [GB],
+     industries: [Defense and Space Manufacturing, Aviation and Aerospace Component Manufacturing, Airlines and Aviation]}
+  - {name: companies_robotics_machines_uk, segment: robotics_machines_uk, max_items: 200, hq_countries: [GB],
+     industries: [Automation Machinery Manufacturing, Robot Manufacturing, Robotics Engineering, Industrial Machinery Manufacturing]}
+  - {name: companies_motorsport_us, segment: motorsport_us, max_items: 200, hq_countries: [US],
+     industries: [Motor Vehicle Manufacturing, Spectator Sports], keywords: [motorsport, racing, race car]}
+  - {name: companies_ev_vehicles_us, segment: ev_vehicles_us, max_items: 300, hq_countries: [US],
+     industries: [Motor Vehicle Manufacturing, Alternative Fuel Vehicle Manufacturing], keywords: [electric vehicle, EV]}

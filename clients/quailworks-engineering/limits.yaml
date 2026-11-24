@@ -1,0 +1,37 @@
+# Layer 0: hard caps. The engine refuses any paid run that would push a vendor past its monthly budget.
+# Raise a cap only when the user asks. Vendor accounts are the ones Quailworks already pays for and
+# shares with its other clients; the guard counts each client separately (decisions.md E1).
+#
+# Trial caps from clients/_template, except BlitzAPI records: the flat plan is already paid and mostly
+# unused (the user, 2026-11-19: use the subscriptions we already pay for).
+
+month_budget_usd:
+  apify: 0           # 2026-11-24: company searches moved to the flat BlitzAPI plan (decisions.md E14)
+  leadmagic: 0       # not used
+  fullenrich: 20     # trial cap: fallback only, BlitzAPI finds most emails (quailworks Q39)
+  millionverifier: 5   # trial cap: prepaid credits, about 1,250 checks
+  openrouter: 2      # TypeSafe Jev 1.14 decisions only (see ai.yaml)
+  blitzapi: 0        # flat $99 Start plan, paid outside the engine: no charge per call (quailworks Q44)
+  blitzapi_records: 10000  # of the plan's 200,000 a month (the user, 2026-11-24: use as much of BlitzAPI as we can):
+                           # company searches 1,600, hiring searches 1,200, postings 1,500, people about 1,200, emails
+
+# Unit prices used for estimates before a run (USD per item), as for Quailworks (checked 2026-11-06).
+unit_price_usd:
+  "harvestapi/linkedin-company-search:short": 0.002
+  "harvestapi/linkedin-company-search:full": 0.004
+  "harvestapi/linkedin-profile-search:full": 0.0032
+  "harvestapi/linkedin-job-search:job": 0.001
+  "blitzapi:record": 0.0
+  "openrouter:typesafe/jev-1.14:request": 0.0001
+  "fullenrich:credit": 0.055
+  "fullenrich:person_returned": 0.01375
+  "fullenrich:work_email": 0.055
+  "millionverifier:check": 0.004
+
+sending:
+  # 6 mailboxes on quailworks.work and quailworks.dev (decisions.md E2). Ramp kept by the campaign total:
+  # week 1: 15 a day; week 2: 30; week 3 on: 45, each step only if bounces stay under 2% and there are no
+  # spam complaints. These values are week 1; Claude Code raises them per the ramp.
+  max_emails_per_day: 15
+  max_per_mailbox_per_day: 5
+  max_contacts_per_account: 2

@@ -1,0 +1,125 @@
+# Layer 0 rules, applied in Layer 2. Two separate scores (0-100), then a tier (decisions.md E5).
+# Calibrate on the first 20 Tier 1 accounts: the founder reads them (he is the buyer's peer) and the
+# weights move until the companies he would most like to work for land in Tier 1.
+
+fit:
+  employees:
+    in_range: 30          # 11-500
+    sweet_spot: [20, 250] # an engineering team, but no in-house bench to absorb peaks
+    sweet_spot_bonus: 10
+  industry_group:
+    motorsport: 25            # the founder's deepest track record
+    vehicles: 25
+    aerospace_space: 25
+    robotics_machines: 20
+    energy_hardware: 15
+    vehicle_parts: 5          # parked: price-led (E5)
+    engineering_services: 0   # competitors (E11)
+  country:
+    GB: 15                # UK first: track record, time zone, no export-control barrier (E4)
+    US: 10
+  website_reachable: 5
+  dutch_language_site: 0
+  # A division of a large group usually buys engineering through group procurement.
+  subsidiary_of_large_group: -15
+  # TypeSafe Jev 1.14's ICP score (0 poor .. 2 strong), scaled to 0-15 points.
+  jev_icp_fit: 15
+  # Similarity to won clients (private/best_clients.csv). No effect until it exists.
+  jev_lookalike: 20
+
+signals:
+  design_job_ad: 35        # hiring a mechanical design engineer: budget for the work and a gap now (E5)
+  multiple_design_ads: 15  # two or more design roles open at once
+  cad_platform: 10         # CATIA, NX or Creo named in a job ad: the founder can work in their CAD from day one
+  new_programme: 15        # a prototype, first flight, test campaign, unveiling or contract win: a deadline
+  venture_backed: 15       # named investors or a funding round: money to spend, a board waiting for hardware
+  trade_show: 10           # exhibiting: a show date is a design deadline
+  headcount_growth: 10     # several open roles, growth language, a new facility
+  supplier_certification: 5   # AS9100 or IATF 16949: designs parts for aerospace or automotive programmes
+
+signal_bonuses:
+  multiple_design_ads: {signal: design_job_ad, min_labels: 2}
+
+# Evidence rules for this client. Patterns are case-insensitive unless listed in case_sensitive_signals.
+# The design-role labels are written not to overlap, so one title cannot count as two roles.
+detect:
+  design_job_ad:
+    - {label: "mechanical design engineer", pattern: 'mechanical\s+design\s+engineers?\b'}
+    - {label: "design engineer", pattern: '(?<!mechanical\s)(?<!electrical\s)(?<!electronics\s)(?<!electronic\s)(?<!hardware\s)(?<!chassis\s)(?<!suspension\s)(?<!composites\s)(?<!composite\s)(?<!pcb\s)(?<!rf\s)\bdesign\s+engineers?\b'}
+    - {label: "mechanical engineer", pattern: '\bmechanical\s+engineers?\b'}
+    - {label: "CAD engineer", pattern: '\bcad\s+(engineer|designer|technician)s?\b'}
+    - {label: "chassis engineer", pattern: '\b(chassis|suspension)\s+(design\s+)?engineers?\b'}
+    - {label: "composites design engineer", pattern: '\bcomposites?\s+design\s+engineers?\b'}
+    - {label: "mechanical designer", pattern: '\bmechanical\s+designers?\b|\bdesign\s+draughts\w*|\bdraughts(man|person)\b|\bdrafts(man|person)\b'}
+  cad_platform:
+    - {label: "CATIA", pattern: '\bcatia\b|\b3dexperience\b'}
+    - {label: "Siemens NX", pattern: '\bsiemens\s+nx\b|\bunigraphics\b|\bnx\s+(cad|cam)\b'}
+    - {label: "Creo", pattern: '\bptc\s+creo\b|\bcreo\s+(parametric|\d)|\bcreo\b(?=[^.]{0,40}\b(cad|3d|modelling|modeling)\b)'}
+  new_programme:
+    - {label: "prototype", pattern: '\b(first|new)\s+prototype\b|\bprototype\s+(build|vehicle|car|aircraft|vehicles)\b'}
+    - {label: "test campaign", pattern: '\bfirst\s+flight\b|\b(hot|static)[\s-]fire\b|\btest\s+campaign\b|\bmaiden\s+(flight|launch)\b'}
+    - {label: "unveiling", pattern: '\b(unveil|unveils|unveiled|reveals|revealed)\s+(the\s+|its\s+|our\s+)?(new|first|all-new)\b'}
+    - {label: "contract win", pattern: '\bawarded\s+(a\s+)?(\$[\d.,]+\s?\w*\s+)?contract\b|\bwins?\s+(a\s+)?contract\b|\bselected\s+(by|to\s+supply)\b'}
+  trade_show:
+    - {label: "Autosport International", pattern: 'autosport\s+international'}
+    - {label: "Advanced Engineering", pattern: 'advanced\s+engineering\s+(show|20\d\d)'}
+    - {label: "Engineering Design Show", pattern: 'engineering\s+design\s+show'}
+    - {label: "PMW Expo", pattern: '\bpmw\s+expo\b|performance\s+motorsports?\s+world'}
+    - {label: "PRI Show", pattern: '\bPRI\s+(show|trade\s+show|20\d\d)\b'}
+    - {label: "SEMA", pattern: '\bSEMA\s+(show|20\d\d)\b'}
+    - {label: "Farnborough", pattern: 'farnborough\s+(international\s+)?airshow|\bfarnborough\s+20\d\d\b'}
+    - {label: "Paris Air Show", pattern: 'paris\s+air\s+show'}
+    - {label: "Space-Comm Expo", pattern: 'space[\s-]comm\s+expo'}
+    - {label: "Space Symposium", pattern: 'space\s+symposium'}
+    - {label: "JEC World", pattern: 'jec\s+world'}
+    - {label: "CAMX", pattern: '\bcamx\b'}
+    - {label: "The Battery Show", pattern: 'the\s+battery\s+show'}
+    - {label: "Formnext", pattern: '\bformnext\b'}
+    - {label: "RAPID + TCT", pattern: 'rapid\s*\+\s*tct'}
+    - {label: "Automate", pattern: '\bautomate\s+20\d\d\b'}
+    - {label: "Hannover Messe", pattern: 'hannover\s+messe'}
+    - {label: "visit us at our stand", pattern: 'visit\s+us\s+at\s+(our\s+)?(booth|stand)|booth\s*#\s*\d+'}
+  supplier_certification:
+    - {label: "AS9100", pattern: '\bAS\s?9100\w*'}
+    - {label: "IATF 16949", pattern: '\bIATF\s?16949\b'}
+  venture_backed:
+    - {label: "backed by investors", pattern: '\bbacked\s+by\s+(leading\s+|top\s+)?(investors|VCs?|(?-i:[A-Z][\w&]+))'}
+    - {label: "Series round", pattern: '\bseries\s+[A-D]\s+(round|funding|financing|investment)\b|\b(raised|raises|closes|closed)\s+(a\s+)?[\$£€]\s?\d+(\.\d+)?\s*(M|million|B|billion)\b'}
+    - {label: "seed round", pattern: '\bseed\s+(round|funding|financing)\b'}
+  headcount_growth:
+    - {label: "growing team", pattern: "we're\\s+hiring|we\\s+are\\s+hiring|join\\s+our\\s+growing\\s+team|fast[\\s-]growing|rapidly\\s+growing"}
+    - {label: "new facility", pattern: 'new\s+(facility|headquarters|production\s+facility|manufacturing\s+facility|technical\s+centre|technical\s+center)'}
+  subsidiary_of_large_group:
+    - {label: "part of (EN)", pattern: '(?i:(part|member|subsidiary)\s+of\s+(the\s+)?)[A-Z][\w&\-]+(\s+[A-Z][\w&\-]+){0,2}\s+(?i:group)'}
+    - {label: "division of", pattern: '(?i:\ba\s+(division|subsidiary)\s+of\s+)[A-Z][\w&\-]+'}
+
+# Job-ad words describe products on a homepage, so these count only on careers or vacancy pages.
+job_page_signals: [design_job_ad, cad_platform]
+quote_width: 160
+matches_per_label: 3
+# Open jobs from the public feeds of Greenhouse, Lever and Ashby job boards; jobs placed elsewhere are left out.
+job_boards: {countries: [GB, US]}
+case_sensitive_signals: [subsidiary_of_large_group]
+
+tiers:
+  # A UK company in range with a working site scores 75-100 on fit alone, so Tier 1 and 2 need a signal.
+  tier_1: {fit_min: 60, signal_min: 35}    # hiring a design engineer
+  tier_2: {fit_min: 60, signal_min: 20}    # e.g. a new programme plus funding, or a show plus growth
+  tier_3: {fit_min: 50}
+  tier_2_lookalike: {lookalike_min: 1.5, fit_min: 60}
+  # Jev 1.14 must rate the company at least a possible fit (1 of 2) for Tier 1-2.
+  min_jev_icp: 1.0
+
+enrichment_policy:
+  # People outside gate.yaml's contact countries (GB, US) are never selected or paid for.
+  only_sendable_countries: true
+  # People and work emails: BlitzAPI first (flat plan, already paid), FullEnrich only for what it misses (E1, E14).
+  people_first: blitzapi
+  email_first: blitzapi
+  tier_1: {max_contacts: 2}
+  tier_2: {max_contacts: 2}
+  tier_3: {max_contacts: 0}   # parked until Tier 1-2 replies show a message that works
+
+# Titles of live job postings stored by `discover-hiring --postings` count as careers-page titles;
+# Jev still checks each one.
+posted_jobs: true
