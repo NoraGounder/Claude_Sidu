@@ -481,6 +481,15 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   `jev --new-titles`, `contacts`, `gate --recheck`, `draft`, `approve`. Would change: send capacity growing (more mailboxes or
   a higher ramp), or Tier 3 companies converting as well as Tier 1-2 (then source deeper).
 
+- **Q50. Sixteen mailboxes on six domains (2026-11-24).** The founder added quailworks.dev (3 Outlook) and
+  quailworkshq.com (2 Outlook) on 20 November, sending in his name; both are Quailworks' only. All six domains
+  pass the DNS check (MX, SPF, DKIM, DMARC p=reject). Each mailbox joins a campaign by itself after 14 days
+  of warm-up at 95% or more (Q46): getquailworks.com and quailworksforward.com from 25 November,
+  quailworks.work and teamquailworks.com from 30 November, quailworks.dev and quailworkshq.com from
+  4 December. The ramp is unchanged (30 a day in week 1): more mailboxes means fewer emails per mailbox,
+  which protects the new domains; raising the ramp still needs the user's say-so. The rehearsal moves to
+  15:10 Warsaw on 25 November, after the first six pass 14 days (they were added 13:11-13:23 UTC).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):
