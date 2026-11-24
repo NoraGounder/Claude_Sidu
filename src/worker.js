@@ -36,11 +36,10 @@ const ALLOWED_ORIGINS = new Set(['https://quailworks.co', 'https://www.quailwork
 const LIMITS = { name: 100, email: 254, company: 120, role: 120, focus: 80, message: 4000 };
 const EMAIL_RE = /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]{2,}$/;
 const FOCUS_OPTIONS = new Set([
-  'Outbound pipeline generation',
-  'Inbound conversion and routing',
-  'CRM data quality and RevOps',
-  'AI research and automation',
-  "Not sure yet, we'd like an audit",
+  "Send me 10 accounts with a buying signal",
+  "A conversation about the Signal Engine",
+  "Inbound routing or CRM data",
+  "Not sure yet",
 ]);
 const MIN_FILL_MS = 3000; // humans take longer than this to fill the form
 const URL_RE = /(https?:\/\/|www\.)\S+/gi;

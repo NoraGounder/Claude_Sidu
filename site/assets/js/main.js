@@ -44,32 +44,32 @@
   var CHECK = '<span class="check"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-4.8" stroke="#4CC38A" stroke-width="1.6"/></svg></span>';
   var scenarios = [
     {
-      type: 'Job change', text: 'Former champion <b>Dana Okafor</b> joined Northwind Freight as VP Sales',
-      name: 'Northwind Freight', meta: 'Logistics · 1,200 employees · Series C', tier: 'Tier 1', scores: [92, 81, 88],
-      people: [['DO', 'Dana Okafor', 'VP Sales · former champion'], ['LO', 'Luis Ortega', 'Head of Revenue Operations'], ['PN', 'Priya Nair', 'Chief Financial Officer']],
-      play: 'Champion moved',
-      actions: ['Enriched through a 3-provider waterfall', 'Scored against your closed-won model', 'Routed to <b>Maya Rivera</b>, AE West', 'Warm intro drafted for rep review', 'LinkedIn touch queued', 'Salesforce opportunity created', 'Alert posted to <b>#pipeline-west</b>']
+      type: "Hiring", text: "<b>Halden Robotics</b> posted Account Executive, Austin",
+      name: "Halden Robotics", meta: "Robotics · 140 employees · Austin, TX", tier: "Tier 1", scores: [92, 85, 90],
+      people: [["MR", "Maya Reyes", "VP Sales"], ["JT", "Jonas Thiel", "Chief Executive Officer"], ["AK", "Anika Rao", "Head of Marketing"]],
+      play: "Hiring for sales",
+      actions: ["Open role confirmed on their job board", "Fit checked against your customer profile", "Decision-maker found: <b>VP Sales</b>", "Work email verified", "Email written from 3 sourced facts", "Sent in your name, 9:12 their time", "Reply answered, meeting brief ready"]
     },
     {
-      type: 'Hiring', text: '<b>Contoso Analytics</b> opened 6 SDR roles in Chicago',
-      name: 'Contoso Analytics', meta: 'B2B software · 480 employees · Series B', tier: 'Tier 1', scores: [88, 74, 91],
-      people: [['SW', 'Sam Whitfield', 'Chief Revenue Officer'], ['AB', 'Aisha Bello', 'Director, Sales Operations'], ['TB', 'Tom Brandt', 'Head of Sales Development']],
-      play: 'Scaling a sales team',
-      actions: ['Enriched through a 3-provider waterfall', 'Scored against your closed-won model', 'Routed to <b>Jordan Lee</b>, AE Mid-market', '3-step sequence drafted for review', 'LinkedIn touch queued', 'HubSpot deal created', 'Alert posted to <b>#pipeline-mm</b>']
+      type: "Trade show", text: "<b>Northlane Automation</b> exhibits at Automate, booth 4120",
+      name: "Northlane Automation", meta: "Industrial automation · 320 employees · Detroit, MI", tier: "Tier 2", scores: [86, 62, 88],
+      people: [["DP", "Dev Patel", "Director of Business Development"], ["SL", "Sara Lind", "VP Marketing"], ["RC", "Rui Costa", "Chief Commercial Officer"]],
+      play: "Before the show",
+      actions: ["Exhibitor page read, booth confirmed", "Fit checked against your customer profile", "Decision-maker found: <b>Director of BD</b>", "Work email verified", "Email written around the show", "Sent in your name, 8:40 their time", "Reply answered, meeting brief ready"]
     },
     {
-      type: 'Web intent', text: '<b>Fabrikam Payments</b> viewed /pricing three times this week',
-      name: 'Fabrikam Payments', meta: 'Fintech · 2,300 employees · Public', tier: 'Tier 1', scores: [84, 95, 77],
-      people: [['EH', 'Elena Hart', 'SVP Sales'], ['RK', 'Raj Kapoor', 'VP Revenue Operations'], ['MC', 'Mei Chen', 'Director, Procurement']],
-      play: 'High-intent visit',
-      actions: ['Website visit resolved to account', 'Scored against your closed-won model', 'Routed to <b>Chris Park</b>, Enterprise AE', 'Meeting brief generated for the AE', 'Retargeting audience updated', 'Salesforce activity logged', 'Alert posted to <b>#enterprise-deals</b>']
+      type: "Growth", text: "<b>Corvid Vision</b> lists 14 open roles this month",
+      name: "Corvid Vision", meta: "Machine vision software · 85 employees · Boston, MA", tier: "Tier 2", scores: [89, 58, 76],
+      people: [["EL", "Elena Larsen", "Chief Executive Officer"], ["TB", "Tom Brandt", "Head of Sales"], ["NA", "Noor Aziz", "Marketing Director"]],
+      play: "Growing fast",
+      actions: ["14 open roles counted on their job board", "Fit checked against your customer profile", "Decision-maker found: <b>Head of Sales</b>", "Work email verified", "Email written from 2 sourced facts", "Sent in your name, 10:05 their time", "Reply answered, meeting brief ready"]
     },
     {
-      type: 'Funding', text: '<b>Tailspin Health</b> announced a $60M Series C',
-      name: 'Tailspin Health', meta: 'Healthtech · 900 employees · Series C', tier: 'Tier 2', scores: [79, 68, 94],
-      people: [['NA', 'Noah Adams', 'Chief Operating Officer'], ['GL', 'Grace Liu', 'VP Sales'], ['OB', 'Omar Baker', 'Head of Growth']],
-      play: 'Fresh funding',
-      actions: ['Enriched through a 3-provider waterfall', 'Scored against your closed-won model', 'Routed to <b>Maya Rivera</b>, AE West', 'Congratulations note drafted for review', 'Added to executive nurture track', 'Salesforce account updated', 'Alert posted to <b>#pipeline-west</b>']
+      type: "Hiring", text: "<b>Ferro Systems</b> posted Sales Engineer, Chicago",
+      name: "Ferro Systems", meta: "Manufacturing software · 210 employees · Chicago, IL", tier: "Tier 1", scores: [94, 80, 87],
+      people: [["GL", "Grace Liu", "Chief Revenue Officer"], ["OB", "Omar Baker", "VP Sales"], ["HS", "Hana Sato", "Head of Growth"]],
+      play: "Hiring for sales",
+      actions: ["Open role confirmed on their job board", "Fit checked against your customer profile", "Decision-maker found: <b>Chief Revenue Officer</b>", "Work email verified", "Email written from 3 sourced facts", "Sent in your name, 9:30 their time", "Reply answered, meeting brief ready"]
     }
   ];
   var TIMES = ['just now', '4m ago', '11m ago', '26m ago'];
