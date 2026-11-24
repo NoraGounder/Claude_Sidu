@@ -188,14 +188,14 @@ phone from Form 5500.
 go out through the shared Smartlead account (`eta-send`). Quailworks recommended his own mailbox and a letter for
 the first six because every sending domain carries the Quailworks name; Sidarth chose Smartlead for speed.
 
-**How.** ETA takes `quailworkshq.com` (two mailboxes), which was in Smartlead but in no client's `mailbox_domains`,
-so Quailworks keeps its four listed domains and `quailworks.dev`, and tomorrow's rehearsal is untouched (one
-domain, one client). Each email says it comes from a Quailworks address because Sidarth runs Quailworks, and that
-the search is personal (`domain_note` in sending.yaml). One campaign "ETA | US | <month>", plain text, no tracking,
-two emails at most (follow-up on day 7), any reply stops it, three new owners a day. Mailboxes join after 10 days
-of warm-up at 95%+ (Quailworks' bulk launch waits 14; a handful of one-to-one emails a day needs less), so the
-first send is possible from about 2026-11-30. Sidarth's own details stay in `clients/eta/private/sender.yaml`.
-`eta-send` is a dry run; `--live` uploads paused; `--start --i-confirm` sends, each only after his approval.
+**How.** Sidarth split the Quailworks-named domains the same day (one domain, one client): Quailworks keeps
+getquailworks.com, quailworksforward.com and teamquailworks.com; Quailworks Engineering takes quailworks.work and
+quailworks.dev; ETA takes `quailworkshq.com` (two mailboxes). Each email says it comes from a Quailworks address
+because Sidarth runs Quailworks, and that the search is personal (`domain_note` in sending.yaml). One campaign
+"ETA | US | <month>", plain text, no tracking, two emails at most (follow-up on day 7), any reply stops it, three
+new owners a day. Mailboxes join after the same 14 days of warm-up at 95%+ as Quailworks, so the first send is
+possible from 2026-12-04. Sidarth's own details stay in `clients/eta/private/sender.yaml`. `eta-send` is a dry
+run; `--live` uploads paused; `--start --i-confirm` sends, each only after his approval of the exact text.
 
 **What would change it.** Owners reading the Quailworks name as a sales pitch (replies saying so, or no replies
 from the first ten while letters get answers), or more than about 50 owners a month: then one or two neutral

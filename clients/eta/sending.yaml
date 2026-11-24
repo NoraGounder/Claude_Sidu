@@ -4,8 +4,9 @@
 
 campaign_prefix: "ETA"
 
-# One domain, one client: quailworkshq.com was in Smartlead but in no client's list (2026-11-24). Quailworks keeps
-# its four domains and quailworks.dev. A domain listed here and in another client's sending.yaml stops both.
+# One domain, one client (Sidarth's split, 2026-11-24): Quailworks getquailworks.com, quailworksforward.com,
+# teamquailworks.com; Quailworks Engineering quailworks.work, quailworks.dev; ETA quailworkshq.com (2 mailboxes).
+# A domain listed here and in another client's sending.yaml stops push for both.
 mailbox_domains: [quailworkshq.com]
 
 # The sending address says Quailworks, so the email says why (decisions.md E12). Shown above the signature.
@@ -32,8 +33,7 @@ settings:
 # At most one follow-up, as the email promises.
 follow_up_day: 7
 
-# A handful of one-to-one emails a day: 10 days of warm-up at 95% or more is enough (Quailworks' bulk launch
-# waits 14). The guard is the same Layer 6 mailbox check.
+# The same 14-day warm-up rule as Quailworks (Q46): the mailboxes were added 2026-11-20, so ready 2026-12-04.
 require_warmup: true
-min_warmup_days: 10
+min_warmup_days: 14
 min_warmup_reputation: 95

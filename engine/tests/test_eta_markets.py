@@ -471,7 +471,7 @@ def test_eta_send_holds_until_details_then_uploads_paused_to_own_domain_only(env
     assert "{{" not in body and "Pat Buyer" in body and "Quailworks address" in body and "1 Main St" in body
     assert p["ready"][0]["subject"] == "Strong Mechanical: a question about the long term"
 
-    sl = FakeSmartlead([_mailbox(1, "a@quailworkshq.com", 12), _mailbox(2, "b@getquailworks.com", 30),
+    sl = FakeSmartlead([_mailbox(1, "a@quailworkshq.com", 16), _mailbox(2, "b@getquailworks.com", 30),
                         _mailbox(3, "c@quailworkshq.com", 3)])
     r = send.push(conn, cfg, sl)
     assert r["pushed"] == 1 and r["mailboxes"] == 1
