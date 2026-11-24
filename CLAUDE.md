@@ -85,6 +85,7 @@ python -m gtm --client the-marble-jar retention                # DPA deletion sc
 python -m gtm --client the-marble-jar learn                    # conversations, meetings and revenue per signal, opening, tier
 python -m gtm --client quailworks sample --name "Acme" --roles "Controls Engineer" --search "packaging" --exclude "Acme"   # Signal Sample from job postings (sample.yaml)
 python -m gtm --client quailworks discover-hiring --dry-run   # Layer 1 by signal: companies hiring for the role (BlitzAPI, hiring.yaml)
+python -m gtm --client quailworks-engineering discover-companies --dry-run   # Layer 1 by firmographics on BlitzAPI (hiring.yaml company_searches)
 python -m gtm --client quailworks funnel                      # funnel and cost per step, this client only (free)
 python -m gtm --client quailworks linkedin                    # yesterday's Tier 1 contacts, for manual LinkedIn requests
 python -m gtm --client quailworks markets --refresh           # weekly: hiring companies per segment, named in email 1 (markets.yaml)
@@ -172,5 +173,8 @@ them, The Marble Jar's original behaviour applies (`engine/tests/test_quailworks
   prospect's market in email 1 (`markets --refresh` weekly; `never_name` keeps vendors and recruiters out)
 - `hiring.yaml`: discovery by hiring signal (`discover-hiring`, BlitzAPI): job titles, industries per
   search; `limits.yaml` `blitzapi_records` caps the records used a month. `scoring.yaml`
-  `enrichment_policy.email_first: blitzapi` tries BlitzAPI for work emails before FullEnrich
+  `enrichment_policy.email_first: blitzapi` tries BlitzAPI for work emails before FullEnrich;
+  `enrichment_policy.people_first: blitzapi` searches people on BlitzAPI's title waterfall (personas as tiers)
+  and pays FullEnrich only for companies it returns nobody for; hiring.yaml `company_searches` +
+  `discover-companies` find companies by firmographics on the flat plan instead of Harvest on Apify
 - `.claude/skills/`: one skill per runnable layer

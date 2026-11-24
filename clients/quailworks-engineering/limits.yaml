@@ -6,13 +6,14 @@
 # unused (the user, 2026-11-19: use the subscriptions we already pay for).
 
 month_budget_usd:
-  apify: 15          # trial cap: the six UK/US industry searches are about 1,600 companies, $6.40
+  apify: 0           # 2026-11-24: company searches moved to the flat BlitzAPI plan (decisions.md E14)
   leadmagic: 0       # not used
   fullenrich: 20     # trial cap: fallback only, BlitzAPI finds most emails (quailworks Q39)
   millionverifier: 5   # trial cap: prepaid credits, about 1,250 checks
   openrouter: 2      # TypeSafe Jev 1.14 decisions only (see ai.yaml)
   blitzapi: 0        # flat $99 Start plan, paid outside the engine: no charge per call (quailworks Q44)
-  blitzapi_records: 5000  # of the plan's 200,000 a month; hiring searches about 1,200, postings 1,500, emails
+  blitzapi_records: 10000  # of the plan's 200,000 a month (the user, 2026-11-24: use as much of BlitzAPI as we can):
+                           # company searches 1,600, hiring searches 1,200, postings 1,500, people about 1,200, emails
 
 # Unit prices used for estimates before a run (USD per item), as for Quailworks (checked 2026-11-06).
 unit_price_usd:

@@ -98,7 +98,42 @@ def _person_fields(p: dict) -> dict:
         "title": pick(p, "employment.current.title", "headline"),
         "linkedin_url": pick(p, "social_profiles.professional_network.url"),
         "country": pick(p, "location.country_code", "location.country"),
+        "source": p.get("_source") or "FullEnrich people search",
     }
+
+
+def _same_company(a: str | None, b: str | None) -> bool:
+    from gtm.normalize import normalize_linkedin_company_url
+    return bool(a and b) and normalize_linkedin_company_url(a) == normalize_linkedin_company_url(b)
+
+
+def blitz_person(result: dict, company_linkedin_url: str | None) -> dict:
+    """One BlitzAPI waterfall result in the FullEnrich person shape that `screen` reads. The title is the
+    person's current job at this company (their LinkedIn headline only when no current job is listed)."""
+    p = result.get("person") or {}
+    jobs = [e for e in p.get("experiences") or [] if e.get("job_is_current")]
+    here = next((e for e in jobs if _same_company(e.get("company_linkedin_url"), company_linkedin_url)), None)
+    title = (here or (jobs[0] if jobs else {})).get("job_title") or p.get("headline")
+    url = p.get("linkedin_url")
+    return {"id": url, "full_name": p.get("full_name"), "first_name": p.get("first_name"),
+            "last_name": p.get("last_name"), "employment": {"current": {"title": title}}, "headline": p.get("headline"),
+            "social_profiles": {"professional_network": {"url": url}},
+            "location": {"country_code": (p.get("location") or {}).get("country_code")},
+            "_source": "BlitzAPI people search"}
+
+
+def blitz_cascade(cfg: ClientConfig) -> list[dict]:
+    """The personas, in priority order, as BlitzAPI waterfall tiers (at most 10 tiers of 50 titles)."""
+    excluded = cfg.icp.personas.get("exclude_titles", [])
+    return [{"include_title": titles[:50], "exclude_title": excluded[:50], "location": ["WORLD"],
+             "include_headline_search": False}
+            for persona, titles in cfg.icp.personas.items() if persona != "exclude_titles" and titles][:10]
+
+
+def people_first(cfg: ClientConfig) -> str | None:
+    """Optional (scoring.yaml enrichment_policy.people_first: blitzapi): search people on BlitzAPI's flat plan
+    first, and pay FullEnrich only for companies BlitzAPI returns nobody for."""
+    return cfg.scoring.get("enrichment_policy", {}).get("people_first")
 
 
 def sendable_countries(cfg: ClientConfig) -> set[str] | None:
@@ -182,34 +217,59 @@ def _store(conn, cfg, account_id: int, c: dict, status: str, rank: int | None, r
         " status=excluded.status, rank=excluded.rank, jev_relevance=excluded.jev_relevance, updated_at=excluded.updated_at",
         (cfg.slug, account_id, c["person_id"], c["full_name"], c["first_name"], c["last_name"], c["title"],
          c["linkedin_url"], c["country"], c["persona"], c.get("jev_relevance"), rank, status, reason,
-         f"FullEnrich people search, {ts[:10]}", ts, ts))
+         f"{c.get('source') or 'FullEnrich people search'}, {ts[:10]}", ts, ts))
     return conn.execute("SELECT id FROM contacts WHERE client=? AND account_id=? AND person_id=?",
                         (cfg.slug, account_id, c["person_id"])).fetchone()[0]
 
 
 def find_people(cfg: ClientConfig, conn, cp: ContactPlan, fe: FullEnrichClient | None = None,
-                jev: JevClient | None = None) -> dict:
-    """Steps 1-4. Stops on a Jev failure (no fallback); people already found are kept."""
+                jev: JevClient | None = None, blitz=None) -> dict:
+    """Steps 1-4. Stops on a Jev failure (no fallback); people already found are kept. With
+    enrichment_policy.people_first: blitzapi, BlitzAPI's flat plan searches first and FullEnrich (paid per
+    person) only searches companies BlitzAPI returned nobody for, each within FullEnrich's budget."""
     check_policy(cfg.ai)
-    fe = fe or FullEnrichClient()
     jev = jev or JevClient(cfg.ai)
-    budget.check(conn, cfg, VENDOR, cp.est_search_cost)
+    use_blitz = people_first(cfg) == "blitzapi"
+    if use_blitz:
+        from gtm.layers.l1_hiring import check_records
+        from gtm.sources.blitz import BlitzClient
+        check_records(conn, cfg, len(cp.accounts) * cp.search_limit)
+        blitz = blitz or BlitzClient()
+        cascade = blitz_cascade(cfg)
+    else:
+        budget.check(conn, cfg, VENDOR, cp.est_search_cost)
     titles = [t for p, ts in cfg.icp.personas.items() if p != "exclude_titles" for t in ts]
     credit_usd = cfg.limits.unit_price_usd["fullenrich:credit"]
-    totals = {"accounts": 0, "people_returned": 0, "candidates": 0, "selected": 0, "credits": 0.0}
+    per_account = budget.estimate(cfg, SEARCH_KEY, cp.search_limit)
+    totals = {"accounts": 0, "people_returned": 0, "candidates": 0, "selected": 0, "credits": 0.0,
+              "blitzapi_people": 0, "fullenrich_searches": 0}
     run_id = db.start_run(conn, cfg.slug, "L3-search", VENDOR, f"people search x{len(cp.accounts)}",
-                          cp.est_search_cost, {"accounts": len(cp.accounts), "limit": cp.search_limit})
+                          0.0 if use_blitz else cp.est_search_cost, {"accounts": len(cp.accounts), "limit": cp.search_limit})
+    blitz_run = db.start_run(conn, cfg.slug, "L3-search", "blitzapi", f"people search x{len(cp.accounts)}", 0.0,
+                             {"accounts": len(cp.accounts), "limit": cp.search_limit}) if use_blitz else None
     outcome = "failed"
     try:
         for acc in cp.accounts:
-            res = fe.search_people(acc["domain"], titles, limit=cp.search_limit)
+            people: list[dict] = []
+            if use_blitz and acc.get("linkedin_url"):
+                found = blitz.people(acc["linkedin_url"], cascade, max_results=cp.search_limit)
+                people = [blitz_person(r, acc["linkedin_url"]) for r in found]
+                totals["blitzapi_people"] += len(people)
+            credits = 0.0
+            if not people:
+                fe = fe or FullEnrichClient()
+                if use_blitz:
+                    budget.check(conn, cfg, VENDOR, per_account)    # fallback only, within FullEnrich's cap
+                res = fe.search_people(acc["domain"], titles, limit=cp.search_limit)
+                people, credits = res.people, res.credits
+                totals["fullenrich_searches"] += 1
             totals["accounts"] += 1
-            totals["people_returned"] += len(res.people)
-            totals["credits"] += res.credits
-            candidates = screen(cfg, acc, res.people)
+            totals["people_returned"] += len(people)
+            totals["credits"] += credits
+            candidates = screen(cfg, acc, people)
             totals["candidates"] += len(candidates)
             conn.execute("INSERT OR REPLACE INTO l3_progress(account_id, searched_at, found, credits)"
-                         " VALUES (?,?,?,?)", (acc["id"], db.now_iso(), len(candidates), res.credits))
+                         " VALUES (?,?,?,?)", (acc["id"], db.now_iso(), len(candidates), credits))
             if candidates:
                 state, questions = relevance_request(acc, candidates, cfg.icp.offer_summary,
                                                      brain.jev_context(cfg, "contact"),
@@ -233,8 +293,11 @@ def find_people(cfg: ClientConfig, conn, cp: ContactPlan, fe: FullEnrichClient |
             conn.commit()
         outcome = "succeeded"
     finally:
-        db.finish_run(conn, run_id, outcome, totals["people_returned"], round(totals["credits"] * credit_usd, 4),
-                      json.dumps(totals))
+        db.finish_run(conn, run_id, outcome, totals["people_returned"] - totals["blitzapi_people"],
+                      round(totals["credits"] * credit_usd, 4), json.dumps(totals))
+        if blitz_run is not None:   # records on the flat plan count towards limits.yaml blitzapi_records
+            db.finish_run(conn, blitz_run, outcome, totals["blitzapi_people"], 0.0,
+                          f"records remaining on the plan: {getattr(blitz, 'records_remaining', None)}")
     totals["cost_usd"] = round(totals["credits"] * credit_usd, 4)
     return totals
 

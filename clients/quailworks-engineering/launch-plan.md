@@ -6,9 +6,8 @@ same run order as Quailworks' own outbound (`clients/quailworks/launch-plan.md`)
 ## This week, in parallel
 
 **The user** (decisions.md E2, E6, E9, E10):
-- buys one sending domain with three SmartSenders mailboxes in the founder's name in the existing Smartlead
-  account, warm-up on (about $15 a month), and adds the domain to `sending.yaml mailbox_domains`. First sends
-  14 days later;
+- done 2026-11-24: quailworks.work and quailworks.dev (six mailboxes in the founder's name) lent by Quailworks
+  GTM (E2); they become warm on 30 November and 4 December;
 - writes to the warm list (20-30 people from past programmes and contract agencies) and puts former employers
   in `private/exclusions.csv`;
 - approves the one-page profile and the `/engineering` page on quailworks.co.
@@ -18,13 +17,13 @@ same run order as Quailworks' own outbound (`clients/quailworks/launch-plan.md`)
 ```bash
 python -m gtm --client quailworks-engineering discover-hiring --dry-run   # 7 searches, about 1,200 BlitzAPI records (flat plan)
 python -m gtm --client quailworks-engineering discover-hiring
-python -m gtm --client quailworks-engineering discover --dry-run          # 6 UK/US industry searches, about $6.40 on Apify
-python -m gtm --client quailworks-engineering discover
+python -m gtm --client quailworks-engineering discover-companies --dry-run   # 6 UK/US market searches, about 1,600 BlitzAPI records (flat plan, E14)
+python -m gtm --client quailworks-engineering discover-companies
 python -m gtm --client quailworks-engineering discover-hiring --postings  # live design postings onto every account
 python -m gtm --client quailworks-engineering prefilter                   # crawl and rules (free)
 python -m gtm --client quailworks-engineering jev                         # Jev 1.14 decisions, cents
 python -m gtm --client quailworks-engineering tiers --tier tier_1 --verbose   # the founder calibrates on the first 20
-python -m gtm --client quailworks-engineering contacts --dry-run          # Tier 1-2 only; BlitzAPI first, FullEnrich fallback
+python -m gtm --client quailworks-engineering contacts --dry-run          # Tier 1-2 only; people and emails on BlitzAPI first, FullEnrich fallback
 python -m gtm --client quailworks-engineering contacts --limit 10
 python -m gtm --client quailworks-engineering contacts
 python -m gtm --client quailworks-engineering gate --recheck              # MillionVerifier, every address
@@ -63,12 +62,12 @@ more, give it the volume.
 
 | Item | Plan | Extra per month |
 |---|---|---|
-| BlitzAPI | Quailworks' flat Start plan, 5,000 of 200,000 records | 0 |
+| BlitzAPI | Quailworks' flat Start plan, 10,000 of 200,000 records | 0 |
 | Smartlead | the existing account, `QWE` campaigns | 0 |
-| Mailboxes | 3 SmartSenders mailboxes on 1 new domain | about 15 |
-| Apify | Quailworks' existing plan, capped at $15 | up to 15 (about 6 for the first run) |
-| FullEnrich | shared credits, fallback only, capped at $20 | up to 20 |
+| Mailboxes | 6 existing mailboxes on quailworks.work and quailworks.dev (E2) | 0 |
+| Apify | not used: company searches run on BlitzAPI (E14) | 0 |
+| FullEnrich | shared credits, fallback for people and emails only, capped at $20 | 0-20 |
 | MillionVerifier | prepaid credits, capped at $5 | up to 5 |
 | TypeSafe Jev 1.14 | per request | under 2 |
 | HubSpot | Quailworks' own free portal | 0 |
-| **Total new spend** | | **about 15 fixed + 10-40 usage** |
+| **Total new spend** | | **about 0 fixed + 0-25 usage** |

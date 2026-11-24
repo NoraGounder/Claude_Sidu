@@ -113,7 +113,8 @@ tiers:
 enrichment_policy:
   # People outside gate.yaml's contact countries (GB, US) are never selected or paid for.
   only_sendable_countries: true
-  # Work emails: BlitzAPI first (flat plan, already paid), FullEnrich for the rest (E1).
+  # People and work emails: BlitzAPI first (flat plan, already paid), FullEnrich only for what it misses (E1, E14).
+  people_first: blitzapi
   email_first: blitzapi
   tier_1: {max_contacts: 2}
   tier_2: {max_contacts: 2}

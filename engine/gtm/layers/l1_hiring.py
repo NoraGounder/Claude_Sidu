@@ -42,6 +42,7 @@ class HiringPlan:
     company: dict
     max_items: int
     est_cost: float
+    kind: str = "hiring"        # "hiring": companies with a matching job posting; "companies": firmographics only
 
 
 def load_config(cfg: ClientConfig) -> dict:
@@ -89,6 +90,30 @@ def plan(cfg: ClientConfig, names: list[str] | None = None, max_items: int | Non
     return plans
 
 
+def plan_companies(cfg: ClientConfig, names: list[str] | None = None, max_items: int | None = None) -> list[HiringPlan]:
+    """Layer 1 by firmographics on the flat plan (hiring.yaml `company_searches`): the same filters as the
+    hiring searches (industries, keywords, HQ countries, the ICP's size band) without the job condition. It
+    replaces the paid industry searches on Apify; Layer 2 still crawls, scores and asks Jev about every company."""
+    conf = load_config(cfg)
+    plans = []
+    for s in conf.get("company_searches") or []:
+        if names and s["name"] not in names:
+            continue
+        if not names and not s.get("enabled", True):
+            continue
+        cfg.segment(s["segment"])
+        company = {"employee_count": {"min": cfg.icp.company.employees_min, "max": cfg.icp.company.employees_max},
+                   "hq": {"country_code": {"include": s.get("hq_countries") or cfg.icp.allowed_countries}}}
+        if s.get("industries"):
+            company["industry"] = {"include": s["industries"]}
+        if s.get("keywords"):
+            company["keywords"] = {"include": s["keywords"]}
+        limit = max_items or s.get("max_items", 100)
+        plans.append(HiringPlan(s["name"], s["segment"], {}, company, limit,
+                                budget.estimate(cfg, PRICE_KEY, limit), kind="companies"))
+    return plans
+
+
 def normalise(company: dict, matched_jobs: int | None = None) -> dict:
     """One BlitzAPI company record in our account shape (same keys as l1_discover.normalise)."""
     start, end = size_range(company.get("size"))
@@ -124,7 +149,9 @@ def run(cfg: ClientConfig, conn, plans: list[HiringPlan], client: BlitzClient | 
         cursor, items = None, []
         try:
             while len(items) < p.max_items:
-                data = api.companies_hiring(p.job, p.company, min(PAGE, p.max_items - len(items)), cursor)
+                n = min(PAGE, p.max_items - len(items))
+                data = (api.search_companies(p.company, n, cursor) if p.kind == "companies"
+                        else api.companies_hiring(p.job, p.company, n, cursor))
                 page = data.get("results") or []
                 items.extend(page)
                 cursor = data.get("cursor")
@@ -136,12 +163,13 @@ def run(cfg: ClientConfig, conn, plans: list[HiringPlan], client: BlitzClient | 
         res.fetched = len(items)
         res.cost_usd = budget.estimate(cfg, PRICE_KEY, len(items))
         for item in items:
-            acc = normalise(item.get("company") or {}, item.get("matched_jobs"))
+            acc = (normalise(item) if p.kind == "companies"
+                   else normalise(item.get("company") or {}, item.get("matched_jobs")))
             if not acc["name"]:
                 res.rejected["no_name"] = res.rejected.get("no_name", 0) + 1
                 continue
             reason = hard_filter(cfg, acc, suppressed)
-            acc["source"] = f"blitzapi:companies-hiring:{p.name}"
+            acc["source"] = f"blitzapi:{'company-search' if p.kind == 'companies' else 'companies-hiring'}:{p.name}"
             acc["status"] = "rejected_l1" if reason else "qualified_l1"
             acc["status_reason"] = reason
             if db.upsert_account(conn, cfg.slug, acc, p.segment) == "duplicate":

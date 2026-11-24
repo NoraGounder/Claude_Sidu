@@ -429,7 +429,8 @@ def cmd_discover_hiring(args) -> int:
         print(f"Read {r['postings']} job postings; {r['accounts']} of our accounts have at least one. "
               "Next: prefilter --rescore (scoring.yaml posted_jobs: true), then jev for those accounts.")
         return 0
-    plans = l1_hiring.plan(cfg, args.search, args.max_items)
+    companies = getattr(args, "companies", False)
+    plans = (l1_hiring.plan_companies if companies else l1_hiring.plan)(cfg, args.search, args.max_items)
     if not args.force:
         recent = l1_hiring.recently_run(conn, cfg.slug)
         skipped = [p.name for p in plans if p.name in recent]
@@ -438,11 +439,11 @@ def cmd_discover_hiring(args) -> int:
             print(f"Skipped (run in the last {l1_hiring.RERUN_DAYS} days, same results; --force to repeat): {', '.join(skipped)}")
     used = l1_hiring.records_used(conn, cfg.slug)
     cap = int(cfg.limits.month_budget_usd.get("blitzapi_records", 0))
-    print(f"Discovery by hiring signal for {cfg.slug}: {len(plans)} searches, up to {sum(p.max_items for p in plans)} "
+    print(f"Discovery {'by firmographics' if companies else 'by hiring signal'} for {cfg.slug}: {len(plans)} searches, up to {sum(p.max_items for p in plans)} "
           f"records; {used} of {cap} BlitzAPI records used this month.")
     for p in plans:
         print(f"  - {p.name} (counts towards {p.segment}): up to {p.max_items} companies")
-        print(f"    job: {json.dumps(p.job)}\n    company: {json.dumps(p.company)}")
+        print((f"    job: {json.dumps(p.job)}\n" if p.job else "") + f"    company: {json.dumps(p.company)}")
     if args.dry_run:
         print("Dry run: nothing was called or spent.")
         return 0
@@ -757,6 +758,13 @@ def build_parser() -> argparse.ArgumentParser:
     dh.add_argument("--force", action="store_true", help="repeat a search run in the last few days (uses records)")
     dh.add_argument("--postings", action="store_true", help="store live job postings as evidence on known accounts")
     dh.set_defaults(func=cmd_discover_hiring)
+
+    dc = sub.add_parser("discover-companies", help="Layer 1 by firmographics on the flat BlitzAPI plan (hiring.yaml company_searches)")
+    dc.add_argument("--search", action="append", help="search name from hiring.yaml company_searches (repeatable)")
+    dc.add_argument("--max-items", type=int, help="cap companies per search (default: hiring.yaml)")
+    dc.add_argument("--dry-run", action="store_true", help="show the searches, call nothing")
+    dc.add_argument("--force", action="store_true", help="repeat a search run in the last few days (uses records)")
+    dc.set_defaults(func=cmd_discover_hiring, companies=True, postings=False)
 
     mk = sub.add_parser("markets", help="market lists for email 1: hiring companies per segment (markets.yaml)")
     mk.add_argument("--refresh", action="store_true", help="fetch job postings for lists older than a week (BlitzAPI)")

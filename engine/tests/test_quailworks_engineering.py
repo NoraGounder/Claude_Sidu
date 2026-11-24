@@ -83,3 +83,92 @@ def test_email_one_is_short_names_no_employer_and_passes_the_banned_phrase_check
         _, s = l5_copy.render(seq, "en", hook, "design", f, {"id": 1, "first_name": "Alex"}, {"name": "Acme Ltd"},
                               {"first_name": "Sam"}, "Notice.")
         assert "{" not in s[0]["body"] and "Acme" in s[0]["body"]
+
+
+# ---------- BlitzAPI first (decisions.md E14) ----------
+
+class StubBlitz:
+    records_remaining = 1000
+
+    def __init__(self, companies=None, people=None):
+        self.companies, self.people_by_url, self.calls = companies or [], people or {}, []
+
+    def search_companies(self, company, max_results, cursor=None):
+        self.calls.append(("companies", company, max_results))
+        return {"results": self.companies[:max_results], "cursor": None}
+
+    def people(self, company_linkedin_url, cascade, max_results=4):
+        self.calls.append(("people", company_linkedin_url, cascade, max_results))
+        return self.people_by_url.get(company_linkedin_url, [])[:max_results]
+
+
+def test_company_searches_replace_apify_and_store_accounts(tmp_path, monkeypatch):
+    import shutil
+    from gtm import db
+    clients = tmp_path / "clients"
+    shutil.copytree(REPO_ROOT / "clients" / QWE, clients / QWE, ignore=shutil.ignore_patterns("private"))
+    monkeypatch.setenv("GTM_CLIENTS_DIR", str(clients))
+    monkeypatch.setenv("GTM_DATA_DIR", str(tmp_path / "data"))
+    cfg = load_client(QWE)
+    assert not [s for s in cfg.icp.segments if s.enabled] and cfg.limits.month_budget_usd["apify"] == 0
+    plans = l1_hiring.plan_companies(cfg)
+    assert len(plans) == 6 and {p.kind for p in plans} == {"companies"} and all(p.job == {} for p in plans)
+    assert plans[0].company["keywords"] == {"include": ["motorsport", "racing", "race car"]}
+    stub = StubBlitz(companies=[{"name": "Northfield Motorsport Ltd", "domain": "northfield.example",
+                                 "website": "https://northfield.example", "linkedin_url": "https://www.linkedin.com/company/northfield",
+                                 "industry": "Motor Vehicle Manufacturing", "size": "51-200", "employees_on_linkedin": 80,
+                                 "hq": {"country_code": "GB", "city": "Banbury"}}])
+    conn = db.connect()
+    res = l1_hiring.run(cfg, conn, plans[:1], client=stub)
+    assert res[0].new == 1 and res[0].qualified == 1 and stub.calls[0][0] == "companies"
+    row = conn.execute("SELECT source, status, country FROM accounts WHERE client=?", (QWE,)).fetchone()
+    assert tuple(row) == ("blitzapi:company-search:companies_motorsport_uk", "qualified_l1", "GB")
+    assert l1_hiring.records_used(conn, QWE) == 1                  # counts towards limits.yaml blitzapi_records
+
+
+def test_people_search_on_blitzapi_first_with_fullenrich_only_as_fallback(tmp_path, monkeypatch):
+    import json as _json
+    import shutil
+    from test_l3_contacts import CLIENT as TMJ, StubFE, StubJev, _account
+    from gtm import db
+    from gtm.layers import l3_contacts
+    from gtm.sources.fullenrich import FullEnrichClient
+    from gtm.sources.jev import JevClient
+    clients = tmp_path / "clients"
+    shutil.copytree(REPO_ROOT / "clients" / TMJ, clients / TMJ, ignore=shutil.ignore_patterns("private"))
+    path = clients / TMJ / "scoring.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data.setdefault("enrichment_policy", {})["people_first"] = "blitzapi"
+    path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    for k, v in {"GTM_CLIENTS_DIR": str(clients), "GTM_DATA_DIR": str(tmp_path / "data"),
+                 "OPENROUTER_API_KEY": "proxy-injected", "FULLENRICH_API_KEY": "proxy-injected"}.items():
+        monkeypatch.setenv(k, v)
+    cfg = load_client(TMJ)
+    conn = db.connect()
+    a = _account(conn, "Groothandel BV", "groothandel.example", "tier_2", "51-200")
+    _account(conn, "Groot BV", "groot.example", "tier_2", "201-500")          # no LinkedIn page: FullEnrich
+    url = "https://www.linkedin.com/company/groothandel-bv"
+    conn.execute("UPDATE accounts SET linkedin_url=? WHERE id=?", (url, a))
+    conn.commit()
+
+    def person(first, title, here=True):
+        return {"icp": 1, "ranking": 1, "person": {
+            "first_name": first, "last_name": "Tester", "full_name": f"{first} Tester", "headline": "Headline only",
+            "linkedin_url": f"https://www.linkedin.com/in/{first.lower()}", "location": {"country_code": "NL"},
+            "experiences": [{"job_title": title, "job_is_current": True,
+                             "company_linkedin_url": url + "/" if here else "https://www.linkedin.com/company/other"}]}}
+    blitz = StubBlitz(people={url: [person("Anna", "Operations Manager"), person("Bram", "Financieel Directeur")]})
+    fe_session = StubFE()
+    t = l3_contacts.find_people(cfg, conn, l3_contacts.plan(cfg, conn), fe=FullEnrichClient(session=fe_session),
+                                jev=JevClient(cfg.ai, session=StubJev()), blitz=blitz)
+    assert t["blitzapi_people"] == 2 and t["fullenrich_searches"] == 1
+    searched = [j["current_company_domains"][0]["value"] for u, j in fe_session.posts if u.endswith("/people/search")]
+    assert searched == ["groot.example"]                           # FullEnrich only where BlitzAPI had nobody
+    cascade = blitz.calls[0][2]
+    assert cascade[0]["include_title"] == cfg.icp.personas[next(iter(cfg.icp.personas))][:50]
+    rows = {r["first_name"]: (r["title"], r["data_source"]) for r in conn.execute(
+        "SELECT first_name, title, data_source FROM contacts WHERE account_id=?", (a,))}
+    assert rows["Anna"][0] == "Operations Manager" and rows["Anna"][1].startswith("BlitzAPI people search")
+    used = conn.execute("SELECT items, actual_cost FROM runs WHERE client=? AND vendor='blitzapi'", (TMJ,)).fetchone()
+    assert tuple(used) == (2, 0.0)                                 # flat plan: records logged, nothing charged
+    _json.dumps(t)

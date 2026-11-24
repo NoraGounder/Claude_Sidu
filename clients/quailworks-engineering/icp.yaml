@@ -50,19 +50,19 @@ industry_groups:
     label: Engineering services
     ids: [3242]
 
-# Industry searches (Harvest on Apify). Discovery by hiring signal (hiring.yaml, BlitzAPI) is the main
-# source; these add the UK market, where companies post fewer jobs on boards. One-word search words match
+# Segments name the markets. Since 2026-11-24 (decisions.md E14) every search runs on the flat BlitzAPI plan
+# (hiring.yaml: hiring searches and company_searches), so the Harvest/Apify searches below are all disabled. One-word search words match
 # company names, so the motorsport group (which includes "Spectator Sports") always carries a search word (quailworks Q29 lesson).
 segments:
   # United Kingdom first (decisions.md E4)
-  - {name: motorsport_uk,        enabled: true,  industry_group: motorsport,          locations: [United Kingdom], max_items: 300, search_query: motorsport}
-  - {name: vehicles_uk,          enabled: true,  industry_group: vehicles,            locations: [United Kingdom], max_items: 300}
-  - {name: aerospace_space_uk,   enabled: true,  industry_group: aerospace_space,     locations: [United Kingdom], max_items: 300}
-  - {name: robotics_machines_uk, enabled: true,  industry_group: robotics_machines,   locations: [United Kingdom], max_items: 200}
+  - {name: motorsport_uk,        enabled: false,  industry_group: motorsport,          locations: [United Kingdom], max_items: 300, search_query: motorsport}
+  - {name: vehicles_uk,          enabled: false,  industry_group: vehicles,            locations: [United Kingdom], max_items: 300}
+  - {name: aerospace_space_uk,   enabled: false,  industry_group: aerospace_space,     locations: [United Kingdom], max_items: 300}
+  - {name: robotics_machines_uk, enabled: false,  industry_group: robotics_machines,   locations: [United Kingdom], max_items: 200}
   - {name: energy_hardware_uk,   enabled: false, industry_group: energy_hardware,     locations: [United Kingdom], max_items: 100}   # 100-company test once the core segments are read
   # United States: commercial programmes only (E5); hiring searches carry most of the volume
-  - {name: motorsport_us,        enabled: true,  industry_group: motorsport,          locations: [United States], max_items: 200, search_query: racing}
-  - {name: ev_vehicles_us,       enabled: true,  industry_group: vehicles,            locations: [United States], max_items: 300, search_query: electric vehicle}
+  - {name: motorsport_us,        enabled: false,  industry_group: motorsport,          locations: [United States], max_items: 200, search_query: racing}
+  - {name: ev_vehicles_us,       enabled: false,  industry_group: vehicles,            locations: [United States], max_items: 300, search_query: electric vehicle}
   - {name: space_evtol_us,       enabled: false, industry_group: aerospace_space,     locations: [United States], max_items: 300}   # 11,000+ companies, mostly build-to-print (quailworks Q29): hiring search only
   - {name: robotics_machines_us, enabled: false, industry_group: robotics_machines,   locations: [United States], max_items: 300}   # Quailworks GTM reads this market: hiring search only
   - {name: energy_hardware_us,   enabled: false, industry_group: energy_hardware,     locations: [United States], max_items: 100}

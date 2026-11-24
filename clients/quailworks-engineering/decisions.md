@@ -121,6 +121,17 @@ Sources: the founder's CV (shared 2026-11-19, kept out of this repository), Quai
   footer and listed in the sitemap. It ships with the site's new dark "studio" theme. Not live until the user says
   "deploy".
 
+- **E14. Everything that BlitzAPI can do runs on BlitzAPI (2026-11-24, the user: "use as much as we can").**
+  Company discovery moves from Harvest on Apify to BlitzAPI's company search (`discover-companies`, hiring.yaml
+  `company_searches`, the same six markets), and people search from FullEnrich to BlitzAPI's title waterfall
+  (`scoring.yaml enrichment_policy.people_first: blitzapi`, the personas as tiers in priority order). FullEnrich
+  stays only for companies BlitzAPI returns nobody for, and for emails BlitzAPI does not find, each within its
+  $20 cap; Apify's cap for this client is 0. The records cap rises from 5,000 to 10,000 of the plan's 200,000.
+  Checked on the live API the same day: company search found 476 UK companies under 500 people with "motorsport"
+  as a keyword; people search returns the current job title, location and LinkedIn profile. Every company still
+  goes through Layer 2 (crawl, signals, Jev) and every address through MillionVerifier. Would change: BlitzAPI's
+  people search missing the right person at more than a third of Tier 1 companies (then FullEnrich first again).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 See `client.yaml needed_from_client`. In one message: the domain and three mailboxes (E2), the one-page
