@@ -133,30 +133,37 @@ def find_email(conn, cfg, fe, number: str, person: dict, domain: str) -> tuple[s
 
 # ---------- drafts ----------
 
+SUFFIX = re.compile(r"[,\s]+(inc|incorporated|llc|l\.l\.c|corp|corporation|co|company|ltd|pc|p\.c)\.?$", re.I)
+
+
+def short_name(name: str) -> str:
+    """'MEYER & DEPEW COMPANY, INC.' -> 'Meyer & Depew': how a person would write it."""
+    text = (name or "").strip()
+    while (cut := SUFFIX.sub("", text)) != text:
+        text = cut
+    return text.title()
+
+
 def draft(company: dict, contact: dict, metrics: dict, website: str | None, today: date) -> tuple[str, str]:
     first = (contact.get("person") or "").split()[0].title() if contact.get("person") else None
     since = metrics.get("plan_since")
-    years = f"more than {today.year - since} years" if since else "many years"
-    what = (metrics.get("industry") or "your field").lower()
+    years = f"more than {today.year - since} years in business" if since else "many years in business"
     city = (company["locality"] or "").split(",")[0].title()
+    name = short_name(company["name"])
     greet = f"Dear {first}," if first else "Dear owner,"
     before, now = metrics.get("active_before"), metrics.get("headcount")
     grown = ", and a team that has grown" if before and now and now > before else ""
-    email = f"""Subject: {company['name'].title()}: a question about the long term
+    email = f"""Subject: {name}: a question about the long term
 
 {greet}
 
-My name is {{{{YOUR FULL NAME}}}}. I am looking to buy one company to own and run myself for the long term.
-I am an individual buyer, not a private equity fund and not a broker.
+My name is {{{{YOUR FULL NAME}}}}. I am looking to buy one company to own and run myself for the long term. I am an individual buyer, not a private equity fund and not a broker.
 
-{company['name'].title()} stood out to me: {years} in {what} in {city}{grown}. That kind of
-steady, well-run business is exactly what I hope to spend the next part of my career building on.
+{name} stood out to me: {years}{' in ' + city if city else ''}{grown}. That kind of steady, well-run business is exactly what I hope to spend the next part of my career building on.
 
-If you have ever thought about what happens to the company when you step back, I would value 20 minutes to
-introduce myself and listen. If the timing is wrong, I understand, and I will not follow up more than once.
+If you have ever thought about what happens to the company when you step back, I would value 20 minutes to introduce myself and listen. If the timing is wrong, I understand, and I will not follow up more than once.
 
-{{{{ONE SENTENCE ABOUT YOUR BACKGROUND, e.g. what you did before and why this kind of business}}}}
-{{{{HOW THE PURCHASE WOULD BE FUNDED, e.g. your own capital and long-term investors, no bank debt}}}}
+{{{{ONE SENTENCE ABOUT YOUR BACKGROUND, e.g. what you did before and why this kind of business}}}} {{{{HOW THE PURCHASE WOULD BE FUNDED, e.g. your own capital and long-term investors, no bank debt}}}}
 
 With respect,
 {{{{YOUR FULL NAME}}}}

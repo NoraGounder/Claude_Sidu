@@ -64,7 +64,8 @@ network secret for api.company-information.service.gov.uk and document-api.compa
 so set the variable to `proxy-injected`). Code: `engine/gtm/eta/`, `engine/gtm/ixbrl.py`,
 `engine/gtm/sources/companies_house.py`; tables `eta_*` in data/engine.db. Selection: sieve 1 = Stanford Search Fund
 company criteria on filed numbers; sieve 2 (`eta-qualify`) = Stanford industry scorecard per SIC code and Hamilton
-Helmer's 7 Powers per company, both TypeSafe Jev 1.14 (decisions.md E5). No outreach yet.
+Helmer's 7 Powers per company, both TypeSafe Jev 1.14 (decisions.md E5). Outreach goes through the shared
+Smartlead account on `quailworkshq.com`, ETA's own domain (`clients/eta/sending.yaml`, E12).
 
 ```bash
 python -m gtm --client eta eta-discover --dry-run              # searches per SIC code, calls nothing
@@ -77,6 +78,9 @@ python -m gtm --client eta eta-pl --days 5 --max-new 2000       # Poland: KRS bu
 python -m gtm --client eta eta-qualify --market US --limit 25   # sieve 2 for one country
 python -m gtm --client eta eta-owners --verdict qualified --dry-run   # US leader, age and tenure (FullEnrich, cap in limits.yaml)
 python -m gtm --client eta eta-packs                            # one-page deal pack per qualified company (data/eta/packs/)
+python -m gtm --client eta eta-decide yes <company number>...    # Sidarth's call on a pack: yes, no or more
+python -m gtm --client eta eta-outreach                         # for each yes: work email, address, draft email and letter
+python -m gtm --client eta eta-send                             # dry run; --live uploads paused; --start --i-confirm sends (E12)
 ```
 
 Three countries share the tables: UK ids are Companies House numbers, US ids `US-<loan number>`, Polish ids

@@ -1,0 +1,39 @@
+# ETA outreach through the shared Smartlead account (engine/gtm/eta/send.py, decisions.md E12).
+# Sidarth's acquisition emails to owners he said yes to. Nothing is uploaded without `eta-send --live` and nothing
+# is sent without `eta-send --start --i-confirm`, each only after his approval in the conversation.
+
+campaign_prefix: "ETA"
+
+# One domain, one client: quailworkshq.com was in Smartlead but in no client's list (2026-11-24). Quailworks keeps
+# its four domains and quailworks.dev. A domain listed here and in another client's sending.yaml stops both.
+mailbox_domains: [quailworkshq.com]
+
+# The sending address says Quailworks, so the email says why (decisions.md E12). Shown above the signature.
+domain_note: >-
+  You may notice this comes from a Quailworks address: Quailworks is the small growth firm I run. Buying and
+  running a company is a personal search, separate from it.
+
+region: {countries: [US], timezone: America/Chicago}
+
+schedule:
+  days_of_the_week: [1, 2, 3, 4]   # Monday-Thursday
+  start_hour: "09:00"
+  end_hour: "15:00"
+  min_time_btw_emails: 30          # minutes between sends per mailbox: these are one-to-one letters
+  max_new_leads_per_day: 3
+
+settings:
+  track_open: false
+  track_click: false
+  stop_on_reply: true              # any reply, "no" included, ends the sequence
+  stop_on_auto_reply: false
+  send_as_plain_text: true
+
+# At most one follow-up, as the email promises.
+follow_up_day: 7
+
+# A handful of one-to-one emails a day: 10 days of warm-up at 95% or more is enough (Quailworks' bulk launch
+# waits 14). The guard is the same Layer 6 mailbox check.
+require_warmup: true
+min_warmup_days: 10
+min_warmup_reputation: 95

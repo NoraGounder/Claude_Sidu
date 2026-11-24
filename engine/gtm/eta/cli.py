@@ -301,6 +301,38 @@ def cmd_outreach(args, fe=None) -> int:
     return 0
 
 
+def cmd_send(args, sl=None) -> int:
+    """ETA outreach through Smartlead: dry run by default; --live uploads paused; --start --i-confirm sends."""
+    from gtm.eta import send
+
+    cfg, _, conn = _setup(args)
+    if args.start:
+        if not args.i_confirm:
+            print("Starting sends needs --i-confirm, and only after Sidarth approves in the conversation.")
+            return 2
+        print(f"Started: {send.start(conn, cfg, sl)}")
+        return 0
+    if args.live:
+        r = send.push(conn, cfg, sl)
+        print(f"Uploaded {r['pushed']} leads to campaign {r.get('campaign_id')} (paused) on {r.get('mailboxes', 0)} "
+              f"mailboxes. Nothing is sent until eta-send --start --i-confirm.")
+        for p in r.get("mailbox_problems") or []:
+            print(f"  mailbox held back: {p}")
+        for name, why in r["held"]:
+            print(f"  held: {name}: {why}")
+        return 0
+    p = send.plan(conn, cfg)
+    print(f"ETA send plan (dry run, calls nothing): {len(p['ready'])} ready, {len(p['held'])} held. "
+          f"Final text of every email: {p['final_dir']}")
+    if p["missing_sender"]:
+        print(f"  Sidarth's details missing in clients/eta/private/sender.yaml: {', '.join(p['missing_sender'])}")
+    for l in p["ready"]:
+        print(f"  ready: {l['company']} -> {l['email']}")
+    for name, why in p["held"]:
+        print(f"  held: {name}: {why}")
+    return 0
+
+
 def cmd_pl(args, krs=None) -> int:
     """Poland: KRS daily bulletin -> current extracts -> target PKD companies -> sieve 1 (free)."""
     from gtm.eta import pl
@@ -485,6 +517,12 @@ def register(sub) -> None:
     ou.add_argument("--dry-run", action="store_true", help="show what would be looked up and the cost")
     ou.add_argument("--no-emails", action="store_true", help="skip the paid work-email lookup")
     ou.set_defaults(func=cmd_outreach)
+
+    sd = sub.add_parser("eta-send", help="ETA: outreach through Smartlead (dry run; --live uploads paused; --start --i-confirm sends)")
+    sd.add_argument("--live", action="store_true", help="upload the ready leads to a paused campaign")
+    sd.add_argument("--start", action="store_true", help="start sending (needs --i-confirm)")
+    sd.add_argument("--i-confirm", action="store_true", help="Sidarth approved sending in the conversation")
+    sd.set_defaults(func=cmd_send)
 
     st = sub.add_parser("eta-stats", help="ETA: companies per stage, sieve verdicts, requests this month")
     st.set_defaults(func=cmd_stats)

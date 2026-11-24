@@ -407,3 +407,75 @@ def test_yes_prepares_contact_and_drafts_but_sends_nothing(env):
     assert "{{YOUR FULL NAME}}" in text and "reply \"no\"" in text
     outreach.prepare(conn, cfg, eta, fe, today=date(2026, 11, 23))
     assert len([c for c in fe.calls if c[0] == "enrich"]) == 1                # never looked up twice
+
+
+# ---------- outreach through Smartlead ----------
+
+import shutil
+
+from gtm.eta import send
+
+
+class FakeSmartlead:
+    def __init__(self, accounts):
+        self.accounts, self.calls = accounts, []
+
+    def email_accounts(self):
+        return self.accounts
+
+    def __getattr__(self, name):
+        def call(*args, **kwargs):
+            self.calls.append((name, args))
+            return 77 if name == "create_campaign" else {}
+        return call
+
+
+def _mailbox(i, email, days, rep="100%"):
+    from datetime import datetime, timedelta
+    return {"id": i, "from_email": email, "created_at": (datetime.utcnow() - timedelta(days=days)).isoformat(),
+            "message_per_day": 15, "warmup_details": {"status": "ACTIVE", "warmup_reputation": rep}}
+
+
+def test_short_name_and_fill():
+    assert outreach.short_name("MEYER & DEPEW COMPANY, INC.") == "Meyer & Depew"
+    assert outreach.short_name("DEE CRAMER, INC.") == "Dee Cramer"
+    text = "{{ONE SENTENCE ABOUT YOUR BACKGROUND, e.g. x}} {{HOW THE PURCHASE WOULD BE FUNDED, e.g. y}}\n" \
+           "{{PHONE}} | {{EMAIL}}\n{{POSTAL ADDRESS (US law)}}"
+    out = send.fill(text, {"background": "B.", "funding": "F.", "phone": "1", "postal_address": "A"}, "Note.")
+    assert out == "B. F.\n\nNote.\n1\nA" and "{{" not in out
+
+
+def test_eta_send_holds_until_details_then_uploads_paused_to_own_domain_only(env):
+    cfg, eta, conn, tmp = env
+    root = tmp / "clients" / "eta"
+    shutil.copytree(cfg.root, root, ignore=shutil.ignore_patterns("private"))
+    cfg = cfg.model_copy(update={"root": root})
+    _write_sf(2024, [_sf("900000010", "STRONG MECHANICAL INC", 75)])
+    us.run(conn, cfg.slug, eta, None, dol.employers([2024], {"238220"}))
+    _shortlisted(conn, cfg.slug)
+    cfg.limits.month_budget_usd["fullenrich"] = 1.0
+    owners_us.run(conn, cfg, FakeFE([_person("Owner", edu_start=1978, since=1990)]), today=date(2026, 11, 23))
+    outreach.decide(conn, cfg.slug, "US-900000010", "yes")
+    outreach.prepare(conn, cfg, eta, FakeEnrich([]), today=date(2026, 11, 23))
+
+    p = send.plan(conn, cfg)                                   # no sender file yet: nothing is ready
+    assert not p["ready"] and p["held"][0][1] == "your details are not filled in yet"
+
+    (root / "private").mkdir()
+    (root / "private" / "sender.yaml").write_text(
+        "full_name: Pat Buyer\nbackground: I ran operations.\nfunding: Own capital.\nphone: '555'\n"
+        "postal_address: 1 Main St\n")
+    p = send.plan(conn, cfg)
+    assert len(p["ready"]) == 1
+    body = p["ready"][0]["steps"][0]
+    assert "{{" not in body and "Pat Buyer" in body and "Quailworks address" in body and "1 Main St" in body
+    assert p["ready"][0]["subject"] == "Strong Mechanical: a question about the long term"
+
+    sl = FakeSmartlead([_mailbox(1, "a@quailworkshq.com", 12), _mailbox(2, "b@getquailworks.com", 30),
+                        _mailbox(3, "c@quailworkshq.com", 3)])
+    r = send.push(conn, cfg, sl)
+    assert r["pushed"] == 1 and r["mailboxes"] == 1
+    names = [c[0] for c in sl.calls]
+    assert "set_status" not in names                           # uploaded paused, never started
+    assert ("link_email_accounts", (77, [1])) in sl.calls      # own warm domain only
+    assert send.push(conn, cfg, sl)["pushed"] == 0              # never uploaded twice

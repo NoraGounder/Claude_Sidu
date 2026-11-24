@@ -180,8 +180,23 @@ a postal address and a one-line opt-out (US CAN-SPAM), and there is at most one 
 its own (a separate domain and mailbox, warmed up), as a separate decision.
 
 **2026-11-24.** Three more yes (six in total), prepared the same way: work email found for all six, address and
-phone from Form 5500. Sidarth proposed sending from a couple of the Quailworks mailboxes now warming in Smartlead.
-Open until he chooses: every Quailworks sending domain carries the Quailworks name and forwards to the agency, so
-an "individual buyer" email from it reads as an agency pitch, and a domain moved to ETA leaves Quailworks' own
-launch (one domain, one client). Recommended instead: his own mailbox and a letter for these six, and one or two
-neutral domains of ETA's own (warmed 14 days, `eta` mailbox_domains, campaign prefix ETA) if outreach grows.
+phone from Form 5500.
+
+## E12. Send through the GTM email infrastructure, on a domain of ETA's own (2026-11-24)
+
+**Decision (Sidarth, 2026-11-24: "use the GTM email infrastructure for now, and later we can scale").** ETA emails
+go out through the shared Smartlead account (`eta-send`). Quailworks recommended his own mailbox and a letter for
+the first six because every sending domain carries the Quailworks name; Sidarth chose Smartlead for speed.
+
+**How.** ETA takes `quailworkshq.com` (two mailboxes), which was in Smartlead but in no client's `mailbox_domains`,
+so Quailworks keeps its four listed domains and `quailworks.dev`, and tomorrow's rehearsal is untouched (one
+domain, one client). Each email says it comes from a Quailworks address because Sidarth runs Quailworks, and that
+the search is personal (`domain_note` in sending.yaml). One campaign "ETA | US | <month>", plain text, no tracking,
+two emails at most (follow-up on day 7), any reply stops it, three new owners a day. Mailboxes join after 10 days
+of warm-up at 95%+ (Quailworks' bulk launch waits 14; a handful of one-to-one emails a day needs less), so the
+first send is possible from about 2026-11-30. Sidarth's own details stay in `clients/eta/private/sender.yaml`.
+`eta-send` is a dry run; `--live` uploads paused; `--start --i-confirm` sends, each only after his approval.
+
+**What would change it.** Owners reading the Quailworks name as a sales pitch (replies saying so, or no replies
+from the first ten while letters get answers), or more than about 50 owners a month: then one or two neutral
+domains in Sidarth's own name, warmed 14 days, replace quailworkshq.com.
