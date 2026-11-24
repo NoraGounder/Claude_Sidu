@@ -9,8 +9,7 @@ campaign_prefix: "QW"
 # used. A domain listed here and in another client's sending.yaml stops push for both.
 # Bought 2026-11-11 through SmartSenders, 3 mailboxes each, both forwarding to quailworks.co:
 # getquailworks.com on Google, quailworksforward.com on Outlook.
-mailbox_domains: [getquailworks.com, quailworksforward.com, quailworks.work, teamquailworks.com,
-                  quailworks.dev, quailworkshq.com]
+mailbox_domains: [getquailworks.com, quailworksforward.com, teamquailworks.com]   # Q51
 
 # US and UK (decisions.md Q8). US Central time keeps sends inside working hours from coast to coast.
 regions:

@@ -490,6 +490,15 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   which protects the new domains; raising the ramp still needs the user's say-so. The rehearsal moves to
   15:10 Warsaw on 25 November, after the first six pass 14 days (they were added 13:11-13:23 UTC).
 
+- **Q51. Domains split across three clients (2026-11-24, the user's choice, replacing Q50's list).**
+  Quailworks keeps getquailworks.com, quailworksforward.com and teamquailworks.com: 8 mailboxes (5 Google,
+  3 Outlook), all warm by 30 November, up to 120 a day against a plan that peaks at 90, so one weak mailbox
+  can sit out. Quailworks Engineering gets quailworks.work and quailworks.dev (campaigns QWE); the acquisition
+  search (ETA) gets quailworkshq.com, to move to its own holding-company brand later. Each domain belongs to
+  one client, so a complaint on one campaign cannot hurt another's reputation. Would change: Quailworks'
+  weekly supply of fresh-signal leads outgrowing 120 a day (then buy a domain for Quailworks, about $15 a
+  month for 3 mailboxes, rather than take one back).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):
