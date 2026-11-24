@@ -1,0 +1,83 @@
+/* Motion layer: headline word reveal, magnetic pills, card spotlight, count-up, stack marquee, scroll progress.
+   Written by Qwen 4 Max through OpenRouter on 2026-11-24 from a design brief, chosen over Kimi K3.1 Pro and
+   GLM-5.3 Prime, reviewed and integrated by Claude. */
+/* ── quailworks motion layer (append after existing styles) ───────────── */
+:root { --qw-accent: #FF5A12; --qw-ease: cubic-bezier(.22, .61, .21, 1); }
+
+/* 6 · scroll progress */
+.qw-progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--qw-accent);
+  transform: scaleX(var(--sp, 0)); transform-origin: 0 50%;
+  z-index: 9999; pointer-events: none;
+}
+
+/* 1 · headline word reveal */
+.wsplit .w { display: inline-block; white-space: nowrap; }
+.wsplit .wi {
+  display: inline-block;
+  opacity: 0; transform: translateY(.55em); filter: blur(7px);
+  transition: opacity .7s var(--qw-ease), transform .7s var(--qw-ease), filter .7s var(--qw-ease);
+  transition-delay: calc(var(--i, 0) * 45ms);
+  will-change: transform, opacity, filter;
+}
+.wsplit.in .wi { opacity: 1; transform: none; filter: blur(0); }
+/* words own the reveal; neutralize the generic .reveal fade on split headings */
+.wsplit.reveal { opacity: 1; transform: none; transition: none; }
+
+/* 2 · magnetic pills / buttons + arrow nudge (fine pointers only) */
+@media (hover: hover) and (pointer: fine) {
+  .chip, .btn {
+    transform: translate(var(--tx, 0px), var(--ty, 0px));
+    transition: transform .3s var(--qw-ease), background-color .3s ease,
+                color .3s ease, border-color .3s ease, box-shadow .3s ease;
+  }
+  .chip .arr, .btn .arr { display: inline-block; transition: transform .3s var(--qw-ease); }
+  .chip:hover .arr, .btn:hover .arr { transform: translateX(4px); }
+}
+
+/* 3 · pointer spotlight on cards */
+.svc, .plan { position: relative; }
+.svc::before, .plan::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; opacity: 0; transition: opacity .45s ease;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%),
+              rgba(255, 90, 18, .09), transparent 65%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .svc:hover::before, .plan:hover::before { opacity: 1; }
+}
+.plan.featured {
+  border-color: rgba(255, 90, 18, .45);
+  box-shadow: 0 0 0 1px rgba(255, 90, 18, .35), 0 0 34px -12px rgba(255, 90, 18, .35);
+}
+
+/* 4 · count-up: reserve final width, tabular figures */
+.qw-count { display: inline-block; min-width: var(--qw-w, auto); font-variant-numeric: tabular-nums; }
+
+/* 5 · stack marquee (wide screens, enabled from JS) */
+@media (min-width: 900px) {
+  .stack.qw-mq {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .stack .mq {
+    --sgap: 3rem;
+    display: flex; flex-wrap: nowrap; gap: var(--sgap);
+    width: max-content; margin: 0; padding: 0; list-style: none;
+    animation: qw-marquee var(--dur, 40s) linear infinite;
+  }
+  .stack .mq li { flex: 0 0 auto; white-space: nowrap; margin: 0; }
+  .stack.qw-mq:hover .mq, .stack.qw-mq:focus-within .mq { animation-play-state: paused; }
+}
+@keyframes qw-marquee { to { transform: translateX(calc(-50% - var(--sgap, 3rem) / 2)); } }
+
+/* reduced motion: everything off or plain fade */
+@media (prefers-reduced-motion: reduce) {
+  .wsplit .wi { opacity: 1; transform: none; filter: none; transition: none; }
+  .chip, .btn, .chip .arr, .btn .arr { transform: none !important; transition: none; }
+  .svc::before, .plan::before { display: none; }
+  .stack .mq { animation: none; width: auto; flex-wrap: wrap; }
+  .qw-progress { transition: none; }
+}
