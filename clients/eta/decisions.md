@@ -178,3 +178,10 @@ a postal address and a one-line opt-out (US CAN-SPAM), and there is at most one 
 
 **What would change it.** More yes decisions than Sidarth can write to by hand would justify a sending setup of
 its own (a separate domain and mailbox, warmed up), as a separate decision.
+
+**2026-11-24.** Three more yes (six in total), prepared the same way: work email found for all six, address and
+phone from Form 5500. Sidarth proposed sending from a couple of the Quailworks mailboxes now warming in Smartlead.
+Open until he chooses: every Quailworks sending domain carries the Quailworks name and forwards to the agency, so
+an "individual buyer" email from it reads as an agency pitch, and a domain moved to ETA leaves Quailworks' own
+launch (one domain, one client). Recommended instead: his own mailbox and a letter for these six, and one or two
+neutral domains of ETA's own (warmed 14 days, `eta` mailbox_domains, campaign prefix ETA) if outreach grows.
