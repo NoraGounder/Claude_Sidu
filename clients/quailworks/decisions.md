@@ -490,6 +490,14 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   which protects the new domains; raising the ramp still needs the user's say-so. The rehearsal moves to
   15:10 Warsaw on 25 November, after the first six pass 14 days (they were added 13:11-13:23 UTC).
 
+- **Q51. Two domains lent to Quailworks Engineering (2026-11-24, the user's OK).** quailworks.work (3 Google) and
+  quailworks.dev (3 Outlook) now send Quailworks' second offer, contract mechanical design
+  (`clients/quailworks-engineering/`, its decisions.md E2). This client keeps getquailworks.com,
+  quailworksforward.com, teamquailworks.com and quailworkshq.com: 10 mailboxes, 150 a day of headroom for a ramp
+  that peaks at 90. Neither domain had joined a QW campaign (they become warm on 30 November and 4 December).
+  Quailworks Engineering holds any company this client emailed in the last 90 days (`avoid_overlap_with`), so one
+  company never hears both offers at once. Would change: replies needing more than 90 a day here.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

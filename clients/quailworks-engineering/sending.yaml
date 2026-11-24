@@ -6,9 +6,10 @@
 campaign_prefix: "QWE"
 
 # Only mailboxes on these domains are linked to this offer's campaigns. A domain listed here and in another
-# client's sending.yaml stops push for both. Empty until the user buys one domain with three mailboxes
-# (decisions.md E2): Quailworks GTM's eleven mailboxes are its own bottleneck (quailworks Q48).
-mailbox_domains: []
+# client's sending.yaml stops push for both. Lent by Quailworks GTM on 2026-11-24 with the user's OK
+# (decisions.md E2): quailworks.work (3 Google, warm from 30 November) and quailworks.dev (3 Outlook, warm
+# from 4 December), all in the founder's name.
+mailbox_domains: [quailworks.work, quailworks.dev]
 
 # Never pitch a company that Quailworks' GTM offer emailed in the last 90 days: one founder, one company,
 # one conversation at a time (decisions.md E12). Company domains and names only; no contact data is shared.

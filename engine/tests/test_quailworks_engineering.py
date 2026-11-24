@@ -22,7 +22,7 @@ def test_config_loads_with_every_launch_safeguard():
     check_policy(cfg.ai)                                           # Jev 1.14 only, no fallback
     sending = l6_send.load_sending(cfg)
     gate = yaml.safe_load((cfg.root / "gate.yaml").read_text(encoding="utf-8"))
-    assert cfg.client["sender"]["consent_to_send_in_name"] == "pending"     # its own yes (decisions.md E2)
+    assert cfg.client["sender"]["consent_to_send_in_name"] == "granted"     # given 2026-11-24 (decisions.md E2)
     assert sending["campaign_prefix"] == "QWE" and sending["send_order"] == "best_first"
     assert sending["min_warmup_days"] >= 14 and sending["min_warmup_reputation"] >= 95 and sending["require_backup"]
     assert set(gate["verify_statuses"]) >= {"DELIVERABLE", "HIGH_PROBABILITY"}
@@ -36,6 +36,7 @@ def test_never_shares_a_sending_domain_and_holds_companies_the_gtm_offer_emailed
     cfg = load_client(QWE)
     sending = l6_send.load_sending(cfg)
     assert l6_send.shared_domains(cfg) == []                         # one domain, one client
+    assert sending["mailbox_domains"] == ["quailworks.work", "quailworks.dev"]   # lent by Quailworks GTM (E2)
     assert sending["avoid_overlap_with"] == ["quailworks"] and sending["overlap_days"] >= 90   # E12
 
 

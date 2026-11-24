@@ -28,9 +28,9 @@ unit_price_usd:
   "millionverifier:check": 0.004
 
 sending:
-  # 3 fresh mailboxes after 14 days of warm-up (decisions.md E2). Ramp: week 1: 5 a day each (15);
-  # week 2: 10 (30); week 3 on: 15 (45), each step only if bounces stay under 2% and there are no spam
-  # complaints. These values are week 1; Claude Code raises them per the ramp.
+  # 6 mailboxes on quailworks.work and quailworks.dev (decisions.md E2). Ramp kept by the campaign total:
+  # week 1: 15 a day; week 2: 30; week 3 on: 45, each step only if bounces stay under 2% and there are no
+  # spam complaints. These values are week 1; Claude Code raises them per the ramp.
   max_emails_per_day: 15
   max_per_mailbox_per_day: 5
   max_contacts_per_account: 2

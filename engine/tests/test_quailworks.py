@@ -338,8 +338,8 @@ def test_one_smartlead_account_keeps_each_sending_domain_with_one_client(env):
     sending = env / QW / "sending.yaml"
     text = sending.read_text()
     import yaml as _yaml
-    assert _yaml.safe_load(text)["mailbox_domains"] == ["getquailworks.com", "quailworksforward.com", "quailworks.work",
-                                                      "teamquailworks.com", "quailworks.dev", "quailworkshq.com"]
+    assert _yaml.safe_load(text)["mailbox_domains"] == ["getquailworks.com", "quailworksforward.com",
+                                                      "teamquailworks.com", "quailworkshq.com"]   # .work, .dev: engineering (Q51)
     sending.write_text(text.replace("mailbox_domains: [getquailworks.com,", "mailbox_domains: [GetMarbleJar.com, getquailworks.com,"))
     assert l6_send.shared_domains(load_client(QW)) == ["getmarblejar.com"]
     assert l6_send.shared_domains(load_client(TMJ)) == ["getmarblejar.com"]
