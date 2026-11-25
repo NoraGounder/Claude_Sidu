@@ -333,6 +333,46 @@ def cmd_send(args, sl=None) -> int:
     return 0
 
 
+def cmd_partners(args, api=None, fetcher=None, jev=None) -> int:
+    """Capital partners, brokers and advisers (partners.yaml): BlitzAPI search, website check by Jev 1.14, people."""
+    from gtm.eta import partners
+
+    cfg, _, conn = _setup(args)
+    conf = partners.load(cfg.root)
+    kinds = args.kind or None
+    partners.ensure_schema(conn)
+    if args.dry_run:
+        ps = partners.plans(conf, kinds)
+        used, cap = partners.records_used(conn, cfg.slug), partners.records_cap(cfg)
+        print(f"Partner searches (dry run, calls nothing): {len(ps)} BlitzAPI searches, up to "
+              f"{sum(p['max_items'] for p in ps)} records; ETA has used {used} of {cap} this month (flat plan, $0).")
+        for p in ps:
+            print(f"  {p['kind']:8} {p['name']:30} up to {p['max_items']}")
+        if ps:
+            print("First request (POST /search/companies):")
+            print(json.dumps({"company": ps[0]["company"], "max_results": 50}, indent=2))
+        return 0
+    if api is None and (args.search or args.people):
+        from gtm.sources.blitz import BlitzClient
+        api = BlitzClient()
+    if args.search:
+        r = partners.search(conn, cfg, conf, api, kinds)
+        print(f"Searched {r['searches']} times: {r['records']} records, {r['new']} new firms {r['per_kind']}.")
+    if args.check:
+        r = partners.check(conn, cfg, conf, fetcher, jev, args.limit)
+        print(f"Checked {r['firms']} websites with Jev 1.14: fit {r['fit']}, maybe {r['maybe']}, no {r['no']}, "
+              f"no usable site {r['no_site']}.")
+    if args.people:
+        r = partners.people(conn, cfg, conf, api, kinds, limit=args.limit)
+        print(f"People at {r['firms']} firms that fit: {r['people']} found (names and LinkedIn only).")
+    r = partners.export(conn, cfg, conf)
+    for kind, c in r["counts"].items():
+        print(f"  {kind:8} found {c['found']}: fit {c['fit']} (strongest {c['strong']}), maybe {c['maybe']}, "
+              f"no {c['no']}, no site {c['no_site']}, unchecked {c['unchecked']}")
+    print(f"Lists: {r['folder']}")
+    return 0
+
+
 def cmd_pl(args, krs=None) -> int:
     """Poland: KRS daily bulletin -> current extracts -> target PKD companies -> sieve 1 (free)."""
     from gtm.eta import pl
@@ -523,6 +563,15 @@ def register(sub) -> None:
     sd.add_argument("--start", action="store_true", help="start sending (needs --i-confirm)")
     sd.add_argument("--i-confirm", action="store_true", help="Sidarth approved sending in the conversation")
     sd.set_defaults(func=cmd_send)
+
+    pa = sub.add_parser("eta-partners", help="ETA: capital partners, brokers, advisers (BlitzAPI + Jev website check)")
+    pa.add_argument("--dry-run", action="store_true", help="show the searches and records, call nothing")
+    pa.add_argument("--search", action="store_true", help="BlitzAPI company searches (flat plan records)")
+    pa.add_argument("--check", action="store_true", help="read each new firm's website and ask Jev 1.14 if it fits")
+    pa.add_argument("--people", action="store_true", help="senior people at firms that fit (BlitzAPI, no emails)")
+    pa.add_argument("--kind", action="append", choices=["capital", "broker", "adviser"])
+    pa.add_argument("--limit", type=int)
+    pa.set_defaults(func=cmd_partners)
 
     st = sub.add_parser("eta-stats", help="ETA: companies per stage, sieve verdicts, requests this month")
     st.set_defaults(func=cmd_stats)

@@ -60,6 +60,14 @@ class BlitzClient:
             body["cursor"] = cursor
         return self._post("/company/tam-by-jobs", body)
 
+    def search_companies(self, company: dict, max_results: int = 50, cursor: str | None = None) -> dict:
+        """Companies by firmographics: industry, employee_count, hq country, keywords. Returns {results:
+        [company], cursor, total_results}. One record per company returned."""
+        body = {"company": company, "max_results": max_results}
+        if cursor:
+            body["cursor"] = cursor
+        return self._post("/search/companies", body)
+
     def jobs(self, job: dict, company: dict, max_results: int = 50, cursor: str | None = None) -> dict:
         """Live job postings. Returns {results: [{title, url, date_posted, company_name, company_linkedin_url,
         location}], cursor}. One record per posting returned."""

@@ -200,3 +200,21 @@ run; `--live` uploads paused; `--start --i-confirm` sends, each only after his a
 **What would change it.** Owners reading the Quailworks name as a sales pitch (replies saying so, or no replies
 from the first ten while letters get answers), or more than about 50 owners a month: then one or two neutral
 domains in Sidarth's own name, warmed 14 days, replace quailworkshq.com.
+
+## E13. Capital partners, brokers and advisers: BlitzAPI net, website check by Jev 1.14 (2026-11-25)
+
+**Decision (Sidarth, 2026-11-25: "build the capital partner list").** Everyone around a deal besides the owner is
+found by `eta-partners` (clients/eta/partners.yaml): BlitzAPI company searches on the shared flat plan cast the net
+(ETA's share: 2,000 records a month, `blitzapi_records`; Quailworks keeps 20,000 and The Marble Jar 5,000 of the
+200,000), each firm's website is read for free, and Jev 1.14 scores how well it fits the kind (capital partner,
+broker or M&A adviser, lawyer or accountant) plus the one check that matters most (for capital: does it back
+independent sponsors or search funds?). People at firms that fit: names and LinkedIn only, no emails.
+
+**When to approach.** Advisers first (a securities lawyer before any investor contact; M&A lawyer and quality-of-
+earnings accountant shortlisted in December, engaged after an LOI). Owners from 2026-12-04 (E12). Brokers from mid-
+December, once the buyer profile is final. Capital partners: introductions from January 2027, after the securities
+lawyer has cleared the outreach; a specific ask only after a signed LOI.
+
+**What would change it.** BlitzAPI keyword searches return mostly noise (the first 20 checked: 3 fits): if the full
+run yields under 30 capital partners that fit, add free lists (SEC Form D filers, independent-sponsor conference
+sponsor lists) before paying for an investor database.

@@ -479,3 +479,68 @@ def test_eta_send_holds_until_details_then_uploads_paused_to_own_domain_only(env
     assert "set_status" not in names                           # uploaded paused, never started
     assert ("link_email_accounts", (77, [1])) in sl.calls      # own warm domain only
     assert send.push(conn, cfg, sl)["pushed"] == 0              # never uploaded twice
+
+
+# ---------- partners: capital, brokers, advisers ----------
+
+from types import SimpleNamespace
+
+from gtm.eta import partners
+
+
+class FakeBlitzPartners:
+    def __init__(self):
+        self.calls = []
+
+    def search_companies(self, company, max_results, cursor=None):
+        self.calls.append(("companies", company))
+        return {"results": [{"name": "Oak Family Office", "domain": "oakfo.example", "linkedin_url": "https://li/oak",
+                             "industry": "Venture Capital and Private Equity Principals", "size": "1-10",
+                             "hq": {"country_code": "US", "city": "Austin"}},
+                            {"name": "Thin Site LLC", "domain": "thin.example", "hq": {"country_code": "US"}}][:max_results],
+                "cursor": None}
+
+    def people(self, url, cascade, max_results=4):
+        self.calls.append(("people", url, cascade))
+        return [{"person": {"full_name": "Pat Partner", "linkedin_url": "https://li/pat",
+                            "experiences": [{"job_is_current": True, "job_title": "Managing Partner"}]}}]
+
+
+class FakeSiteFetcher:
+    def get(self, url):
+        text = "We back independent sponsors buying lower middle market companies. " * 20 if "oak" in url else "hi"
+        return SimpleNamespace(ok=True, text=text, title="Oak" if "oak" in url else "Thin", links=[])
+
+
+class FakeJevPartners:
+    def decide(self, state, questions):
+        assert set(questions) == {"fit", "check"}
+        return SimpleNamespace(answers={"fit": {"score": 1.8}, "check": {"noul": 0.9}}, model_id="typesafe/jev-1.14",
+                               input_tokens=10, output_tokens=5, cost_usd=0.0001, latency_ms=5, request_id="r1")
+
+
+def test_partners_search_check_people_export(env):
+    cfg, eta, conn, tmp = env
+    conf = partners.load(cfg.root)
+    conf["kinds"] = {"capital": dict(conf["kinds"]["capital"], searches=[{"name": "fo", "keywords": ["family office"],
+                                                                          "max_items": 2}])}
+    api = FakeBlitzPartners()
+    r = partners.search(conn, cfg, conf, api)
+    assert r["new"] == 2 and partners.records_used(conn, cfg.slug) == 2
+    assert partners.search(conn, cfg, conf, api)["new"] == 0                     # seen firms are not added twice
+    c = partners.check(conn, cfg, conf, FakeSiteFetcher(), FakeJevPartners())
+    assert c["fit"] == 1 and c["no_site"] == 1                                   # a thin site is never sent to Jev
+    p = partners.people(conn, cfg, conf, api)
+    assert p["people"] == 1 and api.calls[-1][2][0]["include_title"] == ["Managing Partner"]
+    out = partners.export(conn, cfg, conf)
+    assert out["counts"]["capital"]["strong"] == 1
+    text = (tmp / "eta" / "partners" / "capital.csv").read_text()
+    assert "Oak Family Office" in text and "Pat Partner (Managing Partner)" in text and "Thin Site" not in text
+
+
+def test_partners_respect_the_record_cap(env):
+    cfg, eta, conn, tmp = env
+    conf = partners.load(cfg.root)
+    cfg.limits.month_budget_usd["blitzapi_records"] = 10
+    with pytest.raises(Exception, match="records"):
+        partners.search(conn, cfg, conf, FakeBlitzPartners())

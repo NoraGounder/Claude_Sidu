@@ -5,6 +5,8 @@ month_budget_usd:
   companies_house: 0     # free API: the cap stays 0 and every call is logged at $0
   openrouter: 2          # TypeSafe Jev 1.14 for sieve 2
   fullenrich: 5          # US owner lookup (eta-owners); set by Sidarth 2026-11-23
+  blitzapi: 0            # the Quailworks flat Start plan, paid outside the engine: no charge per call (Q44)
+  blitzapi_records: 2000 # ETA's monthly share of the plan's 200,000 records for partner searches (E13, Sidarth 2026-11-25)
 
 unit_price_usd:
   "companies_house:request": 0.0
@@ -12,6 +14,7 @@ unit_price_usd:
   "fullenrich:credit": 0.055
   "fullenrich:person_returned": 0.01375   # people search: 0.25 credit per person returned
   "fullenrich:work_email": 0.055          # 1 credit, charged only when an email is found
+  "blitzapi:record": 0.0                  # flat plan
 
 # Companies House allows 600 requests per 5 minutes per key. The client paces itself below that and
 # backs off on 429. Daily request ceiling for this client, so one run cannot eat the whole quota.

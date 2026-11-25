@@ -81,6 +81,7 @@ python -m gtm --client eta eta-packs                            # one-page deal 
 python -m gtm --client eta eta-decide yes <company number>...    # Sidarth's call on a pack: yes, no or more
 python -m gtm --client eta eta-outreach                         # for each yes: work email, address, draft email and letter
 python -m gtm --client eta eta-send                             # dry run; --live uploads paused; --start --i-confirm sends (E12)
+python -m gtm --client eta eta-partners --dry-run              # capital partners, brokers, advisers: --search (BlitzAPI), --check (Jev), --people (E13)
 ```
 
 Three countries share the tables: UK ids are Companies House numbers, US ids `US-<loan number>`, Polish ids

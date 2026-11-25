@@ -1,0 +1,74 @@
+# The people around a deal: who backs it, who brings it, who papers it (engine/gtm/eta/partners.py, decisions.md E13).
+# Owners are the companies in eta.yaml; this file is everyone else. Each kind: what fits (Jev 1.14 reads each firm's
+# website against `fit`), the yes/no check that matters most, the BlitzAPI searches that cast the net, and when to
+# approach. Nothing here sends anything: outreach to investors waits for a securities lawyer (E13).
+#
+# BlitzAPI keyword search is loose (one keyword per search, or it ORs them), so searches only cast the net and the
+# website check decides. Records come from the shared flat plan; limits.yaml blitzapi_records caps ETA's share.
+
+country: US
+employees: {min: 1, max: 500}
+fit_bar: 1.5            # Jev fit score 0-2: 1.5 or more = fit, 1.0 = maybe
+max_sites_per_run: 400
+
+kinds:
+  capital:
+    label: Capital partners
+    approach: >-
+      Relationship first, money last: introductions from January 2027 once a securities lawyer has cleared the
+      outreach; a specific ask only after a signed LOI.
+    fit: >-
+      Invests its own or its clients' equity directly in privately owned US companies: a family office that makes
+      direct private-equity investments, an equity fund that backs independent sponsors, fundless sponsors or search
+      funds deal by deal, or a lower-middle-market buyout investor that co-invests. Companies of about $1M-$5M EBITDA
+      or $8M-$40M revenue are in its range. Not a fit: start-up venture capital only, real estate only, public
+      markets or wealth management only, lenders only, fund-of-funds with no direct deals.
+    check: >-
+      Does the website say the firm backs independent sponsors, fundless sponsors, search funds or individual
+      operators buying a company, or co-invests alongside them?
+    titles: [Managing Partner, Partner, Principal, Managing Director, Founder, Chief Investment Officer]
+    searches:
+      - {name: independent_sponsor, keywords: [independent sponsor], max_items: 120}
+      - {name: fundless_sponsor, keywords: [fundless sponsor], max_items: 60}
+      - {name: search_fund, keywords: [search fund], max_items: 120}
+      - {name: family_office_pe, industries: [Venture Capital and Private Equity Principals], keywords: [family office], max_items: 150}
+      - {name: family_office_im, industries: [Investment Management], keywords: [family office], max_items: 100}
+      - {name: lower_middle_market, industries: [Venture Capital and Private Equity Principals], keywords: [lower middle market], max_items: 120}
+
+  broker:
+    label: Brokers and M&A advisers
+    approach: >-
+      From mid-December 2026, once the buyer profile is final: send the buy box, ask to join their buyer list, and
+      take the intro calls. No securities rules apply to this.
+    fit: >-
+      A sell-side M&A adviser or business broker that sells privately owned US companies with roughly $5M-$50M
+      revenue, ideally trades, HVAC and mechanical, engineering, testing or industrial services. Not a fit: buy-side
+      only, real-estate or franchise brokers, or firms that sell only small main-street businesses under $2M.
+    check: >-
+      Does the website show closed or current sell-side deals for companies in trades, building services,
+      engineering, testing or industrial services?
+    titles: [Managing Director, Managing Partner, Partner, Principal, President, Founder]
+    searches:
+      - {name: lower_middle_market_ma, industries: [Investment Banking], keywords: [lower middle market], max_items: 120}
+      - {name: sell_side, industries: [Investment Banking], keywords: [sell-side], max_items: 100}
+      - {name: business_broker, keywords: [business broker], max_items: 120}
+      - {name: mergers_acquisitions_advisory, keywords: [mergers and acquisitions advisory], max_items: 100}
+
+  adviser:
+    label: Lawyers and accountants
+    approach: >-
+      Shortlist in December 2026 and hold one intro call each; engage only after an LOI. The securities lawyer comes
+      first, before any investor outreach.
+    fit: >-
+      A US law firm that acts for buyers in lower-middle-market acquisitions or advises independent sponsors and
+      private funds (securities, fund formation), or a US accounting firm that does quality-of-earnings and
+      financial due diligence on acquisitions of $5M-$50M companies. Not a fit: litigation, personal injury, family
+      or estate law only; tax preparation or bookkeeping only.
+    check: >-
+      Does the website name lower-middle-market M&A, independent sponsors, private equity, securities offerings or
+      quality-of-earnings work as a service?
+    titles: [Partner, Managing Partner, Principal, Director]
+    searches:
+      - {name: ma_law, industries: [Law Practice], keywords: [private equity], max_items: 80}
+      - {name: sponsor_law, industries: [Law Practice], keywords: [independent sponsor], max_items: 40}
+      - {name: quality_of_earnings, industries: [Accounting], keywords: [quality of earnings], max_items: 80}
