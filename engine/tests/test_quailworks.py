@@ -846,3 +846,13 @@ def test_jev_decides_again_only_accounts_with_new_job_titles(env):
     conn.commit()
     assert [i["id"] for i in l2_jev.plan(cfg, conn).items if i["id"] in ids] == []           # both decided
     assert [i["id"] for i in l2_jev.plan(cfg, conn, new_titles=True).items if i["id"] in ids] == [ids[1]]
+
+
+def test_company_names_read_like_a_person_wrote_them():
+    from gtm.layers import l5_copy
+    seq = {"company_suffixes": ["inc"], "company_name_cut": [" by ", " (formerly"],
+           "company_names": {"StartProto AI Manufacturing OS": "StartProto"}}
+    assert l5_copy.company_name(seq, "StartProto AI Manufacturing OS") == "StartProto"
+    assert l5_copy.company_name(seq, "Humanity Schedule by TCP Software") == "Humanity Schedule"
+    assert l5_copy.company_name(seq, "Nintex RPA (formerly Kryon)") == "Nintex RPA"
+    assert l5_copy.company_name({"company_suffixes": ["inc"]}, "Acme Robotics, Inc.") == "Acme Robotics"   # no fixed name: cleaned

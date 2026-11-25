@@ -86,6 +86,13 @@ def load_sender(cfg: ClientConfig) -> tuple[dict, bool]:
         return yaml.safe_load(fh), real.exists()
 
 
+def company_name(seq: dict, raw: str) -> str:
+    """The company as written in an email: a fixed name from sequence.yaml `company_names` when one is set
+    (LinkedIn names that follow no pattern, e.g. "StartProto AI Manufacturing OS"), else the cleaned name."""
+    fixed = (seq.get("company_names") or {}).get(raw)
+    return fixed or clean_company(raw, seq.get("company_suffixes"), seq.get("company_name_cut"))
+
+
 def clean_company(name: str, extra_suffixes: list[str] | None = None, cut: list[str] | None = None) -> str:
     """Company name for a sentence. `cut` (sequence.yaml company_name_cut) drops LinkedIn taglines:
     "Vimachem - IIoT Pharma 4.0 AI Platform" -> "Vimachem"."""
@@ -287,7 +294,7 @@ def render(seq: dict, lang: str, hook: str, process: str, facts: dict, contact: 
            sender: dict, gdpr: str) -> tuple[str, list[dict]]:
     values = {
         "first_name": clean_first_name(contact["first_name"]),
-        "company": clean_company(account["name"], seq.get("company_suffixes"), seq.get("company_name_cut")),
+        "company": company_name(seq, account["name"]),
         **fact_values(seq, facts),
         "sender_first_name": sender.get("first_name", ""),
         "sender_full_name": sender.get("full_name") or sender.get("first_name", ""),
@@ -416,7 +423,7 @@ def _fact_check(cfg, conn, jev, seq, lang, hook, subject, facts, contact, accoun
     """Jev 1.14 checks only what claims something about the company: the subject and the opening.
     Data minimisation: no names are sent."""
     hook_text = seq["hooks"][hook][lang].format(
-        company=clean_company(account["name"], seq.get("company_suffixes"), seq.get("company_name_cut")),
+        company=company_name(seq, account["name"]),
         **fact_values(seq, facts))
     qa_text = f"Subject: {subject}\n{hook_text}"
     for name, placeholder in ((clean_first_name(contact["first_name"]), "[first name]"),

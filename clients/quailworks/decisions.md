@@ -515,6 +515,13 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   stays, delivered on calls. Would change: replies asking who is behind Quailworks (then add a short
   "who you'll work with" line back to the site).
 
+- **Q54. Rehearsal check 1 (2026-11-25).** Email 1 reached both seed inboxes at 14:15 UTC from two QW
+  mailboxes, no tracking, with the footer, opt-out and postal address. It exposed one flaw a prospect would
+  see: a LinkedIn name printed as "StartProto AI Manufacturing OS". Fixed for every draft: " by " and
+  " (formerly" now cut names, and sequence.yaml `company_names` holds the few names no rule can clean
+  (engine: `l5_copy.company_name`). All 286 drafts were rewritten and re-approved. Would change: any odd
+  company name in a reply or a later check (add it to `company_names`).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

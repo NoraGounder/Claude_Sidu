@@ -26,7 +26,11 @@ quote_titles:
   - {label: "sales manager", pattern: '\bsales\s+manager'}
 job_title_qa: "Open job listed on their careers page"
 # LinkedIn page names often carry a tagline: "Vimachem - IIoT Pharma 4.0 AI Platform" -> "Vimachem".
-company_name_cut: [" | ", " - ", " – ", " — ", ", powered by", ": "]
+company_name_cut: [" | ", " - ", " – ", " — ", ", powered by", ": ", " by ", " (formerly"]
+# LinkedIn names no rule can clean, written as a person would say them (found by the rehearsal, Q54).
+company_names:
+  "StartProto AI Manufacturing OS": StartProto
+  "The AnyLogic Company": AnyLogic
 greetings:
   en: ["Hi", "Hello"]
 signoffs:
