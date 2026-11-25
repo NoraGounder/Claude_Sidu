@@ -1,6 +1,8 @@
 # Layer 5 copy for Quailworks Engineering. Written by people, filled only with facts we can show the source
-# for (engine/gtm/layers/l5_copy.py). Claims follow decisions.md E7: programme types, never employer or
-# programme names; no rates, team size or results; "I", because today the founder does the work.
+# for (engine/gtm/layers/l5_copy.py). Offer v2, the First-Part Sprint (offer.md, decisions.md E15-E19): email 1
+# offers the free 40-Point Release Check, email 2 the Sprint and its promise in plain words, email 3 the free
+# Drawing Check. Company voice ("we"), never headcount; programme types, never names; no prices (E7, E19).
+# "working days" is on the engine's global banned list, so the copy says "two weeks".
 #
 # Rules: plain text, no links in email 1, short, no exclamation marks, openings that presume nothing, the
 # GDPR notice at the end of email 1. Placeholders in {curly_braces}. A hook is only used when its fact
@@ -46,8 +48,8 @@ title_role_words: 'engineer|designer|draughts\w*|drafts\w*|technician|specialist
 company_suffixes: [ltd, limited, plc, llp, inc, incorporated, llc, l.l.c., corp, corporation]
 # Never in an automatically approved draft (decisions.md E7). "outbound" and "signal engine" keep the GTM
 # offer's words out of this one.
-banned_phrases: [guarantee, guaranteed, case study, per hour, per day, day rate of, our engineers, our team of,
-                 money back, refund, marble jar, outbound, signal engine, meetings]
+banned_phrases: [guarantee, guaranteed, case study, per hour, per day, day rate, our engineers, our team of,
+                 money back, refund, marble jar, outbound, signal engine, meetings, £, "$", "€"]
 
 # One process, so Jev 1.14 is not asked to choose one.
 process:
@@ -61,13 +63,13 @@ hooks:
     description: Open with the mechanical design role they are hiring for
     subject:
       en: "your {job_title} opening"
-    en: "I saw the {job_title} opening at {company}. While you hire, I could take design work off the team from next week, on a day rate or as a fixed-price package."
+    en: "I saw the {job_title} opening at {company}. While you hire, we could take one part off the team's list: from your spec to a supplier-ready drawing in your CAD, in two weeks."
   cad_platform:
     needs: cad
     description: Open with the CAD system named in their job ads
     subject:
-      en: "{cad} design work at {company}"
-    en: "I saw that the engineering team at {company} works in {cad}, which I design in too. When there are more parts to release than people, I could help from next week, on a day rate or as a fixed-price package."
+      en: "{cad} parts at {company}"
+    en: "I saw that the engineering team at {company} works in {cad}, which we design in too. When there are more parts to release than people, we can take one off the list and hand it back supplier-ready in two weeks."
   trade_show:
     needs: trade_show
     description: Open with the trade show their website mentions
@@ -79,17 +81,17 @@ hooks:
     description: Open with how many roles they are hiring for (growth)
     subject:
       en: "{open_roles} open roles at {company}"
-    en: "I saw {company} has {open_roles} open roles. Is the design office keeping pace, or is it where work queues up?"
+    en: "I saw {company} has {open_roles} open roles. Is the design office keeping pace, or is it where parts queue up for release?"
   generic:
     needs: null
     description: Open with how they add design capacity
     subject:
-      en: "design capacity at {company}"
-    en: "Quick question: when the design team at {company} has more work than people, how do you add capacity?"
+      en: "parts to release at {company}"
+    en: "Quick question: when the design team at {company} has more parts to release than people, how do you add capacity?"
 
-# The one ask (decisions.md E6): something useful, no call needed.
+# The one ask (offer.md section 4): the lead magnet, useful on its own, no call needed.
 cta:
-  en: "Shall I send you a one-page profile with the parts I've designed and the CAD I work in? No call needed."
+  en: "Shall I send you the 40-point checklist we run on every drawing before it reaches a supplier? It's free to use, and no call is needed."
 
 steps:
   - day: 0
@@ -98,7 +100,7 @@ steps:
 
       {hook}
 
-      I run Quailworks Engineering. Over the last decade I've designed suspension, chassis and composite parts for hypercars and race cars, including a championship-winning touring car, and components for a launch-vehicle turbopump, in CATIA, NX and Creo, through to toleranced drawings and supplier release.
+      I'm with Quailworks Engineering. Our design experience covers suspension, chassis and composite parts for hypercars and race cars, including a championship-winning touring car, and turbopump components for a launch vehicle, in CATIA, NX and Creo.
 
       {cta}
 
@@ -110,24 +112,24 @@ steps:
     en: |
       {greeting} {first_name},
 
-      Two ways to work together: I join the team on a day rate, in your CAD and PLM and to your drawing standard, or I take a fixed-price package with a written scope, such as one upright, housing or jig from concept to drawing release. Either way your team keeps design authority.
+      The easiest way to start is a First-Part Sprint: one part or sub-assembly, scoped in writing, taken from your spec to a supplier-ready drawing in your CAD and to your standard in two weeks. If it isn't supplier-ready by the date in the scope, and the delay isn't on your side, you don't pay for it.
 
-      Worth 20 minutes to see where it would help {company}?
+      Worth 20 minutes to pick the part?
 
       {sender_first_name}
   - day: 7
     en: |
       {greeting} {first_name},
 
-      One thing I learned as the contractor brought in mid-programme: the first days go on learning the team's CAD set-up, standards and interfaces. So I start with one small part to your standard, and you judge the work before handing over more.
+      The hidden cost of outside help is usually the onboarding. So on day one we turn your CAD set-up and drawing standard into a one-page rule sheet, and every drawing is checked against our 40 points before it reaches you.
 
-      The one-page profile is still on offer. Shall I send it?
+      If you'd rather see the quality first, send one released drawing under NDA and we'll mark it up within 48 hours, free. We start two Sprints a month, on the 1st and the 15th.
 
       {sender_first_name}
   - day: 14
     en: |
       {greeting} {first_name},
 
-      I don't want to keep emailing you. Shall I leave it here, or check back when your next programme ramps up?
+      I don't want to keep emailing you. Shall I leave it here, or check back when your next build date gets close?
 
       {sender_first_name}

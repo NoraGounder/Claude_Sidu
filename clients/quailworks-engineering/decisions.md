@@ -136,6 +136,38 @@ Sources: the founder's CV (shared 2026-11-19, kept out of this repository), Quai
   goes through Layer 2 (crawl, signals, Jev) and every address through MillionVerifier. Would change: BlitzAPI's
   people search missing the right person at more than a third of Tier 1 companies (then FullEnrich first again).
 
+## Offer v2: the Grand Slam Offer (2026-11-25, the user: "implement Alex Hormozi's skills and create a compelling grand slam offer")
+
+Built with the $100M Offers method; four MIT-licensed Hormozi skills (github.com/alexsmedile/hormozi-skills) are
+vendored in `.claude/skills/` for every chat. Full offer: `offer.md`. The user can veto any number before the
+first send.
+
+- **E15. From a day rate to a dated outcome: the First-Part Sprint.** v1 sold capacity on a day rate, which
+  buyers compare hour for hour with agency contractors (a commodity). v2 sells one part, scoped in writing,
+  supplier-ready in two weeks at a fixed price (from £4,500 / $6,000; £8,500 / $11,500 for a sub-assembly),
+  then continuity as an Embedded Design Engineer at £600 / $850 a day, month to month, with the Sprint fee
+  credited if they continue within 30 days. Value Equation: the dream outcome is the build date met; time
+  delay and effort are where we win (fixed start, two weeks, the Standards Pack, one review a week). Would
+  change: three calls in a row stalling on the Sprint price, or Sprints running past 7.5 days of our time.
+- **E16. Lead magnet: the 40-Point Release Check** (`assets/40-point-release-check.md`), offered in email 1 instead of
+  the one-page profile (E6). It is useful on its own, needs no call and no data from the prospect, and reveals
+  the release backlog the Sprint solves. After a reply, the free Drawing Check (one released drawing marked up
+  within 48 hours under NDA) gives proof on their own work. Would change: checklists requested but no replies
+  after it (then lead with the Drawing Check).
+- **E17. Supplier-Ready Guarantee (conditional).** "If your part isn't supplier-ready by the date in the scope,
+  you don't pay for the Sprint", plus supplier-found errors of ours fixed in two working days, unbilled.
+  Conditions: inputs on day one, review feedback within two working days, the date moves for delays on the
+  client's side. One claim costs about 7.5 days of our time; Hormozi's guarantee math says a promise that lifts
+  first purchases pays for several claims. Cold emails state it in plain words without the word "guarantee"
+  (banned phrase). Would change: two claims in the first ten Sprints.
+- **E18. Scarcity and urgency, both real.** Two Sprints start a month, on the 1st and the 15th, which is today's
+  real capacity; a slot closes five working days before its start. Motorsport gets a seasonal name (the
+  Pre-Season Part Sprint, October-February). Would change: capacity growing with vetted engineers (E13).
+- **E19. Company voice.** The user (2026-11-24): Quailworks is its own thing. Emails and the site speak as
+  Quailworks ("we"); the sender introduces himself as being "with Quailworks Engineering". Never headcount
+  ("our engineers", "team of" are banned), never results we have not had, programme types only. This replaces
+  the "I" rule in E7.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 See `client.yaml needed_from_client`. In one message: the domain and three mailboxes (E2), the one-page

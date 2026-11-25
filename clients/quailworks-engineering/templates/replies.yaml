@@ -1,14 +1,14 @@
-# Layer 7: first answers sent from the Smartlead inbox, in the founder's name, within a few working hours of
-# an interested reply. Written by people; filled only with known values. Same rules as decisions.md E7: no
+# Layer 7: first answers sent from the Smartlead inbox, in the sender's name, within a few working hours of
+# an interested reply. Written by people; filled only with known values. Same rules as decisions.md E7/E19: no
 # rates or results in writing. {times} is the booking link when private/sender.yaml has one, otherwise two
-# proposed slots. Most interested replies will say "yes, send the profile" (email 1 offers it, E6).
+# proposed slots. Most interested replies will say "yes, send the checklist" (email 1 offers it, E16).
 
 interested: |
-  Thanks {first_name}, good to hear.
+  Thanks {first_name}, here's the 40-point checklist (attached). Run it on your next release and count the noes.
 
-  I'll send the one-page profile today. To point it at what matters to you: which parts or systems is the team shortest of hands on right now, and which CAD and PLM do you run?
+  Two things that may help from here. If you'd like to see our quality on your own work, send one released drawing under NDA and we'll mark it up within 48 hours, free. And if a part is waiting for a designer, a First-Part Sprint takes it to a supplier-ready drawing in two weeks, scoped and priced up front, and you don't pay if we miss the date.
 
-  If you would rather talk it through, {times}
+  If it's easier to talk it through, {times}
 
   {sender_first_name}
 
@@ -34,5 +34,6 @@ call_prep:
   - "Ask which programme is short of design hands, which parts, and the next hard deadline (build, test, show)."
   - "Ask how they buy contract design today: agency contractors, a consultancy, or direct; who signs it off."
   - "Check the CAD and PLM, the drawing standard, remote access, NDA and IP terms, and any export-control limits."
-  - "Offer the first step that fits (offer.md): a named engineer on a day rate, or a small fixed-price package to prove the work."
+  - "Offer the First-Part Sprint (offer.md section 4): pick the part together, agree the scope and date, explain the Supplier-Ready Guarantee."
+  - "If they are not ready: offer the free Drawing Check on one released drawing under NDA; if they want ongoing help, the Embedded Design Engineer."
   - "Afterwards {sender} records one word: qualified, not a fit, or follow up."

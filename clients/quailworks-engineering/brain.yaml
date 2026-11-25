@@ -18,10 +18,13 @@ market_profile:
   - {status: decided, note: "decisions.md E4-E5", text: "UK first, then the US: companies with 11-500 employees that design their own vehicles, race cars, spacecraft, aircraft, robots or machines."}
 
 offer:
-  - {status: decided, note: "decisions.md E3", text: "Design capacity on demand: concept, layout, detailed 3D, GD&T drawings, ply tables, BOMs, DFM with suppliers, jigs and fixtures; the client keeps design authority."}
-  - {status: decided, note: "decisions.md E6", text: "First step: a one-page profile of the engineer, with the parts designed and the CAD used, no call needed. Then a 20-minute call about the part or the gap."}
-  - {status: decided, jev: false, note: "decisions.md E7", text: "No employer or programme names, rates, team size or results in outreach; programme types only."}
-  - {status: decided, jev: false, note: "decisions.md E8", text: "Day rate quoted per engagement; fixed-price packages at estimated days x day rate + 15%; never in email."}
+  - {status: decided, note: "decisions.md E15, offer.md v2", text: "The First-Part Sprint: one part or sub-assembly, scoped in writing, taken from the client's spec to a supplier-ready released drawing in their CAD and to their standard in two weeks, at a fixed price."}
+  - {status: decided, note: "decisions.md E17", text: "Supplier-Ready Guarantee: if the part isn't supplier-ready by the scoped date, and the delay isn't on the client's side, the client doesn't pay for the Sprint; supplier-found dimensioning or tolerancing errors of ours are fixed within two working days, unbilled."}
+  - {status: decided, note: "decisions.md E16", text: "Lead magnet in email 1: the 40-Point Release Check, the checklist run on every drawing before it reaches a supplier, free, no call needed. After a reply: a free Drawing Check on one released drawing under NDA within 48 hours."}
+  - {status: decided, note: "decisions.md E15", text: "After the Sprint: an Embedded Design Engineer, month to month, the Sprint fee credited if they continue within 30 days. Bonuses with every Sprint: Standards Pack, 40-Point Release Check, DFM and supplier notes, Handover Pack, Build-Week Support."}
+  - {status: decided, note: "decisions.md E18", text: "Two Sprints start each month, on the 1st and the 15th (real capacity)."}
+  - {status: decided, jev: false, note: "decisions.md E8, E19", text: "Prices on calls and proposals only: Sprint from £4,500 / $6,000, embedded £600 / $850 a day. Never in email."}
+  - {status: decided, jev: false, note: "decisions.md E7, E19", text: "Company voice (we), never headcount; programme types, never names; no results we have not had."}
 
 personas:
   engineering_leader:

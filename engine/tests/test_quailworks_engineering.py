@@ -71,7 +71,9 @@ def test_email_one_is_short_names_no_employer_and_passes_the_banned_phrase_check
     body = steps[0]["body"]
     assert subject == "your mechanical design engineer opening"
     assert body.startswith(("Hi Alex,", "Hello Alex,")) and "opening at Northfield Motorsport." in body
-    assert "one-page profile" in body and body.endswith(gate["gdpr_notice"]["en"])
+    assert "40-point checklist" in body and "supplier-ready drawing" in body and body.endswith(gate["gdpr_notice"]["en"])
+    assert "you don't pay for it" in steps[1]["body"] and "First-Part Sprint" in steps[1]["body"]   # E15, E17
+    assert "within 48 hours, free" in steps[2]["body"] and "1st and the 15th" in steps[2]["body"]     # E16, E18
     words = body.replace(gate["gdpr_notice"]["en"], "").split()
     assert len(words) <= 110
     text = " ".join(s["body"] for s in steps).lower() + " " + subject.lower()
