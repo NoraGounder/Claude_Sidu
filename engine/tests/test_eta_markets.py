@@ -544,3 +544,11 @@ def test_partners_respect_the_record_cap(env):
     cfg.limits.month_budget_usd["blitzapi_records"] = 10
     with pytest.raises(Exception, match="records"):
         partners.search(conn, cfg, conf, FakeBlitzPartners())
+
+
+def test_long_company_names_never_crash_the_website_search():
+    from gtm.crawl import Fetcher
+    long = "the very long and winding name of a company that keeps going on and on incorporated"
+    assert all(len(c.split(".")[0]) <= 63 for c in qualify.domain_candidates(long, "US"))
+    page = Fetcher(use_cache=False).get("https://" + "a" * 70 + ".com/")
+    assert not page.ok                                         # an unreadable site, not an exception

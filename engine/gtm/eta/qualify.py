@@ -142,7 +142,7 @@ def domain_candidates(name: str, market: str = "GB") -> list[str]:
     core = [w for w in words if w not in _SUFFIXES] or words
     stems = []
     for stem in ("".join(core), "-".join(core), "".join(core[:2]), "".join(core[:1])):
-        if stem and len(stem) >= 3 and stem not in stems:
+        if stem and 3 <= len(stem) <= 63 and stem not in stems:      # a DNS label holds at most 63 characters
             stems.append(stem)
     return [f"{s}.{tld}" for s in stems for tld in _TLDS.get(market, _TLDS["GB"])]
 

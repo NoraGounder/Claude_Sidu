@@ -117,7 +117,11 @@ class Fetcher:
             data = json.loads(cache.read_text(encoding="utf-8"))
             data["links"] = [tuple(x) for x in data.get("links", [])]
             return Page(**data)
-        if not self.allowed(url):
+        try:
+            allowed = self.allowed(url)
+        except Exception as exc:   # noqa: BLE001 - e.g. a host name too long to encode: an unreadable site
+            return Page(url=url, status=0, error=type(exc).__name__)
+        if not allowed:
             return Page(url=url, status=0, error="blocked_by_robots")
         host = urlparse(url).netloc
         wait = self.delay - (time.monotonic() - self._last_hit.get(host, 0))
