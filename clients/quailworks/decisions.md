@@ -506,6 +506,15 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   Engineering client folder came over from its branch; its website files stay on its own branch. Would
   change: a reply showing a company wants both services (then hand over by hand).
 
+- **Q53. Website without the founder section (2026-11-25, the user's choice in the Engineering chat).**
+  quailworks.co now has a dark "studio" theme, a "Why Quailworks" section with company details in place of
+  the founder section, photo and LinkedIn links (replacing that part of Q40), and an /engineering page. The
+  campaign's promises on the site are unchanged: hero text, the Signal Sample, the 90-day Signal Engine, the
+  numbers, the FAQ and the form. Email 1 keeps its one line on the founder's engineering background: it is
+  sent in his name, so it is his own credential, not website copy. The "engineer's read" bonus (offer.md)
+  stays, delivered on calls. Would change: replies asking who is behind Quailworks (then add a short
+  "who you'll work with" line back to the site).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):
