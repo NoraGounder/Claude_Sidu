@@ -175,6 +175,14 @@ first send.
   the First-Part Sprint (Worker version 727e1e1e). Checked live: WebGL renderer active, no founder content, the
   four engineering form options, no console errors, no horizontal scroll at 390px.
 
+- **E21. Offer v2's numbers stand, and the pipeline runs (2026-11-25, the user: "the kind of desired results that I
+  want, make the right judgment and go ahead").** Quailworks keeps E15-E18 as written: Sprint from £4,500 / $6,000,
+  embedded £600 / $850 a day, the Supplier-Ready Guarantee, two Sprints a month. The pipeline runs to approved
+  drafts the same day. Not taken as approval to send: the first real emails in the founder's name wait for his
+  explicit "go" on drafts he has seen (CLAUDE.md rule 3), and the mailboxes only become warm on 30 November and
+  4 December anyway. Off-site backups were not available in this session (the vault repository could not be
+  attached), so the database is backed up, encrypted, on this machine only until it is.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 See `client.yaml needed_from_client`. In one message: the domain and three mailboxes (E2), the one-page
