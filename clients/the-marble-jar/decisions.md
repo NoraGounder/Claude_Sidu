@@ -161,5 +161,8 @@ One message, at launch, a few minutes:
    (GDPR Art. 28). The user keeps his message as the signed copy.
 2. **A booking link or two time slots a week** for meetings. Until then, Quailworks forwards
    interested replies to him and proposes times.
+3. **Sent 25 November 2026** (launch day): the launch message asking for the booking link, the list of
+   102 companies (D11, for information), and the DPA notice (Annex 2 update, BlitzAPI as sub-processor).
+   No objection by 9 December means BlitzAPI may be used as the first email source (D24).
 
 Everything else is decided above.

@@ -151,7 +151,7 @@ Work top to bottom; tick items off here as they land, in the same commit.
 - [ ] M12: DMARC report address away from the sending mailboxes. M15: close the stuck run row.
 
 ### 10. H10: the one message to Mithun
-- [ ] (text ready: `message-to-mithun.md`) Booking link (or two fixed slots a week); the company list for information (D11); the DPA
+- [x] (sent 25 Nov; booking link still awaited) Booking link (or two fixed slots a week); the company list for information (D11); the DPA
       notice (Annex 2 changes, BlitzAPI). Sidarth sends it.
 
 ### 11. Launch
