@@ -183,6 +183,20 @@ first send.
   4 December anyway. Off-site backups were not available in this session (the vault repository could not be
   attached), so the database is backed up, encrypted, on this machine only until it is.
 
+- **E22. First run and calibration (2026-11-25).** BlitzAPI found 1,677 companies (company searches 1,567, hiring
+  searches 222, 830 live design postings matched to 215 of them); 1,327 passed the first filters; Layer 2 and Jev
+  left 66 in Tier 1-2; 110 decision-makers were selected (BlitzAPI people search, FullEnrich only for missing
+  emails); 103 work emails; MillionVerifier checked every one; 69 passed the gate; 67 drafts were approved
+  automatically, 67 of them opening with the company's own open design role. Spend: $2.04 (FullEnrich $1.46,
+  MillionVerifier $0.41, Jev $0.17), BlitzAPI 2,904 records on the flat plan. Calibration, read as the founder
+  would: US spacecraft, launch and military-drone companies were landing in Tier 1 although their work is
+  export-controlled (ITAR) and needs US persons. Fixed by (1) a scoring rule (`itar_required`, -60) for ITAR,
+  US-person, export-control and clearance wording on their pages, (2) a sharper `buyer_profile` that Jev judged
+  every company against again (`jev --redo`, $0.07): spacecraft companies fell to Tier 3, civil eVTOL stayed, and
+  (3) one US military-drone maker added to `private/exclusions.csv` by hand. Two drafts for a UK/German hypersonics
+  company are left for the founder (likely defence work). Upload plan: 40 first contacts (28 US, 12 UK); 27 second
+  contacts wait 21 days. Would change: replies showing a segment or country converting better (E4, quailworks Q27).
+
 ## Needed from the user (only what we cannot do ourselves)
 
 See `client.yaml needed_from_client`. In one message: the domain and three mailboxes (E2), the one-page

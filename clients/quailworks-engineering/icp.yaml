@@ -14,7 +14,10 @@ buyer_profile: >-
   and parts that are weight- or packaging-critical (chassis, suspension, structures, housings,
   composites). Poor fit: build-to-print machine shops and fabricators that do not design, engineering
   consultancies and staffing firms (they sell the same service), software-only companies, distributors
-  and dealerships, and US defence contractors whose work is export-controlled (ITAR).
+  and dealerships, and export-controlled US work: US companies building spacecraft, launch vehicles, satellites,
+  missiles, military drones or weapons, and US defence contractors (their design data falls under ITAR and needs
+  US persons, which an EU design firm cannot provide). Civil eVTOL, electric aircraft, commercial drones, robots and
+  vehicles in the US are fine, and so is space and aerospace work in the UK.
 # What we offer, in one line, for Jev's contact-relevance question.
 offer_summary: >-
   Contract mechanical design engineering: a senior design engineer working in the client's CAD from

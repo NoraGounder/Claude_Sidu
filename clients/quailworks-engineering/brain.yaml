@@ -14,7 +14,7 @@ version: 1
 market_profile:
   - {status: confirmed, note: "founder's CV, 2026-11-19", text: "The founder has over a decade as a mechanical design engineer on motorsport, hypercar, automotive and aerospace programmes: suspension, chassis, driveline, composite and turbopump components, from concept to released drawings, in CATIA V5/3DEXPERIENCE, Siemens NX and Creo."}
   - {status: confirmed, note: "founder's CV", text: "He has led and trained an offshore team producing GD&T drawings, managed suppliers, and worked with analysis teams on weight and stiffness."}
-  - {status: decided, note: "decisions.md E3", text: "Quailworks Engineering sells mechanical design capacity to hardware teams: a senior design engineer on a day rate, or a fixed-price design package, starting next week."}
+  - {status: decided, note: "decisions.md E15", text: "Quailworks Engineering sells mechanical design to hardware teams as a dated outcome: the First-Part Sprint (one part, supplier-ready in two weeks, fixed price, or no fee), then an embedded design engineer month to month."}
   - {status: decided, note: "decisions.md E4-E5", text: "UK first, then the US: companies with 11-500 employees that design their own vehicles, race cars, spacecraft, aircraft, robots or machines."}
 
 offer:

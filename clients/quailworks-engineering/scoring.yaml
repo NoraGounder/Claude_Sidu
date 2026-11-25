@@ -36,6 +36,9 @@ signals:
   trade_show: 10           # exhibiting: a show date is a design deadline
   headcount_growth: 10     # several open roles, growth language, a new facility
   supplier_certification: 5   # AS9100 or IATF 16949: designs parts for aerospace or automotive programmes
+  # Export-controlled work needs US persons: a company asking for ITAR, US persons or clearances cannot buy design
+  # work from an EU company, so it is parked below Tier 2 however strong its other signals (decisions.md E5, E22).
+  itar_required: -60
 
 signal_bonuses:
   multiple_design_ads: {signal: design_job_ad, min_labels: 2}
@@ -79,6 +82,11 @@ detect:
     - {label: "Automate", pattern: '\bautomate\s+20\d\d\b'}
     - {label: "Hannover Messe", pattern: 'hannover\s+messe'}
     - {label: "visit us at our stand", pattern: 'visit\s+us\s+at\s+(our\s+)?(booth|stand)|booth\s*#\s*\d+'}
+  itar_required:
+    - {label: "ITAR", pattern: '\bITAR\b'}
+    - {label: "US persons only", pattern: '\bU\.?S\.?\s+persons?\b|\bU\.?S\.?\s+citizens?(hip)?\b'}
+    - {label: "export control", pattern: '\bexport[\s-]+control(led|s)?\b|\bEAR99\b'}
+    - {label: "security clearance", pattern: '\b(security|secret|DoD)\s+clearance\b'}
   supplier_certification:
     - {label: "AS9100", pattern: '\bAS\s?9100\w*'}
     - {label: "IATF 16949", pattern: '\bIATF\s?16949\b'}
