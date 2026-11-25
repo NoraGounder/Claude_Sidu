@@ -168,6 +168,13 @@ first send.
   ("our engineers", "team of" are banned), never results we have not had, programme types only. This replaces
   the "I" rule in E7.
 
+- **E20. Live (2026-11-25, the user: "make the checklist PDF and deploy").** The 40-Point Release Check is a branded
+  three-page A4 PDF (`assets/40-point-release-check.pdf`, built from the .md with Chromium print: tick boxes,
+  drawing fields, the noes tally and the Drawing Check offer), attached to the "interested" reply. quailworks.co
+  is deployed with the company-first content, the WebGL heroes, the motion layer and the engineering page selling
+  the First-Part Sprint (Worker version 727e1e1e). Checked live: WebGL renderer active, no founder content, the
+  four engineering form options, no console errors, no horizontal scroll at 390px.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 See `client.yaml needed_from_client`. In one message: the domain and three mailboxes (E2), the one-page
