@@ -23,7 +23,7 @@ from gtm import db
 from gtm.config import data_dir
 from gtm.eta import outreach
 
-SENDER_KEYS = ("full_name", "background", "funding", "phone", "postal_address")
+SENDER_KEYS = ("full_name", "background", "funding", "postal_address")   # phone and email are optional
 ACCEPT = outreach.ACCEPT
 
 SCHEMA = """
@@ -67,12 +67,16 @@ def load_sender(root: Path) -> tuple[dict, list[str]]:
 def fill(text: str, sender: dict, note: str | None = None) -> str:
     """Replace the draft's {{...}} placeholders. Anything left in braces means the text is not ready."""
     funding = sender.get("funding", "").strip()
+    phone = str(sender.get("phone") or "").strip()
+    if not phone or "<" in phone:                       # no phone yet: the contact line is the email alone
+        text = re.sub(r"\{\{PHONE\}\} \| ", "", text)
     subs = [
         (r"\{\{YOUR FULL NAME\}\}", sender.get("full_name", "")),
         (r"\{\{ONE SENTENCE ABOUT YOUR BACKGROUND[^}]*\}\}", sender.get("background", "").strip()),
         (r"\{\{HOW THE PURCHASE WOULD BE FUNDED[^}]*\}\}", funding + (f"\n\n{note.strip()}" if note else "")),
         (r" \| \{\{EMAIL\}\}", f" | {sender['email']}" if sender.get("email") else ""),
-        (r"\{\{PHONE\}\}", sender.get("phone", "")),
+        (r"\{\{EMAIL\}\}\n?", f"{sender['email']}\n" if sender.get("email") else ""),
+        (r"\{\{PHONE\}\}", phone),
         (r"\{\{POSTAL ADDRESS[^}]*\}\}", sender.get("postal_address", "")),
     ]
     for pattern, value in subs:

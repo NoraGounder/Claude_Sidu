@@ -443,6 +443,8 @@ def test_short_name_and_fill():
            "{{PHONE}} | {{EMAIL}}\n{{POSTAL ADDRESS (US law)}}"
     out = send.fill(text, {"background": "B.", "funding": "F.", "phone": "1", "postal_address": "A"}, "Note.")
     assert out == "B. F.\n\nNote.\n1\nA" and "{{" not in out
+    no_phone = send.fill(text, {"background": "B.", "funding": "F.", "email": "me@x.example", "postal_address": "A"})
+    assert "me@x.example\nA" in no_phone and "|" not in no_phone and "{{" not in no_phone
 
 
 def test_eta_send_holds_until_details_then_uploads_paused_to_own_domain_only(env):
