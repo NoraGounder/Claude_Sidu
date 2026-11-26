@@ -1,0 +1,57 @@
+# Copy to config.local.yaml (gitignored) and fill in. Keep street addresses,
+# names and phone numbers out of this file: it never needs them.
+
+home_country: PL          # where physical goods end up (VAT, customs, delivery)
+report_currency: PLN
+deals_since: 2026-10-15   # ignore deal-site posts older than this
+
+# Optional spend caps per category, in report_currency. Delete the block for no caps.
+budget:
+  vacuum: 3000
+  comics: 400
+  books: 600
+  llm: 1200
+  software: 600
+  membership: 600
+
+# Gifts shipped straight to someone abroad. Offers from that market are
+# delivered locally (no forwarding, no customs).
+gift_delivery: {}        # e.g. {comics: GB}
+
+# Used to keep gift picks age-appropriate.
+recipient_age: {}        # e.g. {comics: 12}
+
+# Shared Amazon wishlist to price (stage 1 scrapes it).
+wishlist_url: https://www.amazon.de/hz/wishlist/ls/YOUR_LIST_ID
+
+llm:
+  provider: openrouter
+  model: typesafe/jev-router
+  max_tokens: 16000
+  reasoning_effort: low   # reasoning tokens share max_tokens with the answer
+
+# Landed-cost assumptions. All overridable. Sources: EU TARIC (HS 8508 11 00
+# robot vacuums 2.2 %), Polish VAT Act (23 % standard, 5 % books/e-books),
+# typical forwarder rates for a ~12 kg boxed vacuum and a small book parcel.
+landed_cost:
+  vat:            # standard rate, reduced book rate
+    PL: {standard: 0.23, books: 0.05}
+    DE: {standard: 0.19, books: 0.07}
+    NL: {standard: 0.21, books: 0.09}
+    UK: {standard: 0.20, books: 0.0}
+    US: {standard: 0.0,  books: 0.0}   # US list prices exclude sales tax
+  duty:
+    vacuum: 0.022
+    comics: 0.0
+    books: 0.0
+  forwarder:      # door-to-door to the home country, in source currency
+    US: {large: 110, small: 25}        # USD; large = boxed vacuum
+    UK: {large: 45,  small: 15}        # GBP
+  us_sales_tax: 0.0                    # 0 when the forwarder sits in DE/OR/DE
+  customs_clearance_pln: 45            # carrier's import-handling fee
+  eu_shipping: {default: 9.99, free_merchants: [amazon, x-kom, roborock, mediamarkt, joybuy]}
+  # Big EU shops charge the buyer's VAT (OSS), so a DE price is re-taxed at PL rates.
+  eu_destination_vat: true
+
+# Optional manual checks shown at the top of the report.
+checks: []

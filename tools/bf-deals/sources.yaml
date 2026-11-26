@@ -1,0 +1,50 @@
+# Stage 1 plan: what to scrape and from where. Claude Code runs these through the
+# Firecrawl MCP (alexandria_library_read / firecrawl_scrape) and saves each raw
+# result as JSON in data/raw/. Each Alexandria call costs ~5 credits.
+
+alexandria:            # structured deal and price providers
+  vacuum:
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: roborock}}
+    - {provider: hotukdeals-com, capability: deals/search_deals, options: {query: roborock}}
+    - {provider: slickdeals-net, capability: deals/search_deals, options: {query: roborock}}
+    - {provider: tweakers-net,   capability: products/search,    options: {query: roborock, sort: popularity}}
+    - {provider: amazon-com,     capability: products/search,    options: {query: roborock robot vacuum}}
+  comics:
+    - {provider: hotukdeals-com, capability: deals/search_deals, options: {query: graphic novel}}
+    - {provider: hotukdeals-com, capability: deals/search_deals, options: {query: comic}}
+  llm:
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: chatgpt}}
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: claude}}
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: perplexity}}
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: google ai pro}}
+    - {provider: hotukdeals-com, capability: deals/search_deals, options: {query: google ai pro}}
+    - {provider: hotukdeals-com, capability: deals/search_deals, options: {query: perplexity}}
+  software:
+    - {provider: hotukdeals-com, capability: deals/list_deals,   options: {group: software}}
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: microsoft 365}}
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: nordvpn}}
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: 1password}}
+  membership:
+    - {provider: mydealz-de,     capability: deals/search_deals, options: {query: kindle unlimited}}
+    - {provider: hotukdeals-com, capability: deals/search_deals, options: {query: audible}}
+    - {provider: hotukdeals-com, capability: deals/search_deals, options: {query: economist}}
+    - {provider: hotukdeals-com, capability: deals/search_deals, options: {query: financial times}}
+
+scrape:                # pages with no Alexandria provider; use formats: [query] to keep output small
+  - url: "https://www.ceneo.pl/;szukaj-roborock+saros"     # Polish reference prices
+    location: PL
+    save_as: ceneo_pl_roborock.json (kind: offers)
+  - url: "https://www.ceneo.pl/;szukaj-roborock+qrevo"
+    location: PL
+  - url: "https://www.amazon.co.uk/s?k=graphic+novel+box+set+teen&i=stripbooks"
+    location: GB
+    save_as: amazon_uk_comics.json (kind: offers, add age_guide per title)
+  - url: "https://www.amazon.co.uk/s?k=manga+box+set"
+    location: GB
+  - url: "{wishlist_url}"                                   # paginate via the 'See More' link
+    location: DE
+    prompt: "items [{t,a,f,p,c,id}] + next 'See More' URL"
+    save_as: wishlist_amazon_de.json (kind: wishlist)
+
+search:                # official vendor prices (no deal site covers them)
+  - "Black Friday {year} AI subscription deals ChatGPT Plus Claude Pro Gemini Google AI Pro Perplexity Pro discount"

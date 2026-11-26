@@ -1,3 +1,6 @@
 src/site-files.js
 node_modules/
 .wrangler/
+tools/bf-deals/data/
+tools/bf-deals/config.local.yaml
+__pycache__/

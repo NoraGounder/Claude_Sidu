@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Run stages 2-5 of the deal scout over the raw scrape in data/raw/.
+
+    python run.py                       # full run, Jev Router verdict
+    python run.py --no-llm              # deterministic picks only
+    python run.py --config my.yaml --raw data/raw --out data/out
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+from pathlib import Path
+
+import yaml
+
+from bfdeals.landed import assess, fetch_fx
+from bfdeals.normalize import load_offers
+from bfdeals.rank import ask_jev, build_payload, fallback_verdict, shortlist, validate
+from bfdeals.report import render_html, render_md
+
+HERE = Path(__file__).parent
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--config", default=HERE / "config.local.yaml")
+    ap.add_argument("--raw", default=HERE / "data/raw")
+    ap.add_argument("--out", default=HERE / "data/out")
+    ap.add_argument("--no-llm", action="store_true")
+    ap.add_argument("--reuse-verdict", action="store_true", help="re-render from the last saved verdict")
+    args = ap.parse_args()
+
+    cfg_path = Path(args.config)
+    if not cfg_path.exists():
+        cfg_path = HERE / "config.example.yaml"
+    cfg = yaml.safe_load(cfg_path.read_text())
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+
+    fx = fetch_fx(cfg["report_currency"])
+    offers = [assess(o, cfg, fx) for o in load_offers(Path(args.raw), cfg.get("deals_since"))]
+    by_id = {o["id"]: o for o in offers}
+    (out / "offers.json").write_text(json.dumps(offers, indent=1, ensure_ascii=False))
+
+    short = shortlist(offers)
+    payload = build_payload(short, cfg, fx)
+    (out / "payload.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False))
+    print(f"{len(offers)} offers, shortlist: " + ", ".join(f"{k}={len(v)}" for k, v in short.items()))
+
+    model, usage, problems = "deterministic (cheapest landed)", {}, []
+    verdict_file = out / "verdict.json"
+    if args.reuse_verdict and verdict_file.exists():
+        saved = json.loads(verdict_file.read_text())
+        verdict, model, usage = saved["verdict"], saved["model"], saved.get("usage", {})
+    elif args.no_llm:
+        verdict = fallback_verdict(short)
+    else:
+        try:
+            res = ask_jev(payload, cfg)
+            verdict, model, usage = res["verdict"], f"{cfg['llm']['model']} → {res['model']}", res["usage"]
+            verdict_file.write_text(json.dumps({"verdict": verdict, "model": model, "usage": usage}, indent=1))
+        except Exception as e:  # network, budget or JSON failure: keep the run useful
+            print(f"Jev Router failed ({e}); falling back to deterministic picks")
+            verdict = fallback_verdict(short)
+    verdict, problems = validate(verdict, by_id)
+    for p in problems:
+        print("warning:", p)
+
+    sources = sorted({o["source"] for o in offers})
+    scraped = max((o.get("posted_at") or "" for o in offers if o["source"] == "amazon-wishlist"), default="")
+    ctx = {"verdict": verdict, "shortlist": short, "offers_by_id": by_id, "fx": fx, "model": model,
+           "n_offers": len(offers), "sources": sources, "checks": cfg.get("checks", []), "scraped": scraped or dt.date.today().isoformat()}
+    (out / "report.html").write_text(render_html(ctx))
+    (out / "report.md").write_text(render_md(ctx))
+    cost = usage.get("cost")
+    print(f"verdict by {model}" + (f", cost ${cost:.4f}" if cost else "") + f" -> {out / 'report.html'}")
+
+
+if __name__ == "__main__":
+    main()
