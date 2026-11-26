@@ -19,6 +19,7 @@ MARKET = {
     "slickdeals-net": ("US", "USD"),
     "tweakers-net": ("NL", "EUR"),
     "amazon-com": ("US", "USD"),
+    "mediaexpert-pl": ("PL", "PLN"),
 }
 
 # Order matters: the first match wins, so specific models come before families.
@@ -27,6 +28,8 @@ ROBOROCK_MODELS = [
     r"saros z70", r"saros 10r", r"saros 10",
     r"qrevo edge 3 pro", r"qrevo edge 2 flowx", r"qrevo edge 2 flow", r"qrevo edge 2 pro", r"qrevo edge 2x", r"qrevo edge 2",
     r"qrevo curv 2 flowx", r"qrevo curv 2 flow", r"qrevo curv 2 pro", r"qrevo curv 2",
+    r"qrevo edge 5v1", r"qrevo curv 5a1", r"qrevo curv", r"q8 max\+", r"q8 max", r"q10 s5\+", r"q10 s5",
+    r"s8 maxv ultra", r"q10 vf\+", r"q10 vf",
     r"qrevo s pro", r"qrevo 2 pro", r"qrevo 5ae", r"qrevo maxv", r"qv 35a",
     r"q10 s5\+", r"q7 l5\+", r"q7 l5", r"q7 m5\+", r"q7 m5",
 ]
@@ -75,6 +78,7 @@ FLAG_RULES = [
     (r"neukunden|new customers|new members", "new_customers_only"),
     (r"selected accounts|ausgew[äa]hlte", "selected_accounts"),
     (r"kindle edition", "ebook_gift"),
+    (r"benefits\.me|beans id|corporate benefits|mitarbeiterangebot", "eligibility_restricted"),
 ]
 
 
@@ -89,7 +93,7 @@ def classify(title: str, query: str = "") -> tuple[str, str] | None:
             return None
         for pat in ROBOROCK_MODELS:
             if re.search(pat, t):
-                name = re.sub(r"\\", "", pat).title().replace("Qv", "QV").replace("Ae", "AE").replace("Maxv", "MaxV").replace("Flowx", "FlowX")
+                name = re.sub(r"\\", "", pat).title().replace("Qv", "QV").replace("Ae", "AE").replace("Maxv", "MaxV").replace("Flowx", "FlowX").replace("5V1", "5V1").replace("Vf", "VF").replace("S8 Maxv", "S8 MaxV")
                 return "vacuum", f"Roborock {name}"
         return None
     for pat, cat, item in DIGITAL:
@@ -142,11 +146,36 @@ def _from_deal(provider: str, query: str, d: dict) -> dict | None:
     }
 
 
+def _from_mediaexpert(data: dict) -> list[dict]:
+    """Media Expert listing: PLN shelf price, checkout-code price and the 30-day low (Omnibus)."""
+    out = []
+    for x in data.get("items", []):
+        name, pr = x.get("name") or "", x.get("price") or {}
+        hit = classify(name)
+        if not hit or pr.get("current") is None:
+            continue
+        code = pr.get("with_code") or {}
+        status = (x.get("availability") or {}).get("status")
+        flags = {"not_available": ["unavailable"], "shops_only": ["in_store_only"]}.get(status, [])
+        out.append({
+            "id": _id("mediaexpert", x.get("offer_id") or x.get("product_id"), name),
+            "category": hit[0], "item": hit[1], "title": name[:160], "retailer": "Media Expert",
+            "market": "PL", "currency": "PLN", "price": float(code.get("price") or pr["current"]),
+            "list_price": pr.get("list") or pr.get("current"), "low_30d": pr.get("lowest_30_days"),
+            "voucher": code.get("code"), "url": x.get("url"), "source": "mediaexpert-pl",
+            "posted_at": "", "votes": None, "shipping": None, "flags": flags,
+        })
+    return out
+
+
 def _from_alexandria(blob: dict) -> list[dict]:
     out = []
     for r in blob["data"]["alexandria"]:
         provider, data = r.get("provider"), r.get("data") or {}
         if provider not in MARKET or r.get("error"):
+            continue
+        if provider == "mediaexpert-pl":
+            out += _from_mediaexpert(data)
             continue
         query = data.get("query") or ""
         if "deals" in data:
@@ -164,7 +193,7 @@ def _from_alexandria(blob: dict) -> list[dict]:
                 "retailer": "Tweakers lowest" if provider == "tweakers-net" else "Amazon US",
                 "market": market, "currency": cur, "price": float(price), "list_price": None,
                 "voucher": None, "url": x.get("url"), "source": provider, "posted_at": "",
-                "votes": None, "shipping": None, "flags": [],
+                "votes": None, "shipping": None, "flags": ["nl_shop"] if provider == "tweakers-net" else [],
             })
     return out
 

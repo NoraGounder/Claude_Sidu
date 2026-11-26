@@ -17,7 +17,8 @@ sources.yaml ──► 1 scrape ──► data/raw/*.json ──► 2 normalize 
 | 2 Normalize | `bfdeals/normalize.py` | One offer schema; classifies titles into items (e.g. `Roborock Saros Z70`); drops stale posts, bundles and noise; flags VPN-region tricks, student-only, personalised and in-store offers. |
 | 3 Landed cost | `bfdeals/landed.py` | NBP mid rates. EU shops re-taxed at Polish VAT (OSS). UK/US: forwarder + duty + 23 % import VAT + clearance fee. Gifts priced inside the recipient's country. Blocks US vacuums (120 V, no EU warranty). |
 | 4 Rank | `bfdeals/rank.py` | Deterministic shortlist per item vs the Polish reference price, then one Jev Router call. The model may only cite shortlisted offer ids; unknown ids are dropped. Falls back to cheapest-landed picks if the call fails. |
-| 5 Report | `bfdeals/report.py` | Artifact-ready HTML (light/dark, phone width) and Markdown. |
+| 4b Roborock lineup | `bfdeals/score.py`, `specs/roborock.yaml` | Scores every model 0–100 on a feature rubric (suction, mop, dock, navigation, mobility, model year), then value = points per 1,000 zł landed, the Pareto frontier (no cheaper model scores higher) and the best model per tier. Jev picks the "deal of the century" from it. |
+| 5 Report | `bfdeals/report.py` | Artifact-ready HTML (light/dark, phone width) and Markdown, with price changes since the last run. |
 
 ## Run
 
@@ -31,6 +32,15 @@ python run.py --reuse-verdict               # re-render without a new model call
 
 To refresh prices, ask Claude Code to "re-run stage 1 of tools/bf-deals from sources.yaml";
 it saves the raw results into `data/raw/`, then run `python run.py`.
+
+## Live mode (Black Friday)
+
+Each run appends a snapshot to `data/out/history.jsonl` and writes `data/out/alerts.json`
+when a model's best landed price drops 5 % or more, or when the deal of the century changes.
+A scheduled Claude Code task re-scrapes the vacuum and subscription sources with `maxAge: 0`,
+runs `python run.py`, republishes the report and sends a push notification on alerts.
+Media Expert supplies the legal 30-day lowest price (Omnibus directive), so a "discount"
+that is really a price hike is visible.
 
 ## Cost per run (26 Nov 2026)
 

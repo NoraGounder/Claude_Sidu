@@ -81,7 +81,7 @@ def assess(o: dict, cfg: dict, fx: dict) -> dict:
         else:
             blockers.append(f"no cost model for market {market}")
     else:  # digital: subscriptions, software keys, e-books
-        if cat == "books":  # Kindle price is tied to the account's store; take it as shown
+        if cat == "books" or o.get("format") == "ebook":  # Kindle price is tied to the account's store
             bd["goods"] = price * rate
         else:
             net = price / (1 + _vat(cfg, market, cat))
@@ -98,14 +98,15 @@ def assess(o: dict, cfg: dict, fx: dict) -> dict:
         "vpn_region_trick": ("block", "needs a fake region via VPN, which breaks the service's terms"),
         "in_store_only": ("block", "in-store only"),
         "student_only": ("block", "students or teachers only"),
-        "eligibility_restricted": ("block", "restricted eligibility (researchers / nonprofits)"),
+        "eligibility_restricted": ("block", "restricted eligibility (researchers, nonprofits or employee-benefit portals)"),
         "unavailable": ("block", "not currently sold new"),
         "personalised": ("warn", "personalised offer: only some accounts see it"),
         "selected_accounts": ("warn", "selected accounts only"),
         "existing_members_only": ("warn", "existing members only"),
         "new_customers_only": ("warn", "new customers only"),
         "cashback_required": ("warn", "price depends on a cashback portal paying out"),
-        "refurbished": ("warn", "refurbished"),
+        "refurbished": ("block" if cat == "vacuum" else "warn", "refurbished"),
+        "nl_shop": ("warn", "lowest Dutch shop on Tweakers: check it ships to Poland"),
         "ebook_gift": ("warn", "e-book: lands in the buyer's own Kindle library, awkward as a gift"),
     }
     for f in sorted(flags):

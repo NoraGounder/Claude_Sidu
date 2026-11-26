@@ -10,6 +10,7 @@ ORDER = [
     ("llm", "LLM subscriptions"),
     ("software", "Software"),
     ("membership", "Memberships"),
+    ("toolkit", "Acquisition toolkit"),
 ]
 SYM = {"EUR": "€", "GBP": "£", "USD": "$", "PLN": "zł"}
 
@@ -21,9 +22,50 @@ def money(v, cur="PLN"):
     return f"{s} zł" if cur == "PLN" else f"{SYM.get(cur, cur)}{s}"
 
 
+def _roles(v: dict, cat: str) -> list[tuple[str, str]]:
+    """(offer id, label) in display order, without repeats."""
+    pairs = [(v.get("deal_of_the_century"), "Deal of the century"), (v.get("pick"), "Pick"),
+             (v.get("runner_up"), "Runner-up")]
+    pairs += [(i, f"Best {t}") for t, i in (v.get("tier_picks") or {}).items()]
+    pairs += [(i, "Buy now" if cat == "books" else "Pick") for i in (v.get("picks") or []) + (v.get("buy_now") or [])]
+    pairs += [(i, "Free") for i in v.get("free") or []]
+    seen, out = set(), []
+    for i, label in pairs:
+        if i and i not in seen:
+            seen.add(i)
+            out.append((i, label))
+    return out
+
+
 def _ids(v: dict) -> list[str]:
-    out = [v.get("pick"), v.get("runner_up")] + list(v.get("picks") or []) + list(v.get("buy_now") or [])
-    return [i for i in out if i]
+    return [i for i, _ in _roles(v, "")]
+
+
+def _lineup_table(rows: list[dict], prev: dict) -> str:
+    out = []
+    for r in rows:
+        if not r["landed"]:
+            continue
+        b = r["best"]
+        star = "★ " if r.get("frontier") else ""
+        tier = f"{r['tier']}{' · best' if r.get('tier_winner') else ''}" if r["tier"] else ""
+        delta = ""
+        if r["item"] in prev and prev[r["item"]]:
+            d = r["landed"] - prev[r["item"]]
+            delta = f"{d:+,.0f}".replace(",", " ") if abs(d) >= 1 else "="
+        vs = f"{-r['vs_pl_pct']:+.0f}%" if r["vs_pl_pct"] is not None else ""
+        score = f"{r['score']:.0f}" + (" ?" if r["confidence"] == "low" else "") if r["score"] else "–"
+        out.append(f"<tr><td>{star}{escape(r['item'].replace('Roborock ', ''))}</td><td class='r'>{score}</td>"
+                   f"<td class='r'><b>{money(r['landed'])}</b></td><td>{escape(b['retailer'])} · {escape(b['market'])}"
+                   f"{' · ' + escape(b['voucher']) if b.get('voucher') else ''}</td>"
+                   f"<td class='r'>{money(r['pl_30d_low'] or r['pl_now'])}</td><td class='r'>{vs}</td>"
+                   f"<td class='r'>{r['value'] if r['value'] else '–'}</td><td>{tier}</td><td class='r'>{delta}</td></tr>")
+    return f"""<div class="scroll"><table>
+<thead><tr><th>Model</th><th class='r'>Score</th><th class='r'>Best landed</th><th>Where</th><th class='r'>PL ref</th>
+<th class='r'>vs PL</th><th class='r'>Pts / 1k zł</th><th>Tier</th><th class='r'>Δ last run</th></tr></thead>
+<tbody>{''.join(out)}</tbody></table></div>
+<p class="fine">★ = price-performance frontier (no cheaper model scores higher). Score = feature rubric in specs/roborock.yaml,
+not a lab test; "?" = low-confidence specs. PL ref = Media Expert 30-day low where shown, else today's lowest Polish price.</p>"""
 
 
 def _card(o: dict, role: str, ref: float | None) -> str:
@@ -120,6 +162,8 @@ details{border-top:1px solid var(--rule);padding-top:8px} summary{cursor:pointer
 .checks ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
 .checks{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:16px 20px}
 .checks h2{font-size:18px}
+.fine{font-size:12px;color:var(--muted);margin:0;max-width:90ch}
+.pick:first-child .role{color:var(--ink)}
 footer{border-top:2px solid var(--ink);padding-top:16px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:8px}
 footer p{margin:0;max-width:75ch}
 @media (prefers-reduced-motion:no-preference){.pick{transition:border-color .15s}.pick:hover{border-color:var(--accent)}}
@@ -129,24 +173,25 @@ footer p{margin:0;max-width:75ch}
 def render_html(ctx: dict) -> str:
     v, short, by_id = ctx["verdict"], ctx["shortlist"], ctx["offers_by_id"]
     secs = []
+    lineup_ref = {r["item"]: (r["pl_30d_low"] or r["pl_now"]) for r in ctx.get("lineup") or []}
     for cat, label in ORDER:
         if cat not in short and cat not in v:
             continue
         cv = v.get(cat) or {}
         refs = {e["item"]: e.get("home_ref_pln") for e in short.get(cat, [])}
-        cards = []
-        for i, oid in enumerate(_ids(cv)):
-            o = by_id[oid]
-            role = "Pick" if oid == cv.get("pick") else "Runner-up" if oid == cv.get("runner_up") else ("Buy now" if cat == "books" else "Pick")
-            cards.append(_card(o, role, refs.get(o["item"])))
+        cards = [_card(by_id[oid], role, refs.get(by_id[oid]["item"]) or lineup_ref.get(by_id[oid]["item"]))
+                 for oid, role in _roles(cv, cat)]
         items = short.get(cat, [])
         table = _table(items[:25])
+        if cat == "vacuum" and ctx.get("lineup"):
+            table = _lineup_table(ctx["lineup"], ctx.get("prev", {}))
+            items = [r for r in ctx["lineup"] if r["landed"]]
         secs.append(f"""
 <section id="{cat}">
   <h2>{escape(label)} <small>{len(items)} items compared</small></h2>
   <div class="verdict"><p><b>Why</b>{escape(cv.get('why', ''))}</p><p><b>Watch out</b>{escape(cv.get('watch_out', '') or '–')}</p></div>
   <div class="picks">{''.join(cards) or '<p>No pick: nothing beats the normal price.</p>'}</div>
-  <details><summary>Show the comparison table</summary>{table}</details>
+  {f'<h3>Every Roborock model, best price first by value</h3>{table}' if cat == 'vacuum' else f'<details><summary>Show the comparison table</summary>{table}</details>'}
 </section>""")
     fx = ctx["fx"]
     checks = "".join(f"<li>{escape(n)}</li>" for n in ctx.get("checks") or [])
@@ -161,7 +206,7 @@ def render_html(ctx: dict) -> str:
   <h1>Black Friday Scout</h1>
   <p class="summary">{escape(v.get('summary', ''))}</p>
   <p class="total">Suggested spend: {money(v.get('total_spend_pln'))}</p>
-  <div class="meta"><span>Scraped {escape(ctx['scraped'])}</span><span>FX: NBP table {escape(fx['table'])} · EUR {fx['rates']['EUR']:.4f} · GBP {fx['rates']['GBP']:.4f} · USD {fx['rates']['USD']:.4f}</span>
+  <div class="meta"><span>Run {escape(ctx['run_at'])}</span><span>FX: NBP table {escape(fx['table'])} · EUR {fx['rates']['EUR']:.4f} · GBP {fx['rates']['GBP']:.4f} · USD {fx['rates']['USD']:.4f}</span>
   <span>{ctx['n_offers']} offers from {escape(', '.join(ctx['sources']))}</span><span>Verdict: {escape(ctx['model'])}</span></div>
 </header>
 {checks}

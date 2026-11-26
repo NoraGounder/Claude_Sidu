@@ -55,3 +55,6 @@ landed_cost:
 
 # Optional manual checks shown at the top of the report.
 checks: []
+
+# Optional one-line context for the toolkit pick (sent to the model; no names).
+buyer_context: ""

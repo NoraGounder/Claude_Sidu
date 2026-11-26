@@ -15,7 +15,7 @@ from collections import defaultdict
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
-DIGITAL = {"llm", "software", "membership"}
+DIGITAL = {"llm", "software", "membership"}  # free trials sort last here; toolkit keeps free items
 
 
 def shortlist(offers: list[dict], per_item: int = 3, max_items: int = 14) -> dict:
@@ -67,7 +67,8 @@ def _compact(o: dict) -> dict:
     return d
 
 
-def build_payload(short: dict, cfg: dict, fx: dict) -> dict:
+def build_payload(short: dict, cfg: dict, fx: dict, lineup_rows: list | None = None) -> dict:
+    lineup_rows = lineup_rows or []
     cats = {}
     for cat, items in short.items():
         cats[cat] = [{
@@ -84,6 +85,18 @@ def build_payload(short: dict, cfg: dict, fx: dict) -> dict:
         "budget": cfg.get("budget", {}), "recipient_age": cfg.get("recipient_age", {}),
         "gift_delivery": cfg.get("gift_delivery", {}),
         "categories": cats,
+        "buyer_context": cfg.get("buyer_context", ""),
+        "vacuum_lineup": [{
+            "item": r["item"], "score": r["score"], "spec_confidence": r["confidence"], "spec": r["spec"],
+            "best_offer_id": r["best"]["id"] if r["best"] else None,
+            "best_where": f"{r['best']['retailer']} ({r['best']['market']})" if r["best"] else None,
+            "best_price": f"{r['best']['price']} {r['best']['currency']}" if r["best"] else None,
+            "voucher": r["best"].get("voucher") if r["best"] else None,
+            "best_warnings": r["best"]["warnings"] if r["best"] else [],
+            "landed_pln": r["landed"], "pl_now_pln": r["pl_now"], "pl_30d_low_pln": r["pl_30d_low"],
+            "vs_pl_pct": r["vs_pl_pct"], "value_pts_per_1000pln": r["value"], "tier": r["tier"],
+            "frontier": r.get("frontier", False), "tier_winner": r.get("tier_winner", False),
+        } for r in lineup_rows if r["landed"]],
     }
 
 
@@ -101,14 +114,26 @@ Rules:
 the right move is to wait or to pay annually.
 - Be blunt and short. Give the strongest reason against your own pick in 'watch_out'.
 
-Return ONLY a JSON object:
+Robot vacuum: use vacuum_lineup. 'score' is a 0-100 feature rubric (suction, mop, dock, \
+navigation, mobility, model year), not a lab test; treat spec_confidence 'low' with caution. \
+'value_pts_per_1000pln' = score per 1,000 zł landed. 'frontier' = no cheaper model scores higher. \
+'vs_pl_pct' = saving against the best Polish price (30-day low where known). Choose a \
+'deal_of_the_century': the single best price-to-performance buy that is also a real cut versus \
+Polish prices; prefer frontier models with score >= 75. Also pick the best model per tier.
+
+Toolkit: the buyer is learning small-business acquisition (see buyer_context). Pick the few \
+items worth paying for now and list the free ones worth joining; say what to skip.
+
+Return ONLY a JSON object (ids must be offer ids from categories or best_offer_id):
 {
- "vacuum":     {"pick": id, "runner_up": id, "why": str, "watch_out": str},
+ "vacuum":     {"deal_of_the_century": id, "pick": id, "runner_up": id,
+                "tier_picks": {"entry": id, "mid": id, "premium": id}, "why": str, "watch_out": str},
  "comics":     {"picks": [id, id], "why": str, "watch_out": str},
  "books":      {"buy_now": [ids], "why": str, "watch_out": str},
  "llm":        {"pick": id|null, "why": str, "watch_out": str},
  "software":   {"picks": [ids], "why": str, "watch_out": str},
  "membership": {"picks": [ids], "why": str, "watch_out": str},
+ "toolkit":    {"picks": [ids], "free": [ids], "why": str, "watch_out": str},
  "summary": str,
  "total_spend_pln": number
 }"""
@@ -166,20 +191,24 @@ def validate(verdict: dict, offers_by_id: dict) -> tuple[dict, list[str]]:
     for cat, v in verdict.items():
         if not isinstance(v, dict):
             continue
-        for key in ("pick", "runner_up"):
+        for key in ("pick", "runner_up", "deal_of_the_century"):
             if key in v:
                 v[key] = keep(v[key])
-        for key in ("picks", "buy_now"):
+        if isinstance(v.get("tier_picks"), dict):
+            v["tier_picks"] = {t: keep(i) for t, i in v["tier_picks"].items()}
+        for key in ("picks", "buy_now", "free"):
             if key in v:
                 v[key] = [i for i in (v[key] or []) if keep(i)]
     return verdict, problems
 
 
-def fallback_verdict(short: dict) -> dict:
+def fallback_verdict(short: dict, deal_row: dict | None = None) -> dict:
     """Cheapest eligible offer per category, used when the model is unavailable."""
     out = {}
     for cat, items in short.items():
         ids = [e["offers"][0]["id"] for e in items if e["offers"]]
         out[cat] = {"picks": ids[:3], "why": "Cheapest landed offers (no model verdict).", "watch_out": ""}
+    if deal_row and deal_row.get("best"):
+        out.setdefault("vacuum", {})["deal_of_the_century"] = deal_row["best"]["id"]
     out["summary"] = "Model verdict unavailable; showing cheapest landed offers."
     return out
