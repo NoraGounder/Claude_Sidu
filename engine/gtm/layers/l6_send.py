@@ -311,6 +311,11 @@ def push(cfg: ClientConfig, conn, sl: SmartleadClient | None = None, plan: PushP
             # Each new lead gets up to 4 emails; share the daily cap across the regions that have
             # leads to send now. Regions only defined in sending.yaml take no share (audit C2).
             per_region = max(1, daily // 4 // max(1, len(plan.eligible)))
+            if sending.get("split_daily_by_leads"):
+                # Optional: share the new leads a day by how many leads each region has, so a region with
+                # a handful of leads does not take half of the capacity (Quailworks Q55).
+                total = sum(len(v) for v in plan.eligible.values()) or 1
+                per_region = max(1, round(daily / 4 * len(leads) / total))
             setup_campaign(sl, campaign_id, leads[0]["_days"], sending,
                            {"timezone": r["timezone"], **dict(sending["schedule"]), "max_new_leads_per_day": per_region})
             conn.execute("UPDATE campaigns SET status='DRAFTED' WHERE id=?", (campaign_db_id,))

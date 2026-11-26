@@ -566,6 +566,7 @@ def test_signal_sample_lists_companies_with_sources_and_stores_no_accounts(env):
     from gtm.sources.apify import RunResult
 
     cfg = load_client(QW)
+    cfg.limits.month_budget_usd["apify"] = 40     # the site-based sample still runs on Apify; Quailworks dropped it (Q55)
     conn = db.connect()
     actor_input, est = sample.plan(cfg, "contract manufacturing", ["135"], ["United States"])
     assert actor_input["maxItems"] == 60 and actor_input["searchQuery"] == "contract manufacturing" and est == 0.24

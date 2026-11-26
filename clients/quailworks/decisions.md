@@ -522,6 +522,17 @@ pipeline (2026-11-11). Each decision below still says what would change it.
   (engine: `l5_copy.company_name`). All 286 drafts were rewritten and re-approved. Would change: any odd
   company name in a reply or a later check (add it to `company_names`).
 
+- **Q55. Launch (2026-11-26, the user: "We've done enough testing ... focus on getting as many booked calls
+  as possible and paying customers"; "log all replies as deals in my HubSpot").** Campaigns QW | US and
+  QW | UK are uploaded paused on 26 November and start on Monday 30 November at 08:30 Chicago: 26 and 27
+  November are Thanksgiving and the day after in the US, the worst days of the year for a first email.
+  Week 1 stays at 30 a day (the ramp in limits.yaml; raising it still needs the user's say-so), shared by
+  region size (US 161 leads, UK 6). Every reply that needs a person becomes a HubSpot deal (`crm --live`,
+  approved) with a one-page brief and a first answer for the founder. Apify is cancelled: discovery and
+  samples run on BlitzAPI, and so does the people search now (`people_first: blitzapi`, FullEnrich only for
+  companies it misses). Daily on weekdays: sync, handoff, CRM. Weekly: the signal routine (Q48). Would
+  change: auto-pause (Q47) firing, or replies showing a different message works better.
+
 ## Needed from the user (only what we cannot do ourselves)
 
 Purchases now, in parallel with the first runs (they need a card):

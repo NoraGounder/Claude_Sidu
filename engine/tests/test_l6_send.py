@@ -360,3 +360,36 @@ def test_latest_reply_cuts_gmail_quote_without_line_break():
     assert text == "Sounds interesting can we talk next week?"
     text, _ = l6_send.latest_reply([{"type": "REPLY", "email_body": "stop\n\nOp di 17 nov 2026 schreef Mithun:\n> Hoi"}])
     assert text == "stop"
+
+
+
+def test_new_leads_a_day_follow_each_regions_share_when_asked(env, monkeypatch):
+    from gtm.layers.l6_send import PushPlan
+    calls = []
+
+    class SL:
+        def email_accounts(self):
+            return [{"id": 1, "from_email": "a@tmj-mail.example", "message_per_day": 15, "is_smtp_success": True,
+                     "is_imap_success": True, "warmup_details": {"status": "ACTIVE"}}]
+        def create_campaign(self, name): return 100 + len(calls)
+        def save_sequences(self, *a): return {}
+        def update_settings(self, *a): return {}
+        def set_schedule(self, cid, schedule): calls.append(schedule["max_new_leads_per_day"]); return {}
+        def link_email_accounts(self, *a): return {}
+        def add_leads(self, *a): return {}
+
+    cfg = load_client(CLIENT)
+    sending = dict(l6_send.load_sending(cfg))
+    sending["regions"] = {"aa": {"countries": ["NL"], "timezone": "Europe/Amsterdam"},
+                          "bb": {"countries": ["BE"], "timezone": "Europe/Brussels"}}
+    sending["mailbox_domains"], sending["split_daily_by_leads"] = ["tmj-mail.example"], True
+    monkeypatch.setattr(l6_send, "load_sending", lambda c: sending)
+    monkeypatch.setitem(cfg.limits.sending, "max_emails_per_day", 40)
+    lead = lambda i: {"email": f"p{i}@x.example", "_contact_id": i, "_account_id": i, "_draft_id": i,
+                      "_days": [0, 3, 7, 14]}
+    plan = PushPlan(eligible={"aa": [lead(i) for i in range(30)], "bb": [lead(99)]}, held={})
+    try:
+        l6_send.push(cfg, db.connect(), sl=SL(), plan=plan)
+    except Exception:
+        pass                                   # later bookkeeping may need real rows; the schedule is what we test
+    assert calls[:2] == [10, 1]                # 40 a day / 4 emails = 10 new leads: 30 of 31 leads -> 10, 1 of 31 -> 1
