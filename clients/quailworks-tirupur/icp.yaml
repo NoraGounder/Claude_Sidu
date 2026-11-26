@@ -1,0 +1,93 @@
+# Layer 0: ideal customer profile for Quailworks Tirupur: the BUYERS we find for Tirupur knitwear exporters
+# (decisions.md T2-T3). Discovery is BlitzAPI hiring searches (hiring.yaml); the Apify segments stay off.
+# Industry IDs are LinkedIn industry codes (v2).
+
+version: 1
+
+# Used by TypeSafe Jev 1.14 for ICP scoring (decisions.md Q8-Q10). Prospects must have budget, high
+# margins and a large market of their own, so that booked meetings are worth a lot to them (Q9).
+buyer_profile: >-
+  UK and European clothing brands and retailers with 51-1,000 employees that design in-house and buy
+  cotton knitwear from overseas factories: T-shirts, polos, sweatshirts, kidswear, loungewear, basics and
+  sportswear. Strong fit: own-label fashion or sportswear brand, sources from Asia or Turkey today, values
+  organic cotton or certified (GOTS, OEKO-TEX) supply, hiring sourcing or buying staff. Poor fit: jewellery,
+  footwear, bags, luxury leather goods, pure marketplaces that do not buy stock, and companies with their
+  own factories or buying offices in India.
+# What we offer, in one line, for Jev's contact-relevance question.
+offer_summary: >-
+  Introductions to vertically integrated, certified Tirupur knitwear manufacturers for brands reviewing
+  or adding suppliers.
+
+company:
+  employees_min: 51
+  employees_max: 1000
+  # Values passed to the Harvest company-size filter (same spelling as The Marble Jar's live runs).
+  linkedin_company_sizes: ["51-200", "201-500", "501-1000"]
+
+industry_groups:
+  apparel:
+    label: Clothing brands and retailers
+    ids: [19]                # Retail Apparel and Fashion (v2 relabel of Apparel & Fashion)
+  sportswear:
+    label: Sportswear brands
+    ids: [20]                # Sporting Goods Manufacturing
+
+segments:
+  # Found by BlitzAPI hiring searches (hiring.yaml); the Apify path stays off (limits.yaml apify: 0).
+  - {name: apparel_uk,       enabled: false, industry_group: apparel, locations: [United Kingdom], max_items: 100}
+  - {name: apparel_north_eu, enabled: false, industry_group: apparel, locations: [Germany, Austria, Switzerland, Netherlands, Belgium, Sweden, Denmark, Norway, Finland], max_items: 100}
+  - {name: apparel_south_eu, enabled: false, industry_group: apparel, locations: [France, Spain, Italy], max_items: 100}
+
+allowed_countries: [GB, DE, NL, FR, SE, DK, "NO", FI, ES, IT, IE, BE, AT, CH]
+
+exclusions:
+  # Company names containing any of these are dropped in Layer 1 (case-insensitive substring).
+  name_keywords:
+    - lead generation
+    - leadgen
+    - demand generation
+    - appointment setting
+    - sales outsourcing
+    - marketing agency
+    - digital agency
+    - growth agency
+    - staffing
+    - recruiting
+    - recruitment
+    - university
+    - college
+    - school
+    - association
+    - foundation
+  # Quailworks itself and its client (decisions.md Q14). Real do-not-contact list: private/exclusions.csv
+  # teamviewer.com: LinkedIn's "Upskill" page points to its large parent (2026-11-10 run).
+  domains: [quailworks.co, quailworks.xyz, themarblejar.io]
+
+# Layer 3: who we contact, in priority order. Max 2 per account (scoring.yaml enrichment_policy).
+personas:
+  sourcing_leader:
+    - Head of Sourcing
+    - Sourcing Director
+    - Director of Sourcing
+    - Senior Sourcing Manager
+    - Sourcing Manager
+    - Head of Buying
+    - Buying Director
+    - Senior Buyer
+    - Head of Production
+    - Production Manager
+    - Supply Chain Director
+  product_leader:
+    - Head of Product
+    - Product Director
+    - Head of Design
+    - Creative Director
+  owner_led:          # used only for companies under about 150 employees (Layer 3)
+    - CEO
+    - Chief Executive Officer
+    - Founder
+    - Co-Founder
+    - Owner
+    - Managing Director
+  # An entry matches at a word end but not inside a longer word ("Intern" keeps "International Sales Director").
+  exclude_titles: [Intern, Internship, Student, Trainee, Traineeship, Assistant, Coordinator, Representative, Product Owner]

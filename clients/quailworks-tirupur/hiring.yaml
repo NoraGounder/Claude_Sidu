@@ -1,0 +1,23 @@
+# Layer 1 by signal: UK and European clothing brands that posted a sourcing, buying or production job in
+# the last 30 days (decisions.md T2). A brand hiring a sourcing manager is reviewing its supplier base now.
+# Jev 1.14 still drops brands that do not sell cotton knitwear (jewellery, shoes, leather) before any lead
+# is quoted to an exporter.
+#   python -m gtm --client quailworks-tirupur discover-hiring --dry-run
+
+job_titles: [Sourcing Manager, Head of Sourcing, Sourcing Director, Senior Sourcing Manager, Sourcing Specialist,
+             Sourcing Coordinator, Buyer, Senior Buyer, Production Manager, Product Developer, Garment Technologist,
+             Supply Chain Manager, Merchandiser, Production Coordinator]
+posted_last_days: 30
+job_countries: [GB, DE, NL, FR, SE, DK, "NO", FI, ES, IT, IE, BE, AT, CH]
+
+searches:
+  # Priority 1: UK mid-size brands (UK-India trade deal; most brands hiring now)
+  - {name: hiring_apparel_uk, segment: apparel_uk, max_items: 100, hq_countries: [GB],
+     industries: [Retail Apparel and Fashion, Apparel & Fashion, Apparel Manufacturing, Sporting Goods Manufacturing]}
+  # Priority 2: DACH, Benelux, Nordics (organic cotton, GOTS)
+  - {name: hiring_apparel_north_eu, segment: apparel_north_eu, max_items: 100,
+     hq_countries: [DE, AT, CH, NL, BE, SE, DK, "NO", FI],
+     industries: [Retail Apparel and Fashion, Apparel & Fashion, Apparel Manufacturing, Sporting Goods Manufacturing]}
+  # Priority 3: France, Spain, Italy
+  - {name: hiring_apparel_south_eu, segment: apparel_south_eu, max_items: 100, hq_countries: [FR, ES, IT],
+     industries: [Retail Apparel and Fashion, Apparel & Fashion, Apparel Manufacturing, Sporting Goods Manufacturing]}

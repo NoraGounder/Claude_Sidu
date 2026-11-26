@@ -1,0 +1,36 @@
+# Layer 0: hard caps. The engine refuses any paid run that would push a vendor past its
+# monthly budget. Raise a cap only when the user asks.
+#
+# The user, 2026-11-26: give Tirupur its own cap of 10,000 BlitzAPI records a month on the flat plan
+# Quailworks already pays for (about 170,000 records a month were going unused). Other paid tools stay off
+# until asked: discovery, contacts and emails all come from BlitzAPI.
+
+month_budget_usd:
+  apify: 0           # not used: BlitzAPI covers discovery
+  leadmagic: 0       # not used
+  fullenrich: 20     # trial cap
+  millionverifier: 5   # trial cap
+  openrouter: 2      # trial cap
+  blitzapi: 0        # flat $99 Start plan, paid outside the engine: no charge per call (decisions.md Q44)
+  blitzapi_records: 10000  # the user, 2026-11-26 (decisions.md T1)
+
+# Unit prices used for estimates before a run (USD per item), as for The Marble Jar (checked 2026-11-06).
+unit_price_usd:
+  "harvestapi/linkedin-company-search:short": 0.002
+  "harvestapi/linkedin-company-search:full": 0.004
+  "harvestapi/linkedin-profile-search:full": 0.0032
+  "harvestapi/linkedin-job-search:job": 0.001      # job postings (decisions.md Q38); needs the owner's approval on Apify
+  "blitzapi:record": 0.0     # flat plan, no charge per record: the free trial is 1,000 records, Start is $99 for 200,000 (Q39)
+  "openrouter:typesafe/jev-1.14:request": 0.0001
+  "fullenrich:credit": 0.055
+  "fullenrich:person_returned": 0.01375
+  "fullenrich:work_email": 0.055
+  "millionverifier:check": 0.004
+
+sending:
+  # 6 fresh brand mailboxes after 2-3 weeks of warm-up (decisions.md Q18-Q19). Ramp agreed in the plan:
+  # week 1: 5 a day each (30); week 2: 10 (60); week 3 on: 15 (90), each step only if bounces stay under
+  # 2% and there are no spam complaints. These values are week 1; Claude Code raises them per the ramp.
+  max_emails_per_day: 30
+  max_per_mailbox_per_day: 5
+  max_contacts_per_account: 2
