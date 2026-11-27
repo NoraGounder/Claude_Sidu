@@ -26,4 +26,4 @@ handoff:
 # Quailworks decides (decisions.md). Only these need The Marble Jar, in one message at launch:
 needed_from_client:
   - DONE 2026-11-11: data processing agreement accepted by Mithun in writing (GDPR Art. 28)
-  - A booking link or weekly time slots for meetings (until then Quailworks proposes times)
+  - A booking link or weekly time slots for meetings (DONE 2026-11-27: Calendly, in private/sender.yaml)

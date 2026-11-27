@@ -164,5 +164,7 @@ One message, at launch, a few minutes:
 3. **Sent 25 November 2026** (launch day): the launch message asking for the booking link, the list of
    102 companies (D11, for information), and the DPA notice (Annex 2 update, BlitzAPI as sub-processor).
    No objection by 9 December means BlitzAPI may be used as the first email source (D24).
+4. **Booking link received 27 November 2026** (Calendly, 30-minute intro call). It is in
+   private/sender.yaml, so every meeting brief's suggested answer now offers it.
 
 Everything else is decided above.
