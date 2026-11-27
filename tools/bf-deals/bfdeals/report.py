@@ -54,7 +54,7 @@ def _lineup_table(rows: list[dict], prev: dict) -> str:
             d = r["landed"] - prev[r["item"]]
             delta = f"{d:+,.0f}".replace(",", " ") if abs(d) >= 1 else "="
         vs = f"{-r['vs_pl_pct']:+.0f}%" if r["vs_pl_pct"] is not None else ""
-        score = f"{r['score']:.0f}" + (" ?" if r["confidence"] == "low" else "") if r["score"] else "–"
+        score = (f"{r['rtings']:.1f} lab" if r.get("tested") else f"~{r['score'] / 10:.1f} est") if r["score"] else "–"
         out.append(f"<tr><td>{star}{escape(r['item'].replace('Roborock ', ''))}</td><td class='r'>{score}</td>"
                    f"<td class='r'><b>{money(r['landed'])}</b></td><td>{escape(b['retailer'])} · {escape(b['market'])}"
                    f"{' · ' + escape(b['voucher']) if b.get('voucher') else ''}</td>"
@@ -62,10 +62,10 @@ def _lineup_table(rows: list[dict], prev: dict) -> str:
                    f"<td class='r'>{r['value'] if r['value'] else '–'}</td><td>{tier}</td><td class='r'>{delta}</td></tr>")
     return f"""<div class="scroll"><table>
 <thead><tr><th>Model</th><th class='r'>Score</th><th class='r'>Best landed</th><th>Where</th><th class='r'>PL ref</th>
-<th class='r'>vs PL</th><th class='r'>Pts / 1k zł</th><th>Tier</th><th class='r'>Δ last run</th></tr></thead>
+<th class='r'>vs PL</th><th class='r'>Score / 1k zł</th><th>Tier</th><th class='r'>Δ last run</th></tr></thead>
 <tbody>{''.join(out)}</tbody></table></div>
-<p class="fine">★ = price-performance frontier (no cheaper model scores higher). Score = feature rubric in specs/roborock.yaml,
-not a lab test; "?" = low-confidence specs. PL ref = Media Expert 30-day low where shown, else today's lowest Polish price.</p>"""
+<p class="fine">★ = price-performance frontier (no cheaper model scores higher). Score = RTINGS overall lab score ("lab");
+models RTINGS has not tested get an estimate from a spec rubric fitted to the lab scores ("est"). German prices include a €35 parcel forwarder. PL ref = Media Expert 30-day low where shown, else today's lowest Polish price.</p>"""
 
 
 def _card(o: dict, role: str, ref: float | None) -> str:

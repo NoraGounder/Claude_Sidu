@@ -4,7 +4,10 @@
 # store page, medium = known model line, low = inferred. Verify on the product
 # page before buying. Models without a row get no score and are listed unscored.
 #
-# Score (0-100):
+# rtings = RTINGS overall lab score (0-10), robot-vacuum reviews, read 27 Nov 2026.
+# Ranking uses rtings x 10 where tested; the rubric below only fills gaps (marked estimated).
+#
+# Rubric (0-100):
 #   suction   0-25  log scale, 4,000 Pa = 0 ... 36,000 Pa = 25
 #   mop       pad 4 | vibra 10 | rotating 13 | rotating_ext 16 | sonic 17 | roller 20
 #   dock      none 0 | empty 7 | allinone 14 | hotwash 17 | premium 20
@@ -14,7 +17,7 @@
 
 Roborock Q7 L5:            {year: 2025, pa: 8000,  mop: pad,          dock: none,     nav: lidar,     mobility: std,   confidence: high}
 Roborock Q7 L5+:           {year: 2025, pa: 8000,  mop: pad,          dock: empty,    nav: lidar,     mobility: std,   confidence: high}
-Roborock Q7 M5:            {year: 2025, pa: 10000, mop: pad,          dock: none,     nav: lidar,     mobility: std,   confidence: high}
+Roborock Q7 M5:            {year: 2025, pa: 10000, mop: pad,          dock: none,     nav: lidar,     mobility: std,   confidence: high, rtings: 6.7}
 Roborock Q7 M5+:           {year: 2025, pa: 10000, mop: pad,          dock: empty,    nav: lidar,     mobility: std,   confidence: medium}
 Roborock Q10 S5+:          {year: 2025, pa: 10000, mop: vibra,        dock: empty,    nav: lidar,     mobility: std,   confidence: high}
 Roborock Q8 Max:           {year: 2023, pa: 5500,  mop: pad,          dock: none,     nav: lidar_ai,  mobility: std,   confidence: medium}
@@ -25,21 +28,21 @@ Roborock Qrevo MaxV:       {year: 2024, pa: 7000,  mop: rotating,     dock: alli
 Roborock Qrevo S Pro:      {year: 2026, pa: 18500, mop: rotating,     dock: allinone, nav: lidar,     mobility: std,   confidence: high}
 Roborock Qrevo 2 Pro:      {year: 2026, pa: 25000, mop: rotating,     dock: hotwash,  nav: lidar_ai,  mobility: std,   confidence: medium}
 Roborock Qrevo Edge 5V1:   {year: 2024, pa: 18500, mop: rotating_ext, dock: hotwash,  nav: lidar_ai,  mobility: slim,  confidence: medium}
-Roborock Qrevo Curv:       {year: 2024, pa: 18500, mop: rotating_ext, dock: hotwash,  nav: lidar_ai,  mobility: lift,  confidence: medium}
+Roborock Qrevo Curv:       {year: 2024, pa: 18500, mop: rotating_ext, dock: hotwash,  nav: lidar_ai,  mobility: lift,  confidence: medium, rtings: 7.7}
 Roborock Qrevo Curv 5A1:   {year: 2024, pa: 18500, mop: rotating_ext, dock: hotwash,  nav: lidar_ai,  mobility: lift,  confidence: medium}
 Roborock Qrevo Edge 2:     {year: 2026, pa: 25000, mop: rotating_ext, dock: hotwash,  nav: lidar_ai,  mobility: slim,  confidence: high}
 Roborock Qrevo Edge 2X:    {year: 2026, pa: 25000, mop: rotating_ext, dock: hotwash,  nav: lidar_ai,  mobility: slim,  confidence: medium}
 Roborock Qrevo Edge 2 Pro: {year: 2026, pa: 25000, mop: rotating_ext, dock: premium,  nav: lidar_ai,  mobility: slim,  confidence: low}
 Roborock Qrevo Edge 2 Flow: {year: 2026, pa: 35000, mop: roller,      dock: hotwash,  nav: lidar_ai,  mobility: slim,  confidence: high}
 Roborock Qrevo Edge 2 FlowX: {year: 2026, pa: 35000, mop: roller,     dock: premium,  nav: lidar_ai,  mobility: slim,  confidence: low}
-Roborock Qrevo Curv 2 Flow: {year: 2026, pa: 20000, mop: roller,      dock: hotwash,  nav: lidar_ai,  mobility: lift,  confidence: high}
+Roborock Qrevo Curv 2 Flow: {year: 2026, pa: 20000, mop: roller,      dock: hotwash,  nav: lidar_ai,  mobility: lift,  confidence: high, rtings: 6.9}
 Roborock Qrevo Curv 2 FlowX: {year: 2026, pa: 20000, mop: roller,     dock: premium,  nav: lidar_ai,  mobility: lift,  confidence: low}
 Roborock Qrevo Curv 2 Pro: {year: 2026, pa: 25000, mop: rotating_ext, dock: premium,  nav: lidar_ai,  mobility: lift,  confidence: high}
 Roborock Qrevo Edge 3 Pro: {year: 2026, pa: 36000, mop: rotating_ext, dock: premium,  nav: lidar_ai,  mobility: slim,  confidence: low}
 Roborock Saros 10:         {year: 2025, pa: 22000, mop: rotating_ext, dock: premium,  nav: starsight, mobility: slim,  confidence: medium}
-Roborock Saros 10R:        {year: 2025, pa: 19000, mop: rotating_ext, dock: premium,  nav: starsight, mobility: slim,  confidence: medium}
-Roborock Saros Z70:        {year: 2025, pa: 22000, mop: rotating_ext, dock: premium,  nav: starsight, mobility: arm,   confidence: high}
+Roborock Saros 10R:        {year: 2025, pa: 19000, mop: rotating_ext, dock: premium,  nav: starsight, mobility: slim,  confidence: medium, rtings: 7.9}
+Roborock Saros Z70:        {year: 2025, pa: 22000, mop: rotating_ext, dock: premium,  nav: starsight, mobility: arm,   confidence: high, rtings: 7.8}
 Roborock Saros 20 Neo:     {year: 2026, pa: 36000, mop: rotating_ext, dock: hotwash,  nav: starsight, mobility: lift,  confidence: low}
-Roborock Saros 20:         {year: 2026, pa: 36000, mop: rotating_ext, dock: premium,  nav: starsight, mobility: lift3, confidence: high}
-Roborock Saros 20 Sonic:   {year: 2026, pa: 36000, mop: sonic,        dock: premium,  nav: starsight, mobility: lift3, confidence: high}
+Roborock Saros 20:         {year: 2026, pa: 36000, mop: rotating_ext, dock: premium,  nav: starsight, mobility: lift3, confidence: high, rtings: 8.0}
+Roborock Saros 20 Sonic:   {year: 2026, pa: 36000, mop: sonic,        dock: premium,  nav: starsight, mobility: lift3, confidence: high, rtings: 7.7}
 Roborock Saros 20 Flow:    {year: 2026, pa: 36000, mop: roller,       dock: premium,  nav: starsight, mobility: lift3, confidence: medium}

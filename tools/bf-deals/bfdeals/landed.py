@@ -59,6 +59,13 @@ def assess(o: dict, cfg: dict, fx: dict) -> dict:
             bd["shipping"] = ship * rate
         elif market == home:
             bd["goods"], bd["shipping"] = price * rate, ship * rate
+        elif market in ("DE", "NL", "FR", "IT", "ES", "AT") and cat == "vacuum" and not any(
+                m in merchant for m in lc.get("ships_to_home_direct", [])):
+            # Bulky item, shop not known to deliver to Poland: buy as a domestic sale (origin VAT
+            # stays) and send it on through a parcel forwarder.
+            fwd = lc.get("eu_forwarder_eur", 35)
+            bd["goods"], bd["forwarder"] = price * rate, fwd * fx["rates"]["EUR"]
+            warnings.append(f"via a parcel forwarder (€{fwd} assumed); warranty claims go back to the German shop")
         elif market in ("DE", "NL", "FR", "IT", "ES", "AT"):
             goods = price
             if lc.get("eu_destination_vat"):
@@ -107,6 +114,8 @@ def assess(o: dict, cfg: dict, fx: dict) -> dict:
         "cashback_required": ("warn", "price depends on a cashback portal paying out"),
         "refurbished": ("block" if cat == "vacuum" else "warn", "refurbished"),
         "nl_shop": ("warn", "lowest Dutch shop on Tweakers: check it ships to Poland"),
+        "ceneo_lowest": ("warn", "Ceneo's lowest can be a code or instalment price: confirm the cash price"),
+        "instalment_only": ("block", "price needs an instalment (credit) agreement; not a cash price"),
         "ebook_gift": ("warn", "e-book: lands in the buyer's own Kindle library, awkward as a gift"),
     }
     for f in sorted(flags):

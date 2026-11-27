@@ -47,15 +47,30 @@ def lineup(offers: list[dict], specs: dict) -> list[dict]:
         spec = specs.get(r["item"])
         best = r["best"]
         r["markets"] = sorted(r["markets"])
-        r["score"] = perf_score(spec) if spec else None
+        r["rubric"] = perf_score(spec) if spec else None
+        r["rtings"] = spec.get("rtings") if spec else None
+        r["tested"] = r["rtings"] is not None
+        r["score"] = round(r["rtings"] * 10, 1) if r["tested"] else None  # filled in below for untested
         r["confidence"] = spec.get("confidence") if spec else None
         r["spec"] = {k: spec[k] for k in ("year", "pa", "mop", "dock", "nav", "mobility")} if spec else None
         r["landed"] = best["landed"] if best else None
-        r["value"] = round(r["score"] / (r["landed"] / 1000), 1) if (r["score"] and r["landed"]) else None
         ref = r["pl_30d_low"] or r["pl_now"]
         r["vs_pl_pct"] = round(100 * (1 - r["landed"] / ref), 1) if (ref and r["landed"]) else None
         r["tier"] = next((t for t, lo, hi in TIERS if r["landed"] and lo <= r["landed"] < hi), None)
         out.append(r)
+
+    # Untested models: map the feature rubric onto the RTINGS scale with a least-squares line
+    # fitted on the tested models, and mark the result as an estimate.
+    pts = [(r["rubric"], r["score"]) for r in out if r["tested"] and r["rubric"]]
+    if len(pts) >= 3:
+        n = len(pts); mx = sum(x for x, _ in pts) / n; my = sum(y for _, y in pts) / n
+        sxx = sum((x - mx) ** 2 for x, _ in pts) or 1.0
+        slope = sum((x - mx) * (y - my) for x, y in pts) / sxx
+        for r in out:
+            if not r["tested"] and r["rubric"]:
+                r["score"] = round(min(my + slope * (r["rubric"] - mx), max(y for _, y in pts)), 1)
+    for r in out:
+        r["value"] = round(r["score"] / (r["landed"] / 1000), 1) if (r["score"] and r["landed"]) else None
 
     # Pareto frontier: no other model is both cheaper (or equal) and higher-scoring.
     scored = sorted((r for r in out if r["value"]), key=lambda r: (r["landed"], -r["score"]))
@@ -71,7 +86,6 @@ def lineup(offers: list[dict], specs: dict) -> list[dict]:
 
 
 def deterministic_deal(rows: list[dict]) -> dict | None:
-    """Fallback 'deal of the century': frontier model with score >= 75, best value, beating PL."""
-    cands = [r for r in rows if r.get("frontier") and (r["score"] or 0) >= 75]
-    cands = [r for r in cands if (r["vs_pl_pct"] or 0) >= 0] or cands
+    """Fallback 'deal of the century': lab-tested model scoring >= 7.5 with the best value."""
+    cands = [r for r in rows if r.get("tested") and (r["score"] or 0) >= 75 and r["value"]]
     return max(cands, key=lambda r: r["value"]) if cands else None

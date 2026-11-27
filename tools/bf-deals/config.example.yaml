@@ -49,6 +49,8 @@ landed_cost:
     UK: {large: 45,  small: 15}        # GBP
   us_sales_tax: 0.0                    # 0 when the forwarder sits in DE/OR/DE
   customs_clearance_pln: 45            # carrier's import-handling fee
+  eu_forwarder_eur: 35                 # German address forwarder to PL, parcel up to 20 kg (€15 handling + courier)
+  ships_to_home_direct: []             # EU shops verified to deliver bulky items to the home country
   eu_shipping: {default: 9.99, free_merchants: [amazon, x-kom, roborock, mediamarkt, joybuy]}
   # Big EU shops charge the buyer's VAT (OSS), so a DE price is re-taxed at PL rates.
   eu_destination_vat: true

@@ -87,7 +87,8 @@ def build_payload(short: dict, cfg: dict, fx: dict, lineup_rows: list | None = N
         "categories": cats,
         "buyer_context": cfg.get("buyer_context", ""),
         "vacuum_lineup": [{
-            "item": r["item"], "score": r["score"], "spec_confidence": r["confidence"], "spec": r["spec"],
+            "item": r["item"], "score": r["score"], "tested": r.get("tested"), "rtings": r.get("rtings"),
+            "spec_confidence": r["confidence"], "spec": r["spec"],
             "best_offer_id": r["best"]["id"] if r["best"] else None,
             "best_where": f"{r['best']['retailer']} ({r['best']['market']})" if r["best"] else None,
             "best_price": f"{r['best']['price']} {r['best']['currency']}" if r["best"] else None,
@@ -114,14 +115,15 @@ Rules:
 the right move is to wait or to pay annually.
 - Be blunt and short. Give the strongest reason against your own pick in 'watch_out'.
 
-Robot vacuum: use vacuum_lineup. 'score' is a 0-100 feature rubric (suction, mop, dock, \
-navigation, mobility, model year), not a lab test; treat spec_confidence 'low' with caution. \
-'value_pts_per_1000pln' = score per 1,000 zł landed. 'frontier' = no cheaper model scores higher. \
-'vs_pl_pct' = saving against the best Polish price (30-day low where known). Choose a \
-'deal_of_the_century': the single best price-to-performance buy that is also a real cut versus \
-Polish prices; prefer frontier models with score >= 75. Also pick the best model per tier. \
-If previous_deal_of_the_century is given and its landed price has not risen, keep it unless \
-another model's numbers clearly beat it now; say what moved if you switch.
+Robot vacuum: use vacuum_lineup. 'score' is the RTINGS lab score x 10 where 'tested' is true; \
+for untested models it is an estimate from a spec rubric - never prefer an untested model over a \
+tested one on the estimate alone. 'value_pts_per_1000pln' = score per 1,000 zł landed. \
+Landed prices for German shops include a parcel forwarder; Polish offers are cash prices. \
+Choose a 'deal_of_the_century': the tested model (score >= 75) with the best value at a cash \
+price. 'vs_pl_pct' is only a tiebreak: an import saving is not product quality, and when a \
+Polish cash price is within about 5% of an import, prefer Polish (local returns and warranty). \
+Also pick the best model per tier. If previous_deal_of_the_century is given and its landed \
+price has not risen, keep it unless another model's numbers clearly beat it; say what moved.
 
 Toolkit: the buyer is learning small-business acquisition (see buyer_context). Pick the few \
 items worth paying for now and list the free ones worth joining; say what to skip.
