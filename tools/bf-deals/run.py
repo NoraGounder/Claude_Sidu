@@ -45,8 +45,16 @@ def main() -> None:
     (out / "offers.json").write_text(json.dumps(offers, indent=1, ensure_ascii=False))
 
     short = shortlist(offers)
+    hist_path = out / "history.jsonl"
+    hist_text = hist_path.read_text().strip() if hist_path.exists() else ""
+    last = json.loads(hist_text.splitlines()[-1]) if hist_text else {}
     rows = lineup(offers, load_specs(HERE / "specs/roborock.yaml"))
     payload = build_payload(short, cfg, fx, rows)
+    if last.get("deal_id"):  # keep the vacuum pick stable unless the numbers moved
+        item = last.get("deal_item") or (by_id[last["deal_id"]]["item"] if last["deal_id"] in by_id else None)
+        payload["previous_deal_of_the_century"] = {
+            "item": item, "landed_last_run": (last.get("prices") or {}).get(item),
+            "landed_now": next((r["landed"] for r in rows if r["item"] == item), None)}
     (out / "payload.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False))
     print(f"{len(offers)} offers, shortlist: " + ", ".join(f"{k}={len(v)}" for k, v in short.items()))
 
@@ -78,10 +86,21 @@ def main() -> None:
     deal_id = (verdict.get("vacuum") or {}).get("deal_of_the_century")
     alerts = [f"{k.replace('Roborock ', '')}: {prev[k]:,.0f} → {v:,.0f} zł ({100 * (v / prev[k] - 1):+.0f}%)"
               for k, v in snap.items() if prev.get(k) and v <= prev[k] * 0.95]
-    if history and deal_id and history[-1].get("deal_id") != deal_id:
-        alerts.insert(0, f"New deal of the century: {by_id[deal_id]['item']} at {by_id[deal_id]['landed']:,.0f} zł")
+    old_id = history[-1].get("deal_id") if history else None
+    if old_id and deal_id and old_id != deal_id:
+        # Only a market move counts: the old pick got dearer or vanished, or the new one got cheaper.
+        old_item = history[-1].get("deal_item") or (by_id[old_id]["item"] if old_id in by_id else None)
+        new_item = by_id[deal_id]["item"]
+        moved = (old_item not in snap or snap[old_item] > prev.get(old_item, float("inf"))
+                 or snap[new_item] < prev.get(new_item, float("inf")))
+        msg = f"deal of the century: {old_item} → {new_item} at {by_id[deal_id]['landed']:,.0f} zł"
+        if moved:
+            alerts.insert(0, "New " + msg)
+        else:
+            print("note: model changed its pick without a price move:", msg)
     with hist_file.open("a") as f:
-        f.write(json.dumps({"at": now, "prices": snap, "deal_id": deal_id}) + "\n")
+        f.write(json.dumps({"at": now, "prices": snap, "deal_id": deal_id,
+                            "deal_item": by_id[deal_id]["item"] if deal_id in by_id else None}) + "\n")
     (out / "alerts.json").write_text(json.dumps(alerts, indent=1, ensure_ascii=False))
     for a in alerts:
         print("ALERT:", a)

@@ -119,7 +119,9 @@ navigation, mobility, model year), not a lab test; treat spec_confidence 'low' w
 'value_pts_per_1000pln' = score per 1,000 zł landed. 'frontier' = no cheaper model scores higher. \
 'vs_pl_pct' = saving against the best Polish price (30-day low where known). Choose a \
 'deal_of_the_century': the single best price-to-performance buy that is also a real cut versus \
-Polish prices; prefer frontier models with score >= 75. Also pick the best model per tier.
+Polish prices; prefer frontier models with score >= 75. Also pick the best model per tier. \
+If previous_deal_of_the_century is given and its landed price has not risen, keep it unless \
+another model's numbers clearly beat it now; say what moved if you switch.
 
 Toolkit: the buyer is learning small-business acquisition (see buyer_context). Pick the few \
 items worth paying for now and list the free ones worth joining; say what to skip.
